@@ -27,7 +27,7 @@ export default function AppShell() {
       case "transactions":
         return <TransactionsPage />;
       case "account":
-        return <AccountPage />;
+        return <AccountPage setView={setView} />;
       case "checkout":
         return <CheckoutPage setView={setView} />;
       case "payment":
