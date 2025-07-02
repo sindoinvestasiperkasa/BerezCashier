@@ -9,9 +9,12 @@ import TransactionsPage from "./pages/transactions-page";
 import AccountPage from "./pages/account-page";
 import CheckoutPage from "./pages/checkout-page";
 import PaymentPage from "./pages/payment-page";
+import EditProfilePage from "./pages/edit-profile-page";
+import MyAddressPage from "./pages/my-address-page";
+import SettingsPage from "./pages/settings-page";
 
 export type Tab = "home" | "wishlist" | "cart" | "transactions" | "account";
-export type View = Tab | "checkout" | "payment";
+export type View = Tab | "checkout" | "payment" | "edit-profile" | "my-address" | "settings";
 
 export default function AppShell() {
   const [view, setView] = useState<View>("home");
@@ -32,6 +35,12 @@ export default function AppShell() {
         return <CheckoutPage setView={setView} />;
       case "payment":
         return <PaymentPage setView={setView} />;
+      case "edit-profile":
+        return <EditProfilePage setView={setView} />;
+      case "my-address":
+        return <MyAddressPage setView={setView} />;
+      case "settings":
+        return <SettingsPage setView={setView} />;
       default:
         return <HomePage />;
     }

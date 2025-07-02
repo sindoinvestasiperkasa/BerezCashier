@@ -11,10 +11,10 @@ interface AccountPageProps {
 
 export default function AccountPage({ setView }: AccountPageProps) {
   const menuItems = [
-    { icon: User, text: "Edit Profil", action: () => {} },
-    { icon: MapPin, text: "Alamat Saya", action: () => {} },
+    { icon: User, text: "Edit Profil", action: () => setView('edit-profile') },
+    { icon: MapPin, text: "Alamat Saya", action: () => setView('my-address') },
     { icon: Heart, text: "Wishlist", action: () => setView('wishlist') },
-    { icon: Settings, text: "Pengaturan", action: () => {} },
+    { icon: Settings, text: "Pengaturan", action: () => setView('settings') },
   ];
 
   return (
