@@ -61,7 +61,7 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-grow flex flex-col items-center justify-center text-center p-6">
+      <div className="flex-grow grid place-items-center p-6">
         <Carousel 
           className="w-full max-w-xs" 
           opts={{ loop: true }}
@@ -73,7 +73,7 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
             {slides.map((slide, index) => (
               <CarouselItem key={index}>
                 <div className="p-1">
-                    <div className="flex flex-col items-center justify-center gap-6">
+                    <div className="flex flex-col items-center justify-center gap-6 text-center">
                         <Image
                             src={slide.image}
                             alt={slide.title}
