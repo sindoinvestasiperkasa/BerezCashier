@@ -44,7 +44,7 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="flex flex-col p-0 max-h-[90vh] w-full" side="bottom">
         <SheetHeader className="p-6 pb-2 border-b">
-            <SheetTitle className="text-xl font-bold text-left flex items-center justify-between">
+            <SheetTitle className="text-xl font-bold text-left flex items-center justify-between mr-8">
                 <span>Detail Transaksi</span>
                 <Badge variant={statusVariant[transaction.status] || 'outline'} className={cn("text-sm", transaction.status === 'Diproses' ? 'border-primary text-primary' : '')}>
                     {transaction.status}
