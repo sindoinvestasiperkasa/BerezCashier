@@ -36,7 +36,7 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
                     onClick={() => setActiveTab(item.id)}
                     className={cn(
                       "absolute -top-7 w-16 h-16 rounded-full flex items-center justify-center transition-transform duration-300 group",
-                      "bg-primary text-primary-foreground shadow-lg border-4 border-background hover:scale-105"
+                      "bg-primary/80 backdrop-blur-sm text-primary-foreground shadow-lg border-4 border-background hover:scale-105"
                     )}
                      aria-current={activeTab === item.id ? "page" : undefined}
                   >
