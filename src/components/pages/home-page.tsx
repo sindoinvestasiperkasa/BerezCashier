@@ -16,9 +16,10 @@ import {
   Salad,
   Frown,
 } from "lucide-react";
-import { products, categories as categoryData } from "@/lib/data";
+import { products, categories as categoryData, type Product } from "@/lib/data";
 import ProductCard from "../product-card";
 import { cn } from "@/lib/utils";
+import ProductDetail from "../product-detail";
 
 const iconMap: { [key: string]: React.ElementType } = {
   LayoutGrid,
@@ -34,6 +35,7 @@ const iconMap: { [key: string]: React.ElementType } = {
 export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
@@ -43,6 +45,14 @@ export default function HomePage() {
       .includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+  
+  const handleProductClick = (product: Product) => {
+    setSelectedProduct(product);
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedProduct(null);
+  };
 
   return (
     <div className="flex flex-col">
@@ -105,7 +115,11 @@ export default function HomePage() {
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 gap-4">
             {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                onProductClick={handleProductClick} 
+              />
             ))}
           </div>
         ) : (
@@ -118,6 +132,12 @@ export default function HomePage() {
           </div>
         )}
       </section>
+      
+      <ProductDetail 
+        product={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={handleCloseDetail}
+      />
     </div>
   );
 }

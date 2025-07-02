@@ -11,9 +11,10 @@ import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
   product: Product;
+  onProductClick: (product: Product) => void;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, onProductClick }: ProductCardProps) {
   const { addToCart, addToWishlist, removeFromWishlist, isInWishlist } = useApp();
   const { toast } = useToast();
   const inWishlist = isInWishlist(product.id);
@@ -55,7 +56,10 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <Card className="group overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300">
+    <Card 
+      className="group overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+      onClick={() => onProductClick(product)}
+    >
       <CardContent className="p-0">
         <div className="relative">
           <Image
