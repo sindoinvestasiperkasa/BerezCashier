@@ -3,8 +3,19 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Search, Bell, LayoutGrid, Wheat, Carrot, Apple, Beef, Egg, Milk, Salad } from "lucide-react";
+import {
+  Search,
+  Bell,
+  LayoutGrid,
+  Wheat,
+  Carrot,
+  Apple,
+  Beef,
+  Egg,
+  Milk,
+  Salad,
+  Frown,
+} from "lucide-react";
 import { products, categories as categoryData } from "@/lib/data";
 import ProductCard from "../product-card";
 import { cn } from "@/lib/utils";
@@ -22,11 +33,16 @@ const iconMap: { [key: string]: React.ElementType } = {
 
 export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredProducts =
-    selectedCategory === "All"
-      ? products
-      : products.filter((p) => p.category === selectedCategory);
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory =
+      selectedCategory === "All" || product.category === selectedCategory;
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="flex flex-col">
@@ -34,7 +50,9 @@ export default function HomePage() {
         <div className="flex justify-between items-center mb-4">
           <div>
             <p className="text-muted-foreground text-sm">Lokasi</p>
-            <h1 className="font-bold text-lg text-foreground">Jakarta, Indonesia</h1>
+            <h1 className="font-bold text-lg text-foreground">
+              Jakarta, Indonesia
+            </h1>
           </div>
           <Button variant="ghost" size="icon">
             <Bell className="h-6 w-6" />
@@ -42,7 +60,12 @@ export default function HomePage() {
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input placeholder="Cari di WarungQ..." className="pl-10 h-12 rounded-full" />
+          <Input
+            placeholder="Cari di WarungQ..."
+            className="pl-10 h-12 rounded-full"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </header>
 
@@ -72,14 +95,28 @@ export default function HomePage() {
 
       <section className="p-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-foreground">Produk Terlaris</h2>
-          <Button variant="link" className="text-primary p-0 h-auto">Lihat Semua</Button>
+          <h2 className="text-xl font-bold text-foreground">
+            {searchQuery ? `Hasil Pencarian` : "Produk Terlaris"}
+          </h2>
+          <Button variant="link" className="text-primary p-0 h-auto">
+            Lihat Semua
+          </Button>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {filteredProducts.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4">
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10 flex flex-col items-center gap-4">
+            <Frown className="w-16 h-16 text-muted-foreground" />
+            <h3 className="text-lg font-semibold">Produk tidak ditemukan</h3>
+            <p className="text-muted-foreground">
+              Coba gunakan kata kunci lain.
+            </p>
+          </div>
+        )}
       </section>
     </div>
   );
