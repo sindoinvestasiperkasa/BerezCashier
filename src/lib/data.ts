@@ -16,6 +16,7 @@ export type Product = {
 
 export const categories = [
   { name: "All", icon: "LayoutGrid" },
+  { name: "Groceries", icon: "ShoppingBasket" },
   { name: "Beras", icon: "Wheat" },
   { name: "Sayuran", icon: "Carrot" },
   { name: "Buah", icon: "Apple" },

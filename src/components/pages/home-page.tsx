@@ -15,6 +15,7 @@ import {
   Milk,
   Salad,
   Frown,
+  ShoppingBasket,
 } from "lucide-react";
 import { products, categories as categoryData, type Product } from "@/lib/data";
 import ProductCard from "../product-card";
@@ -30,6 +31,7 @@ const iconMap: { [key: string]: React.ElementType } = {
   Egg,
   Milk,
   Salad,
+  ShoppingBasket,
 };
 
 export default function HomePage() {
