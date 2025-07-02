@@ -1,39 +1,22 @@
+
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Receipt, Package, Truck, CheckCircle2 } from "lucide-react";
-
-const transactions = [
-  {
-    id: "TRX001",
-    date: "12 Mei 2024",
-    total: 158000,
-    status: "Selesai",
-    items: "Beras Premium, Telur Ayam, ...",
-  },
-  {
-    id: "TRX002",
-    date: "10 Mei 2024",
-    total: 89000,
-    status: "Selesai",
-    items: "Minyak Goreng, Gula Pasir",
-  },
-  {
-    id: "TRX003",
-    date: "15 Mei 2024",
-    total: 250000,
-    status: "Dikirim",
-    items: "Daging Sapi, Bawang Merah, ...",
-  },
-];
+import { Receipt } from "lucide-react";
+import { useApp } from "@/hooks/use-app";
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Selesai': 'default',
     'Dikirim': 'secondary',
+    'Diproses': 'outline',
     'Dibatalkan': 'destructive',
 }
 
 export default function TransactionsPage() {
+  const { transactions } = useApp();
+
   return (
     <div className="p-4">
       <div className="flex items-center gap-2 mb-6">
@@ -50,7 +33,7 @@ export default function TransactionsPage() {
                   <CardTitle className="text-base font-bold">{trx.id}</CardTitle>
                   <CardDescription>{trx.date}</CardDescription>
                 </div>
-                <Badge variant={statusVariant[trx.status] || 'outline'}>{trx.status}</Badge>
+                <Badge variant={statusVariant[trx.status] || 'outline'} className={trx.status === 'Diproses' ? 'border-primary text-primary' : ''}>{trx.status}</Badge>
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">

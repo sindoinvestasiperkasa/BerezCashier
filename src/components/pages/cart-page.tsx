@@ -6,8 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ShoppingCart, Plus, Minus, Trash2, Frown } from "lucide-react";
+import type { View } from "../app-shell";
 
-export default function CartPage() {
+interface CartPageProps {
+  setView: (view: View) => void;
+}
+
+export default function CartPage({ setView }: CartPageProps) {
   const { cart, updateQuantity, removeFromCart } = useApp();
 
   const subtotal = cart.reduce(
@@ -50,6 +55,7 @@ export default function CartPage() {
                     width={80}
                     height={80}
                     className="rounded-md object-cover"
+                    data-ai-hint="product image"
                   />
                   <div className="flex-grow">
                     <h3 className="font-semibold">{item.name}</h3>
@@ -107,7 +113,7 @@ export default function CartPage() {
                         <span>Total</span>
                         <span>{formatCurrency(total)}</span>
                     </div>
-                    <Button className="w-full mt-4 h-12 text-lg font-bold">
+                    <Button className="w-full mt-4 h-12 text-lg font-bold" onClick={() => setView('checkout')}>
                         Lanjut ke Checkout
                     </Button>
                 </CardContent>

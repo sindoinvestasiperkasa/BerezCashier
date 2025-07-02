@@ -7,22 +7,51 @@ export interface CartItem extends Product {
   quantity: number;
 }
 
+export interface Transaction {
+  id: string;
+  date: string;
+  total: number;
+  status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan';
+  items: string;
+}
+
 interface AppContextType {
   cart: CartItem[];
   wishlist: Product[];
+  transactions: Transaction[];
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   addToWishlist: (product: Product) => void;
   removeFromWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'date'>) => void;
+  clearCart: () => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const initialTransactions: Transaction[] = [
+  {
+    id: "TRX001",
+    date: "12 Mei 2024",
+    total: 158000,
+    status: "Selesai",
+    items: "Beras Premium, Telur Ayam, ...",
+  },
+  {
+    id: "TRX002",
+    date: "10 Mei 2024",
+    total: 89000,
+    status: "Selesai",
+    items: "Minyak Goreng, Gula Pasir",
+  },
+];
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
 
   const addToCart = (product: Product) => {
     setCart((prevCart) => {
@@ -67,11 +96,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const isInWishlist = (productId: string) => {
     return wishlist.some(item => item.id === productId);
-  }
+  };
+
+  const addTransaction = (newTransactionData: Omit<Transaction, 'id' | 'date'>) => {
+    const transaction: Transaction = {
+        ...newTransactionData,
+        id: `TRX${Math.floor(10000 + Math.random() * 90000)}`,
+        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    };
+    setTransactions(prev => [transaction, ...prev]);
+  };
+
+  const clearCart = () => {
+      setCart([]);
+  };
 
   return (
     <AppContext.Provider
-      value={{ cart, wishlist, addToCart, removeFromCart, updateQuantity, addToWishlist, removeFromWishlist, isInWishlist }}
+      value={{ 
+        cart, 
+        wishlist, 
+        transactions,
+        addToCart, 
+        removeFromCart, 
+        updateQuantity, 
+        addToWishlist, 
+        removeFromWishlist, 
+        isInWishlist,
+        addTransaction,
+        clearCart
+      }}
     >
       {children}
     </AppContext.Provider>
