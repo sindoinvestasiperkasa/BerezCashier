@@ -56,14 +56,14 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 w-full h-full transition-colors duration-200 relative",
+                  "flex flex-col items-center justify-center gap-1 w-full h-full transition-colors duration-200 relative group",
                   activeTab === item.id
                     ? "text-primary-foreground"
                     : "text-primary-foreground/70 hover:text-primary-foreground"
                 )}
                 aria-current={activeTab === item.id ? "page" : undefined}
               >
-                <item.icon className="w-6 h-6" />
+                <item.icon className="w-6 h-6 transition-transform group-hover:scale-110" />
                 <span className="text-xs font-medium">{item.label}</span>
                 
                 {item.id === 'wishlist' && wishlist.length > 0 && (
