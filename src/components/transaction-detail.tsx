@@ -6,7 +6,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -51,14 +50,14 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                     {transaction.status}
                 </Badge>
             </SheetTitle>
-            <SheetDescription className="text-left flex items-center gap-4 text-sm pt-1">
+            <div className="text-left flex items-center gap-4 text-sm pt-1 text-muted-foreground">
                 <span className="font-mono">{transaction.id}</span>
-                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs">•</span>
                 <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
                     <span>{transaction.date}</span>
                 </div>
-            </SheetDescription>
+            </div>
         </SheetHeader>
 
         <div className="p-4 space-y-4 flex-grow overflow-y-auto bg-secondary/30">
