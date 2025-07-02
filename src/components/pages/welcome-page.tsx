@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/carousel";
 import { Button } from "../ui/button";
 import type { AuthView } from "../auth-flow";
-import { Sparkles, Truck, ShieldCheck } from "lucide-react";
+import { Sparkles, Truck, ShieldCheck, Tag, Store } from "lucide-react";
 
 interface WelcomePageProps {
   setView: (view: AuthView) => void;
@@ -38,6 +38,20 @@ const slides = [
     image: "https://placehold.co/600x400.png",
     hint: "fresh vegetables"
   },
+  {
+    icon: Tag,
+    title: "Promo & Diskon Menarik",
+    description: "Dapatkan penawaran terbaik dan diskon spesial setiap hari untuk belanja lebih hemat.",
+    image: "https://placehold.co/600x400.png",
+    hint: "special offer"
+  },
+  {
+    icon: Store,
+    title: "Dukung Produk Lokal",
+    description: "Dengan berbelanja di WarungQ, Anda turut mendukung pertumbuhan petani dan produsen lokal.",
+    image: "https://placehold.co/600x400.png",
+    hint: "local market"
+  }
 ];
 
 export default function WelcomePage({ setView }: WelcomePageProps) {
