@@ -98,7 +98,7 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
           </CarouselContent>
         </Carousel>
       </div>
-      <div className="p-6 space-y-4 border-t">
+      <div className="p-6 space-y-4">
         <Button onClick={() => setView('signup')} className="w-full h-14 text-lg font-bold">
             Buat Akun Baru
         </Button>
