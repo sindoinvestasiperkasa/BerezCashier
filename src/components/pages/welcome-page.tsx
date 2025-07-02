@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import * as React from "react";
+import Autoplay from "embla-carousel-autoplay";
 import {
   Carousel,
   CarouselContent,
@@ -39,10 +41,20 @@ const slides = [
 ];
 
 export default function WelcomePage({ setView }: WelcomePageProps) {
+  const plugin = React.useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: true })
+  );
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow flex flex-col items-center justify-center text-center p-6">
-        <Carousel className="w-full max-w-xs" opts={{ loop: true }}>
+        <Carousel 
+          className="w-full max-w-xs" 
+          opts={{ loop: true }}
+          plugins={[plugin.current]}
+          onMouseEnter={plugin.current.stop}
+          onMouseLeave={plugin.current.reset}
+        >
           <CarouselContent>
             {slides.map((slide, index) => (
               <CarouselItem key={index}>
