@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +17,13 @@ import {
   Frown,
   ShoppingBasket,
 } from "lucide-react";
-import { products, categories as categoryData, type Product } from "@/lib/data";
+import { categories as categoryData, type Product } from "@/lib/data";
 import ProductCard from "../product-card";
 import { cn } from "@/lib/utils";
 import ProductDetail from "../product-detail";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const iconMap: { [key: string]: React.ElementType } = {
   LayoutGrid,
@@ -35,9 +38,32 @@ const iconMap: { [key: string]: React.ElementType } = {
 };
 
 export default function HomePage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const productsCollection = collection(db, 'products');
+        const productSnapshot = await getDocs(productsCollection);
+        const productList = productSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Product[];
+        setProducts(productList);
+      } catch (error) {
+        console.error("Error fetching products from Firestore: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
@@ -114,7 +140,17 @@ export default function HomePage() {
             Lihat Semua
           </Button>
         </div>
-        {filteredProducts.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="space-y-3">
+                <Skeleton className="w-full aspect-square rounded-lg" />
+                <Skeleton className="h-4 w-full rounded-md" />
+                <Skeleton className="h-4 w-2/3 rounded-md" />
+              </div>
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 gap-4">
             {filteredProducts.map((product) => (
               <ProductCard 
@@ -128,8 +164,8 @@ export default function HomePage() {
           <div className="text-center py-10 flex flex-col items-center gap-4">
             <Frown className="w-16 h-16 text-muted-foreground" />
             <h3 className="text-lg font-semibold">Produk tidak ditemukan</h3>
-            <p className="text-muted-foreground">
-              Coba gunakan kata kunci lain.
+            <p className="text-muted-foreground max-w-xs">
+              Pastikan Anda sudah menambahkan produk di database Firestore.
             </p>
           </div>
         )}

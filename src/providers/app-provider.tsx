@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useState, ReactNode } from 'react';
-import { products, type Product } from '@/lib/data';
+import type { Product } from '@/lib/data';
 
 export interface CartItem extends Product {
   quantity: number;
@@ -42,32 +42,7 @@ interface AppContextType {
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const initialTransactions: Transaction[] = [
-  {
-    id: "TRX001",
-    date: "12 Mei 2024",
-    total: 131000,
-    status: "Selesai",
-    items: [
-      {...products.find(p => p.id === '1')!, quantity: 1},
-      {...products.find(p => p.id === '5')!, quantity: 2},
-    ],
-    paymentMethod: "BCA Virtual Account",
-    paymentStatus: "Berhasil",
-  },
-  {
-    id: "TRX002",
-    date: "10 Mei 2024",
-    total: 60000,
-    status: "Selesai",
-    items: [
-      {...products.find(p => p.id === '2')!, quantity: 1},
-      {...products.find(p => p.id === '3')!, quantity: 1},
-    ],
-    paymentMethod: "Gopay",
-    paymentStatus: "Berhasil",
-  },
-];
+const initialTransactions: Transaction[] = [];
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
