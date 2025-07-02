@@ -35,6 +35,9 @@ interface AppContextType {
   isInWishlist: (productId: string) => boolean;
   addTransaction: (data: NewTransactionData) => void;
   clearCart: () => void;
+  isAuthenticated: boolean;
+  login: () => void;
+  logout: () => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -70,6 +73,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const login = () => {
+    setIsAuthenticated(true);
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+  };
 
   const addToCart = (product: Product) => {
     setCart((prevCart) => {
@@ -144,7 +156,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         removeFromWishlist, 
         isInWishlist,
         addTransaction,
-        clearCart
+        clearCart,
+        isAuthenticated,
+        login,
+        logout,
       }}
     >
       {children}

@@ -4,12 +4,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight, User, MapPin, Heart, Settings, LogOut } from "lucide-react";
 import type { View } from "../app-shell";
+import { useApp } from "@/hooks/use-app";
 
 interface AccountPageProps {
   setView: (view: View) => void;
 }
 
 export default function AccountPage({ setView }: AccountPageProps) {
+  const { logout } = useApp();
   const menuItems = [
     { icon: User, text: "Edit Profil", action: () => setView('edit-profile') },
     { icon: MapPin, text: "Alamat Saya", action: () => setView('my-address') },
@@ -51,7 +53,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
         
         <div className="mt-4">
             <button
-                onClick={() => {}}
+                onClick={logout}
                 className="flex w-full items-center p-3 hover:bg-card rounded-lg transition-colors text-destructive text-left"
               >
                 <LogOut className="w-5 h-5 mr-4" />
