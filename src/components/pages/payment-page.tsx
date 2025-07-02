@@ -55,8 +55,8 @@ export default function PaymentPage({ setView }: PaymentPageProps) {
 
     addTransaction({
       total,
-      status: 'Diproses',
-      items: cart.map(item => `${item.name} (x${item.quantity})`).join(', ')
+      items: cart.map(item => `${item.name} (x${item.quantity})`).join(', '),
+      paymentMethod: selectedPayment,
     });
 
     clearCart();

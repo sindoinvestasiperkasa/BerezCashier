@@ -13,6 +13,14 @@ export interface Transaction {
   total: number;
   status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan';
   items: string;
+  paymentMethod: string;
+  paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
+}
+
+export type NewTransactionData = {
+    total: number;
+    items: string;
+    paymentMethod: string;
 }
 
 interface AppContextType {
@@ -25,7 +33,7 @@ interface AppContextType {
   addToWishlist: (product: Product) => void;
   removeFromWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'date'>) => void;
+  addTransaction: (data: NewTransactionData) => void;
   clearCart: () => void;
 }
 
@@ -38,6 +46,8 @@ const initialTransactions: Transaction[] = [
     total: 158000,
     status: "Selesai",
     items: "Beras Premium, Telur Ayam, ...",
+    paymentMethod: "BCA Virtual Account",
+    paymentStatus: "Berhasil",
   },
   {
     id: "TRX002",
@@ -45,6 +55,8 @@ const initialTransactions: Transaction[] = [
     total: 89000,
     status: "Selesai",
     items: "Minyak Goreng, Gula Pasir",
+    paymentMethod: "Gopay",
+    paymentStatus: "Berhasil",
   },
 ];
 
@@ -98,11 +110,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return wishlist.some(item => item.id === productId);
   };
 
-  const addTransaction = (newTransactionData: Omit<Transaction, 'id' | 'date'>) => {
+  const addTransaction = (data: NewTransactionData) => {
     const transaction: Transaction = {
-        ...newTransactionData,
+        ...data,
         id: `TRX${Math.floor(10000 + Math.random() * 90000)}`,
-        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        status: 'Diproses',
+        paymentStatus: 'Berhasil'
     };
     setTransactions(prev => [transaction, ...prev]);
   };
