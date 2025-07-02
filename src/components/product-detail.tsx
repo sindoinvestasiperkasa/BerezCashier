@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import type { Product } from "@/lib/data";
@@ -51,9 +57,11 @@ export default function ProductDetail({ product, isOpen, onClose }: ProductDetai
             />
         </div>
         <div className="p-6 flex-grow flex flex-col">
-            <h2 className="text-2xl font-bold">{product.name}</h2>
-            <p className="text-muted-foreground mb-4">{product.category}</p>
-            <p className="text-foreground flex-grow">{product.description}</p>
+            <SheetHeader>
+              <SheetTitle className="text-2xl font-bold text-left">{product.name}</SheetTitle>
+              <SheetDescription className="text-left">{product.category}</SheetDescription>
+            </SheetHeader>
+            <p className="text-foreground flex-grow mt-4">{product.description}</p>
             <div className="mt-auto flex items-center justify-between pt-4">
                 <span className="text-2xl font-bold text-primary">{formatCurrency(product.price)}</span>
                 <Button size="lg" className="h-14 px-8 rounded-full text-lg font-bold" onClick={handleAddToCart}>
