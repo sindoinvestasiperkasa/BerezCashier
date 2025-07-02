@@ -1,12 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { useApp } from "@/hooks/use-app";
-import { Button } from "@/components/ui/button";
 import ProductCard from "../product-card";
 import { Heart, Frown } from "lucide-react";
+import type { Product } from "@/lib/data";
+import ProductDetail from "../product-detail";
 
 export default function WishlistPage() {
-  const { wishlist, addToCart, removeFromWishlist } = useApp();
+  const { wishlist } = useApp();
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const handleProductClick = (product: Product) => {
+    setSelectedProduct(product);
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedProduct(null);
+  };
 
   return (
     <div className="p-4">
@@ -24,10 +35,19 @@ export default function WishlistPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4">
           {wishlist.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onProductClick={handleProductClick}
+            />
           ))}
         </div>
       )}
+      <ProductDetail
+        product={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={handleCloseDetail}
+      />
     </div>
   );
 }

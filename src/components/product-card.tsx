@@ -4,14 +4,14 @@ import Image from "next/image";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import type { Product } from "@/lib/data";
-import { Heart, ShoppingCart, Plus } from "lucide-react";
+import { Heart, Plus } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
   product: Product;
-  onProductClick: (product: Product) => void;
+  onProductClick?: (product: Product) => void;
 }
 
 export default function ProductCard({ product, onProductClick }: ProductCardProps) {
@@ -57,8 +57,11 @@ export default function ProductCard({ product, onProductClick }: ProductCardProp
 
   return (
     <Card 
-      className="group overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-      onClick={() => onProductClick(product)}
+      className={cn(
+        "group overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300",
+        onProductClick && "cursor-pointer"
+      )}
+      onClick={() => onProductClick?.(product)}
     >
       <CardContent className="p-0">
         <div className="relative">
