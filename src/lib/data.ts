@@ -5,6 +5,13 @@ export type Product = {
   price: number;
   imageUrl: string;
   description: string;
+  netWeight?: string;
+  ingredients?: string[];
+  productionCode?: string;
+  expirationDate?: string;
+  permitNumber?: string;
+  nutritionFacts?: { [key: string]: string };
+  storageInstructions?: string;
 };
 
 export const categories = [
@@ -25,7 +32,14 @@ export const products: Product[] = [
     category: "Beras",
     price: 65000,
     imageUrl: "https://placehold.co/300x300.png",
-    description: "Beras pulen dan wangi kualitas terbaik, 5kg.",
+    description: "Beras pulen dan wangi kualitas terbaik, cocok untuk hidangan keluarga.",
+    netWeight: "5 kg",
+    ingredients: ["Beras Pilihan"],
+    productionCode: "PD0524-001",
+    expirationDate: "01/05/2025",
+    permitNumber: "P-IRT 2153275010123-23",
+    nutritionFacts: { "Kalori": "360 kcal", "Karbohidrat": "80g", "Protein": "7g", "Lemak": "0.5g" },
+    storageInstructions: "Simpan di tempat sejuk dan kering, jauhkan dari sinar matahari langsung.",
   },
   {
     id: "2",
@@ -34,6 +48,13 @@ export const products: Product[] = [
     price: 32000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Minyak goreng jernih dan sehat, 2L.",
+    netWeight: "2L",
+    ingredients: ["Minyak Kelapa Sawit", "Vitamin A"],
+    productionCode: "PD0424-012",
+    expirationDate: "01/04/2026",
+    permitNumber: "MD 208109001016",
+    nutritionFacts: { "Energi Total": "120 kcal", "Lemak Total": "14g" },
+    storageInstructions: "Simpan pada suhu ruangan dan hindari paparan sinar matahari langsung.",
   },
   {
     id: "3",
@@ -42,6 +63,13 @@ export const products: Product[] = [
     price: 18000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Gula pasir putih bersih, 1kg.",
+    netWeight: "1kg",
+    ingredients: ["Tebu Pilihan"],
+    productionCode: "PD0324-088",
+    expirationDate: "01/03/2027",
+    permitNumber: "MD 224209001016",
+    nutritionFacts: { "Kalori": "40 kcal", "Karbohidrat": "10g" },
+    storageInstructions: "Simpan dalam wadah tertutup rapat di tempat yang sejuk dan kering.",
   },
   {
     id: "4",
@@ -50,6 +78,11 @@ export const products: Product[] = [
     price: 120000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Daging sapi segar potongan rendang, 1kg.",
+    netWeight: "1 kg",
+    productionCode: "PD0524-101",
+    expirationDate: "Gunakan dalam 3 hari",
+    permitNumber: "NKV-3175050-001",
+    storageInstructions: "Simpan di kulkas pada suhu 0-4°C. Untuk penyimpanan lebih lama, bekukan.",
   },
   {
     id: "5",
@@ -58,6 +91,12 @@ export const products: Product[] = [
     price: 28000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Telur ayam negeri segar, 1kg.",
+    netWeight: "1 kg (sekitar 16 butir)",
+    productionCode: "PD0524-210",
+    expirationDate: "25/06/2024",
+    permitNumber: "NKV-3175050-002",
+    nutritionFacts: { "Protein": "6g", "Lemak": "5g", "Kalori": "70 kcal" },
+    storageInstructions: "Simpan di dalam kulkas untuk menjaga kesegaran.",
   },
   {
     id: "6",
@@ -66,6 +105,13 @@ export const products: Product[] = [
     price: 19000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Susu UHT full cream kaya nutrisi, 1L.",
+    netWeight: "1L",
+    ingredients: ["Susu Sapi Segar", "Penstabil Fosfat"],
+    productionCode: "PD0224-305",
+    expirationDate: "01/11/2024",
+    permitNumber: "MD 400109001016",
+    nutritionFacts: { "Kalsium": "25%", "Vitamin D": "30%", "Protein": "8g" },
+    storageInstructions: "Setelah dibuka, simpan di kulkas dan habiskan dalam 4 hari.",
   },
   {
     id: "7",
@@ -74,6 +120,9 @@ export const products: Product[] = [
     price: 5000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Satu ikat bayam hijau segar.",
+    netWeight: "± 200g",
+    expirationDate: "Baik digunakan dalam 3-5 hari",
+    storageInstructions: "Simpan di dalam kulkas dengan dibungkus kertas.",
   },
   {
     id: "8",
@@ -82,6 +131,9 @@ export const products: Product[] = [
     price: 45000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Apel fuji manis dan renyah, 1kg.",
+    netWeight: "1kg",
+    expirationDate: "Baik digunakan dalam 1-2 minggu",
+    storageInstructions: "Simpan di laci sayur kulkas untuk menjaga kerenyahan.",
   },
   {
     id: "9",
@@ -90,6 +142,8 @@ export const products: Product[] = [
     price: 35000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Bawang merah lokal, 1kg.",
+    netWeight: "1kg",
+    storageInstructions: "Simpan di tempat terbuka, sejuk, dan kering.",
   },
   {
     id: "10",
@@ -98,6 +152,12 @@ export const products: Product[] = [
     price: 3500,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Indomie seleraku.",
+    netWeight: "85g",
+    ingredients: ["Tepung Terigu", "Minyak Nabati", "Bumbu", "Kecap Manis"],
+    productionCode: "PD0124-901",
+    expirationDate: "01/09/2024",
+    permitNumber: "MD 231509001016",
+    storageInstructions: "Simpan di tempat sejuk dan kering.",
   },
   {
     id: "11",
@@ -106,6 +166,8 @@ export const products: Product[] = [
     price: 15000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Wortel import segar dan manis, 500g.",
+    netWeight: "500g",
+    storageInstructions: "Simpan di kulkas untuk menjaga kesegaran.",
   },
   {
     id: "12",
@@ -114,5 +176,7 @@ export const products: Product[] = [
     price: 22000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Satu sisir pisang cavendish matang.",
+    netWeight: "± 900g",
+    storageInstructions: "Simpan pada suhu ruangan. Jangan disimpan di kulkas.",
   },
 ];
