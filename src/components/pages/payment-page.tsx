@@ -55,7 +55,7 @@ export default function PaymentPage({ setView }: PaymentPageProps) {
 
     addTransaction({
       total,
-      items: cart.map(item => `${item.name} (x${item.quantity})`).join(', '),
+      items: cart,
       paymentMethod: selectedPayment,
     });
 

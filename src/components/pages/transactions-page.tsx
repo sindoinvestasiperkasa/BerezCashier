@@ -1,20 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Receipt, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
+import type { Transaction } from "@/providers/app-provider";
+import TransactionDetail from "../transaction-detail";
 
-const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
+export const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Selesai': 'default',
     'Dikirim': 'secondary',
     'Diproses': 'outline',
     'Dibatalkan': 'destructive',
 }
 
-const paymentStatusConfig: {
+export const paymentStatusConfig: {
     [key: string]: {
         className: string;
         icon: React.ElementType;
@@ -36,6 +39,11 @@ const paymentStatusConfig: {
 
 export default function TransactionsPage() {
   const { transactions } = useApp();
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+
+  const handleCloseDetail = () => {
+    setSelectedTransaction(null);
+  };
 
   return (
     <div className="p-4">
@@ -48,9 +56,10 @@ export default function TransactionsPage() {
         {transactions.map((trx) => {
           const paymentConfig = paymentStatusConfig[trx.paymentStatus];
           const PaymentIcon = paymentConfig?.icon || Clock;
+          const itemsSummary = trx.items.map(item => `${item.name} (x${item.quantity})`).join(', ');
 
           return (
-          <Card key={trx.id}>
+          <Card key={trx.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedTransaction(trx)}>
             <CardHeader className="p-4">
               <div className="flex justify-between items-start">
                 <div>
@@ -62,7 +71,7 @@ export default function TransactionsPage() {
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <Separator className="mb-3" />
-              <p className="text-sm text-muted-foreground truncate">{trx.items}</p>
+              <p className="text-sm text-muted-foreground truncate">{itemsSummary}</p>
               <div className="flex justify-between items-center mt-3">
                 <p className="text-sm text-muted-foreground">Total Belanja</p>
                 <p className="font-bold text-base text-primary">
@@ -95,6 +104,11 @@ export default function TransactionsPage() {
           </Card>
         )})}
       </div>
+      <TransactionDetail 
+        transaction={selectedTransaction}
+        isOpen={!!selectedTransaction}
+        onClose={handleCloseDetail}
+      />
     </div>
   );
 }

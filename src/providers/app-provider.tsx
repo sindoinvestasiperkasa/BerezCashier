@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useState, ReactNode } from 'react';
-import type { Product } from '@/lib/data';
+import { products, type Product } from '@/lib/data';
 
 export interface CartItem extends Product {
   quantity: number;
@@ -12,14 +12,14 @@ export interface Transaction {
   date: string;
   total: number;
   status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan';
-  items: string;
+  items: CartItem[];
   paymentMethod: string;
   paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
 }
 
 export type NewTransactionData = {
     total: number;
-    items: string;
+    items: CartItem[];
     paymentMethod: string;
 }
 
@@ -43,18 +43,24 @@ const initialTransactions: Transaction[] = [
   {
     id: "TRX001",
     date: "12 Mei 2024",
-    total: 158000,
+    total: 131000,
     status: "Selesai",
-    items: "Beras Premium, Telur Ayam, ...",
+    items: [
+      {...products.find(p => p.id === '1')!, quantity: 1},
+      {...products.find(p => p.id === '5')!, quantity: 2},
+    ],
     paymentMethod: "BCA Virtual Account",
     paymentStatus: "Berhasil",
   },
   {
     id: "TRX002",
     date: "10 Mei 2024",
-    total: 89000,
+    total: 60000,
     status: "Selesai",
-    items: "Minyak Goreng, Gula Pasir",
+    items: [
+      {...products.find(p => p.id === '2')!, quantity: 1},
+      {...products.find(p => p.id === '3')!, quantity: 1},
+    ],
     paymentMethod: "Gopay",
     paymentStatus: "Berhasil",
   },
