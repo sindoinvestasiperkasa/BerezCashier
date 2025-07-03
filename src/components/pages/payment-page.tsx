@@ -62,7 +62,12 @@ export default function PaymentPage({ setView }: PaymentPageProps) {
     clearCart();
     
     toast({
-        title: "Pembayaran Berhasil!",
+        title: (
+            <div className="flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-green-500" />
+                <span className="text-lg font-semibold">Pembayaran Berhasil!</span>
+            </div>
+        ),
         description: "Pesanan Anda sedang diproses. Terima kasih!",
     });
 
