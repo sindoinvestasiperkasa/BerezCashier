@@ -58,7 +58,7 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col">
-      <header className="p-4 bg-gradient-to-b from-primary/20 to-background">
+      <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background">
         <div className="flex justify-between items-center mb-4">
           <div>
             <p className="text-muted-foreground text-sm">Lokasi</p>
@@ -81,9 +81,9 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section className="p-4">
+      <section className="p-4 md:p-6">
         <h2 className="text-xl font-bold mb-3 text-foreground">Kategori</h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
           {categoryData.map((category) => {
             const Icon = iconMap[category.icon];
             return (
@@ -105,7 +105,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="p-4">
+      <section className="p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-foreground">
             {searchQuery ? `Hasil Pencarian` : "Produk Terlaris"}
@@ -115,7 +115,7 @@ export default function HomePage() {
           </Button>
         </div>
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredProducts.map((product) => (
               <ProductCard 
                 key={product.id} 

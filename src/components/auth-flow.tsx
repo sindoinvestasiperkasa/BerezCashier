@@ -24,7 +24,7 @@ export default function AuthFlow() {
   };
 
   return (
-    <div className="mx-auto max-w-md bg-background min-h-screen flex flex-col shadow-2xl">
+    <div className="mx-auto max-w-md md:max-w-2xl lg:max-w-4xl bg-background min-h-screen flex flex-col shadow-2xl">
       <main className="flex-grow overflow-y-auto">
         {renderContent()}
       </main>

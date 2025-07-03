@@ -39,75 +39,79 @@ export default function CheckoutPage({ setView }: CheckoutPageProps) {
         <h1 className="text-xl font-bold">Konfirmasi Pesanan</h1>
       </header>
 
-      <div className="p-4 space-y-4 flex-grow overflow-y-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-lg">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary" />
-                <span>Alamat Pengiriman</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Edit className="w-4 h-4" />
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold">User Keren</p>
-            <p className="text-muted-foreground text-sm">Jl. Jenderal Sudirman No. 123, Apartemen Cendana, Tower A / 12A, Jakarta Pusat, DKI Jakarta, 10220</p>
-          </CardContent>
-        </Card>
+      <div className="flex-grow overflow-y-auto">
+        <div className="p-4 md:p-6 lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
+          <div className="lg:col-span-2 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-lg">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-primary" />
+                    <span>Alamat Pengiriman</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="font-semibold">User Keren</p>
+                <p className="text-muted-foreground text-sm">Jl. Jenderal Sudirman No. 123, Apartemen Cendana, Tower A / 12A, Jakarta Pusat, DKI Jakarta, 10220</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Package className="w-5 h-5 text-primary" />
-              <span>Ringkasan Pesanan</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {cart.map(item => (
-              <div key={item.id} className="flex items-center gap-4">
-                <Image 
-                  src={item.imageUrl} 
-                  alt={item.name} 
-                  width={64} 
-                  height={64} 
-                  className="rounded-md object-cover"
-                  data-ai-hint="product image"
-                />
-                <div className="flex-grow">
-                  <p className="font-semibold">{item.name}</p>
-                  <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(item.price)}</p>
-                </div>
-                <p className="font-semibold">{formatCurrency(item.quantity * item.price)}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Package className="w-5 h-5 text-primary" />
+                  <span>Ringkasan Pesanan</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {cart.map(item => (
+                  <div key={item.id} className="flex items-center gap-4">
+                    <Image 
+                      src={item.imageUrl} 
+                      alt={item.name} 
+                      width={64} 
+                      height={64} 
+                      className="rounded-md object-cover"
+                      data-ai-hint="product image"
+                    />
+                    <div className="flex-grow">
+                      <p className="font-semibold">{item.name}</p>
+                      <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(item.price)}</p>
+                    </div>
+                    <p className="font-semibold">{formatCurrency(item.quantity * item.price)}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
 
-      <div className="p-4 border-t mt-auto bg-background">
-        <Card>
-          <CardContent className="p-4 space-y-3">
-              <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal</span>
-                  <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                  <span>Ongkos Kirim</span>
-                  <span className="font-medium text-foreground">{formatCurrency(shipping)}</span>
-              </div>
-              <Separator/>
-              <div className="flex justify-between font-bold text-lg">
-                  <span>Total</span>
-                  <span>{formatCurrency(total)}</span>
-              </div>
-              <Button className="w-full mt-4 h-12 text-lg font-bold" onClick={() => setView('payment')}>
-                  Pilih Metode Pembayaran
-              </Button>
-          </CardContent>
-        </Card>
+          <div className="mt-6 lg:mt-0 lg:col-span-1">
+            <Card className="lg:sticky lg:top-6">
+              <CardContent className="p-4 space-y-3">
+                  <div className="flex justify-between text-muted-foreground">
+                      <span>Subtotal</span>
+                      <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                      <span>Ongkos Kirim</span>
+                      <span className="font-medium text-foreground">{formatCurrency(shipping)}</span>
+                  </div>
+                  <Separator/>
+                  <div className="flex justify-between font-bold text-lg">
+                      <span>Total</span>
+                      <span>{formatCurrency(total)}</span>
+                  </div>
+                  <Button className="w-full mt-4 h-12 text-lg font-bold" onClick={() => setView('payment')}>
+                      Pilih Metode Pembayaran
+                  </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

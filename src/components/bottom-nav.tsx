@@ -23,7 +23,7 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
   const { cart, wishlist } = useApp();
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md">
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-4xl">
       <div className="relative h-16 bg-gradient-to-t from-primary/90 to-primary/70 backdrop-blur-sm shadow-[0_-1px_10px_rgba(0,0,0,0.1)]">
         <div className="grid grid-cols-5 h-full">
           {navItems.map((item) => {

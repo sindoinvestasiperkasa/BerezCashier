@@ -20,7 +20,7 @@ export default function WishlistPage() {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 md:p-6">
       <div className="flex items-center gap-2 mb-6">
         <Heart className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-bold">Wishlist Saya</h1>
@@ -33,7 +33,7 @@ export default function WishlistPage() {
           <p className="text-muted-foreground">Yuk, tambahkan produk favoritmu!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {wishlist.map((product) => (
             <ProductCard
               key={product.id}

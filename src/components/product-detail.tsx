@@ -19,6 +19,7 @@ import { Plus } from "lucide-react";
 import type { Product } from "@/lib/data";
 import { useApp } from "@/hooks/use-app";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProductDetailProps {
   product: Product | null;
@@ -29,6 +30,7 @@ interface ProductDetailProps {
 export default function ProductDetail({ product, isOpen, onClose }: ProductDetailProps) {
   const { addToCart } = useApp();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   if (!product) {
     return null;
@@ -52,7 +54,10 @@ export default function ProductDetail({ product, isOpen, onClose }: ProductDetai
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="flex flex-col p-0 max-h-[90vh]" side="bottom">
+      <SheetContent 
+        side={isMobile ? "bottom" : "right"} 
+        className="flex flex-col p-0 max-h-[90vh] md:max-h-full md:w-[480px] md:max-w-none"
+      >
         <div className="relative h-64 w-full">
             <Image
                 src={product.imageUrl}

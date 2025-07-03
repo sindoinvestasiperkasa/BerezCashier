@@ -31,7 +31,7 @@ export default function CartPage({ setView }: CartPageProps) {
   };
 
   return (
-    <div className="p-4 flex flex-col h-full">
+    <div className="p-4 md:p-6 flex flex-col h-full">
       <div className="flex items-center gap-2 mb-6">
         <ShoppingCart className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-bold">Keranjang Saya</h1>
@@ -44,8 +44,8 @@ export default function CartPage({ setView }: CartPageProps) {
           <p className="text-muted-foreground">Cari produk dan tambahkan ke keranjang!</p>
         </div>
       ) : (
-        <div className="flex-grow">
-          <div className="space-y-4">
+        <div className="flex-grow lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
+          <div className="lg:col-span-2 space-y-4">
             {cart.map((item) => (
               <Card key={item.id} className="overflow-hidden">
                 <CardContent className="p-3 flex gap-4 items-center">
@@ -92,12 +92,9 @@ export default function CartPage({ setView }: CartPageProps) {
               </Card>
             ))}
           </div>
-        </div>
-      )}
-      
-      {cart.length > 0 && (
-        <div className="mt-auto pt-4">
-            <Card>
+
+          <div className="mt-6 lg:mt-0 lg:col-span-1">
+            <Card className="lg:sticky lg:top-6">
                 <CardContent className="p-4 space-y-3">
                     <h2 className="text-lg font-bold mb-2">Ringkasan Belanja</h2>
                     <div className="flex justify-between text-muted-foreground">
@@ -118,6 +115,7 @@ export default function CartPage({ setView }: CartPageProps) {
                     </Button>
                 </CardContent>
             </Card>
+          </div>
         </div>
       )}
     </div>
