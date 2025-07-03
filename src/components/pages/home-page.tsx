@@ -85,7 +85,7 @@ export default function HomePage() {
         <h2 className="text-xl font-bold mb-3 text-foreground">Kategori</h2>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
           {categoryData.map((category) => {
-            const Icon = iconMap[category.name];
+            const Icon = iconMap[category.icon];
             return (
               <button
                 key={category.name}
