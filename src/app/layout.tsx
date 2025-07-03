@@ -23,6 +23,7 @@ export default function RootLayout({
           content="default-src *; img-src * data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';"
         />
         <meta name="theme-color" content="#7c3aed" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="font-body antialiased">
         {children}
