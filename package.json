@@ -11,7 +11,8 @@
     "export": "next export",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "build:android": "next build && next export && npx cap sync android"
+    "build:android": "next build && next export && npx cap sync android",
+    "build:ios": "next build && next export && npx cap sync ios"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.0",
