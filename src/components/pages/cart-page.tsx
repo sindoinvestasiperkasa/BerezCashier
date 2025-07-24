@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from "next/image";
 import { useApp } from "@/hooks/use-app";
 import { Button } from "@/components/ui/button";
@@ -49,11 +49,29 @@ export default function CartPage({ setView }: CartPageProps) {
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
 
   const [isPkp, setIsPkp] = useState(false);
-  const [salesAccountId, setSalesAccountId] = useState<string>();
-  const [discountAccountId, setDiscountAccountId] = useState<string>();
-  const [cogsAccountId, setCogsAccountId] = useState<string>();
-  const [inventoryAccountId, setInventoryAccountId] = useState<string>();
-  const [taxAccountId, setTaxAccountId] = useState<string>();
+  const [salesAccountId, setSalesAccountId] = useState<string | undefined>();
+  const [discountAccountId, setDiscountAccountId] = useState<string | undefined>();
+  const [cogsAccountId, setCogsAccountId] = useState<string | undefined>();
+  const [inventoryAccountId, setInventoryAccountId] = useState<string | undefined>();
+  const [taxAccountId, setTaxAccountId] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (accounts.length > 0) {
+        // Find and set default accounts
+        const defaultSalesAccount = accounts.find(a => a.category === 'Pendapatan');
+        if (defaultSalesAccount) setSalesAccountId(defaultSalesAccount.id);
+
+        const defaultCogsAccount = accounts.find(a => a.category === 'Beban');
+        if (defaultCogsAccount) setCogsAccountId(defaultCogsAccount.id);
+
+        const defaultInventoryAccount = accounts.find(a => a.category === 'Aset');
+        if (defaultInventoryAccount) setInventoryAccountId(defaultInventoryAccount.id);
+
+        const defaultTaxAccount = accounts.find(a => a.category === 'Liabilitas');
+        if (defaultTaxAccount) setTaxAccountId(defaultTaxAccount.id);
+    }
+  }, [accounts]);
+
 
   const TAX_RATE = 0.11;
 
@@ -410,24 +428,24 @@ export default function CartPage({ setView }: CartPageProps) {
               <DialogDescription>Pilih transaksi untuk dilanjutkan atau hapus.</DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <ScrollArea className="max-h-96">
-                <div className="space-y-4 px-4">
-                    {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
-                        heldCarts.map(held => (
-                        <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
-                            <div>
-                                <p className="font-semibold">{held.customerName}</p>
-                                <p className="text-sm">Ditahan pada: {format(held.heldAt, 'HH:mm')}</p>
-                                <p className="text-sm">{held.cart.length} item - {formatCurrency(held.cart.reduce((sum, item) => sum + item.quantity * item.price, 0))}</p>
+                <ScrollArea className="max-h-96">
+                    <div className="space-y-4 px-4">
+                        {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
+                            heldCarts.map(held => (
+                            <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
+                                <div>
+                                    <p className="font-semibold">{held.customerName}</p>
+                                    <p className="text-sm">Ditahan pada: {format(held.heldAt, 'HH:mm')}</p>
+                                    <p className="text-sm">{held.cart.length} item - {formatCurrency(held.cart.reduce((sum, item) => sum + item.quantity * item.price, 0))}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button size="sm" variant="default" onClick={() => handleResumeCart(held.id)}>Lanjutkan</Button>
+                                    <Button size="sm" variant="destructive" onClick={() => handleDeleteHeldCart(held.id)}><Trash2 className="h-4 w-4"/></Button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button size="sm" variant="default" onClick={() => handleResumeCart(held.id)}>Lanjutkan</Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleDeleteHeldCart(held.id)}><Trash2 className="h-4 w-4"/></Button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </ScrollArea>
+                        ))}
+                    </div>
+                </ScrollArea>
           </div>
         </DialogContent>
       </Dialog>
@@ -519,5 +537,7 @@ export default function CartPage({ setView }: CartPageProps) {
 }
 
 
+
+    
 
     
