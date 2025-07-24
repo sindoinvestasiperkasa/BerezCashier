@@ -42,7 +42,7 @@ export const paymentStatusConfig: {
 }
 
 export default function TransactionsPage() {
-  const { transactions } = useApp();
+  const { transactions, products } = useApp();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const cashierTransactions = useMemo(() => {
@@ -141,6 +141,7 @@ export default function TransactionsPage() {
       </div>
       <TransactionDetail 
         transaction={selectedTransaction}
+        products={products}
         isOpen={!!selectedTransaction}
         onClose={handleCloseDetail}
       />

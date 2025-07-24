@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, Calendar, CreditCard } from "lucide-react";
 import type { Transaction } from "@/providers/app-provider";
+import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { statusVariant, paymentStatusConfig } from "./pages/transactions-page";
 import { format } from "date-fns";
@@ -20,6 +21,7 @@ import { id } from "date-fns/locale";
 
 interface TransactionDetailProps {
   transaction: Transaction | null;
+  products: Product[];
   isOpen: boolean;
   onClose: () => void;
 }
@@ -40,7 +42,7 @@ const formatDate = (date: Date) => {
 };
 
 
-export default function TransactionDetail({ transaction, isOpen, onClose }: TransactionDetailProps) {
+export default function TransactionDetail({ transaction, products, isOpen, onClose }: TransactionDetailProps) {
   if (!transaction) {
     return null;
   }
@@ -86,23 +88,29 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {Array.isArray(transaction.items) && transaction.items.map((item, index) => (
-                    <div key={`${transaction.id}-${item.productId}-${index}`} className="flex items-center gap-4">
-                        <Image 
-                            src={item.imageUrl || 'https://placehold.co/64x64.png'} 
-                            alt={item.productName || 'Gambar produk'} 
-                            width={64} 
-                            height={64} 
-                            className="rounded-md object-cover"
-                            data-ai-hint="product image"
-                        />
-                        <div className="flex-grow">
-                            <p className="font-semibold">{item.productName}</p>
-                            <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(item.unitPrice)}</p>
-                        </div>
-                        <p className="font-semibold">{formatCurrency(item.quantity * item.unitPrice)}</p>
-                    </div>
-                    ))}
+                    {Array.isArray(transaction.items) && transaction.items.map((item, index) => {
+                      const product = products.find(p => p.id === item.productId);
+                      const imageUrl = product?.imageUrl || 'https://placehold.co/64x64.png';
+                      const productName = item.productName || product?.name || 'Produk tidak ditemukan';
+                      
+                      return (
+                      <div key={`${transaction.id}-${item.productId}-${index}`} className="flex items-center gap-4">
+                          <Image 
+                              src={imageUrl} 
+                              alt={productName} 
+                              width={64} 
+                              height={64} 
+                              className="rounded-md object-cover bg-muted"
+                              data-ai-hint="product image"
+                          />
+                          <div className="flex-grow">
+                              <p className="font-semibold">{productName}</p>
+                              <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(item.unitPrice)}</p>
+                          </div>
+                          <p className="font-semibold">{formatCurrency(item.quantity * item.unitPrice)}</p>
+                      </div>
+                      )
+                    })}
                 </CardContent>
             </Card>
 
