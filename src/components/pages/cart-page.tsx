@@ -61,6 +61,9 @@ export default function CartPage({ setView }: CartPageProps) {
         const defaultSalesAccount = accounts.find(a => a.name === 'Penjualan Produk') || accounts.find(a => a.category === 'Pendapatan');
         if (defaultSalesAccount) setSalesAccountId(defaultSalesAccount.id);
 
+        const defaultDiscountAccount = accounts.find(a => a.name === 'Diskon Penjualan') || accounts.find(a => a.category === 'Pendapatan');
+        if (defaultDiscountAccount) setDiscountAccountId(defaultDiscountAccount.id);
+
         const defaultCogsAccount = accounts.find(a => a.name === 'Harga Pokok Penjualan (HPP)') || accounts.find(a => a.category === 'Beban');
         if (defaultCogsAccount) setCogsAccountId(defaultCogsAccount.id);
 
