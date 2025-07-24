@@ -10,7 +10,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { getFirestore, collection, addDoc, doc, updateDoc, increment, writeBatch } from 'firebase/firestore';
+import { collection, doc, increment, writeBatch } from 'firebase/firestore';
+import { db } from '@/lib/firebase'; // Impor instance db yang sudah diinisialisasi
 
 const CartItemSchema = z.object({
   id: z.string(),
@@ -57,7 +58,6 @@ const createTransactionFlow = ai.defineFlow(
     outputSchema: CreateTransactionOutputSchema,
   },
   async (input) => {
-    const db = getFirestore();
     const batch = writeBatch(db);
 
     // 1. Simpan data transaksi
