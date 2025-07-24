@@ -82,8 +82,8 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {Array.isArray(transaction.items) && transaction.items.map(item => (
-                    <div key={item.id} className="flex items-center gap-4">
+                    {Array.isArray(transaction.items) && transaction.items.map((item, index) => (
+                    <div key={`${transaction.id}-${item.id}-${index}`} className="flex items-center gap-4">
                         <Image 
                             src={item.imageUrl} 
                             alt={item.name} 
