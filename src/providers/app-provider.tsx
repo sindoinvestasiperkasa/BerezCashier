@@ -18,10 +18,11 @@ export interface Transaction {
   id: string;
   date: string;
   total: number;
-  status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan';
+  status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan' | 'Lunas';
   items: CartItem[];
   paymentMethod: string;
   paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
+  amount?: number;
 }
 
 export type NewTransactionClientData = {
@@ -35,8 +36,10 @@ export type NewTransactionClientData = {
     salesAccountId: string;
     cogsAccountId: string;
     inventoryAccountId: string;
+    paymentAccountId: string;
     discountAccountId?: string;
     taxAccountId?: string;
+    isPkp?: boolean;
 };
 
 export type Customer = {
@@ -182,6 +185,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return {
             id: doc.id,
             ...rest,
+            total: data.amount, // Map amount to total for UI consistency
             date: jsDate.toISOString(),
         } as Transaction;
       });
@@ -310,13 +314,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
     if (!idUMKM) throw new Error("UMKM ID not found");
 
-    const cashAccount = accounts.find(a => a.name === "Kas" || a.category === "Aset");
-    if (!cashAccount) throw new Error("Akun Kas/Bank default tidak ditemukan.");
-
     const transactionData: CreateTransactionInput = {
       ...data,
       idUMKM,
-      cashAccountId: cashAccount.id,
     };
     
     // onSnapshot akan memperbarui state transaksi secara otomatis
@@ -414,5 +414,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    

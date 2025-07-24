@@ -15,6 +15,7 @@ import { id } from "date-fns/locale";
 
 export const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Selesai': 'default',
+    'Lunas': 'default',
     'Dikirim': 'secondary',
     'Diproses': 'outline',
     'Dibatalkan': 'destructive',

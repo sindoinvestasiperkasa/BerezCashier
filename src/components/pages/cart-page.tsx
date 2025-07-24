@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, Settings2, PlayCircle, Edit, Loader2, CheckCircle } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
@@ -54,6 +54,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
 
   const [isPkp, setIsPkp] = useState(false);
+  const [paymentAccountId, setPaymentAccountId] = useState<string | undefined>();
   const [salesAccountId, setSalesAccountId] = useState<string | undefined>();
   const [discountAccountId, setDiscountAccountId] = useState<string | undefined>();
   const [cogsAccountId, setCogsAccountId] = useState<string | undefined>();
@@ -63,22 +64,29 @@ export default function CartPage({ setView }: CartPageProps) {
   useEffect(() => {
     if (accounts.length > 0) {
         // Find and set default accounts with specific names, with fallbacks
-        const defaultSalesAccount = accounts.find(a => a.name === 'Penjualan Produk') || accounts.find(a => a.category === 'Pendapatan');
-        if (defaultSalesAccount) setSalesAccountId(defaultSalesAccount.id);
-
-        const defaultDiscountAccount = accounts.find(a => a.name === 'Diskon Penjualan') || accounts.find(a => a.category === 'Pendapatan' || a.category === 'Beban');
-        if (defaultDiscountAccount) setDiscountAccountId(defaultDiscountAccount.id);
-
-        const defaultCogsAccount = accounts.find(a => a.name === 'Harga Pokok Penjualan (HPP)') || accounts.find(a => a.category === 'Beban');
-        if (defaultCogsAccount) setCogsAccountId(defaultCogsAccount.id);
-
-        const defaultInventoryAccount = accounts.find(a => a.name === 'Persediaan') || accounts.find(a => a.category === 'Aset');
-        if (defaultInventoryAccount) setInventoryAccountId(defaultInventoryAccount.id);
-
-        const defaultTaxAccount = accounts.find(a => a.name === 'PPN Keluaran') || accounts.find(a => a.category === 'Liabilitas');
-        if (defaultTaxAccount) setTaxAccountId(defaultTaxAccount.id);
+        const findAcc = (keywords: string[], category?: string) => accounts.find(a => (!category || a.category === category) && keywords.some(kw => a.name.toLowerCase().includes(kw)));
+        
+        setSalesAccountId(prev => prev ?? findAcc(['penjualan produk'], 'Pendapatan')?.id);
+        setDiscountAccountId(prev => prev ?? findAcc(['diskon penjualan', 'potongan penjualan'])?.id);
+        setCogsAccountId(prev => prev ?? findAcc(['harga pokok penjualan', 'hpp'], 'Beban')?.id);
+        setInventoryAccountId(prev => prev ?? findAcc(['persediaan'], 'Aset')?.id);
+        setTaxAccountId(prev => prev ?? findAcc(['ppn keluaran'], 'Liabilitas')?.id);
     }
   }, [accounts]);
+  
+  useEffect(() => {
+      const getPaymentAccount = (method: string): string | undefined => {
+        const methodLower = method.toLowerCase();
+        let account = accounts.find(a => a.name.toLowerCase() === methodLower);
+        if (account) return account.id;
+        if (['qris', 'gopay', 'dana', 'ovo', 'transfer'].includes(methodLower)) {
+            account = accounts.find(a => a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('kas digital'));
+            if (account) return account.id;
+        }
+        return accounts.find(a => a.name.toLowerCase().includes('kas'))?.id;
+    };
+    setPaymentAccountId(getPaymentAccount(paymentMethod));
+  }, [paymentMethod, accounts]);
 
 
   const TAX_RATE = 0.11;
@@ -109,8 +117,21 @@ export default function CartPage({ setView }: CartPageProps) {
       return;
     }
 
-    if (!salesAccountId || !cogsAccountId || !inventoryAccountId || (isPkp && !taxAccountId) || (discountAmount > 0 && !discountAccountId)) {
-        toast({ title: "Akun Belum Lengkap", description: "Silakan pilih semua akun yang diperlukan di Pengaturan Akun.", variant: "destructive" });
+    const missingAccounts = [];
+    if (!paymentAccountId) missingAccounts.push("Akun Pembayaran (Kas/Bank)");
+    if (!salesAccountId) missingAccounts.push("Akun Pendapatan");
+    if (!cogsAccountId) missingAccounts.push("Akun HPP");
+    if (!inventoryAccountId) missingAccounts.push("Akun Persediaan");
+    if (isPkp && !taxAccountId) missingAccounts.push("Akun PPN");
+    if (discountAmount > 0 && !discountAccountId) missingAccounts.push("Akun Diskon");
+
+    if (missingAccounts.length > 0) {
+        toast({ 
+            title: "Akun Belum Lengkap", 
+            description: `Silakan pilih akun berikut di Pengaturan Akun: ${missingAccounts.join(', ')}.`, 
+            variant: "destructive",
+            duration: 9000
+        });
         return;
     }
 
@@ -130,6 +151,9 @@ export default function CartPage({ setView }: CartPageProps) {
             total,
             paymentMethod,
             customerId: selectedCustomerId,
+            isPkp,
+            // Account IDs
+            paymentAccountId: paymentAccountId!,
             salesAccountId: salesAccountId!,
             cogsAccountId: cogsAccountId!,
             inventoryAccountId: inventoryAccountId!,
@@ -417,6 +441,7 @@ export default function CartPage({ setView }: CartPageProps) {
                     <RadioGroup defaultValue="Cash" className="flex" onValueChange={setPaymentMethod}>
                         <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="cash" /><Label htmlFor="cash">Cash</Label></div>
                         <div className="flex items-center space-x-2"><RadioGroupItem value="Transfer" id="transfer" /><Label htmlFor="transfer">Transfer</Label></div>
+                        <div className="flex items-center space-x-2"><RadioGroupItem value="QRIS" id="qris" /><Label htmlFor="qris">QRIS</Label></div>
                     </RadioGroup>
                 </div>
                 {paymentMethod === 'Cash' && <div className='flex justify-between items-center'>
@@ -446,7 +471,7 @@ export default function CartPage({ setView }: CartPageProps) {
                     Tahan
                 </Button>
                 <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handleOpenPaymentDialog} disabled={cart.length === 0 || isProcessing}>
-                    {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <DollarSign className="mr-2 h-5 w-5" />}
+                    {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wallet className="mr-2 h-5 w-5" />}
                     {isProcessing ? 'Memproses...' : 'Bayar'}
                 </Button>
             </div>
@@ -522,7 +547,11 @@ export default function CartPage({ setView }: CartPageProps) {
       </Dialog>
 
       {/* Success Dialog */}
-      <Dialog open={isSuccessOpen} onOpenChange={handleFinishTransaction}>
+      <Dialog open={isSuccessOpen} onOpenChange={(open) => {
+           if (!open) {
+               handleFinishTransaction();
+           }
+       }}>
         <DialogContent className="sm:max-w-sm text-center">
             <DialogHeader>
                 <DialogTitle className="text-center w-full">Pembayaran Berhasil!</DialogTitle>
@@ -654,5 +683,3 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
-
-    

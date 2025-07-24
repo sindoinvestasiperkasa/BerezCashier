@@ -34,12 +34,12 @@ const CreateTransactionInputSchema = z.object({
   idUMKM: z.string(),
   isPkp: z.boolean().optional().default(false),
   // Account IDs
+  paymentAccountId: z.string(),
   salesAccountId: z.string(),
   discountAccountId: z.string().optional(),
   cogsAccountId: z.string(),
   inventoryAccountId: z.string(),
   taxAccountId: z.string().optional(),
-  paymentAccountId: z.string(),
 });
 
 
@@ -103,7 +103,7 @@ const createTransactionFlow = ai.defineFlow(
       date: transactionTimestamp,
       description: `Penjualan Kasir - Transaksi #${transactionRef.id.substring(0, 5)}`,
       type: 'Sale',
-      status: 'Selesai',
+      status: 'Lunas',
       paymentStatus: 'Berhasil', // Dianggap berhasil karena ini alur backend
       transactionNumber: `KSR-${Date.now()}`,
       amount: input.total,
@@ -129,8 +129,10 @@ const createTransactionFlow = ai.defineFlow(
 
     // 3. Update Stok Produk
     input.items.forEach(item => {
-      const productRef = db.collection('products').doc(item.id);
-      batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
+      if (item.hpp > 0) { // Hanya update stok untuk barang, bukan jasa
+        const productRef = db.collection('products').doc(item.id);
+        batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
+      }
     });
 
     await batch.commit();
