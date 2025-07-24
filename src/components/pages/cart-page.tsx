@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, Settings2, PlayCircle } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, Settings2, PlayCircle, Edit } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from '../ui/scroll-area';
 import { format } from 'date-fns';
@@ -33,7 +34,7 @@ interface CartPageProps {
 }
 
 export default function CartPage({ setView }: CartPageProps) {
-  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart } = useApp();
+  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart, transactions } = useApp();
   const { toast } = useToast();
 
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -41,6 +42,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const [amountReceived, setAmountReceived] = useState(0);
   const [selectedCustomer, setSelectedCustomer] = useState("Pelanggan Umum");
   const [isHeldCartsOpen, setIsHeldCartsOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = (subtotal * discountPercent) / 100;
@@ -115,6 +117,14 @@ export default function CartPage({ setView }: CartPageProps) {
     deleteHeldCart(cartId);
   }
 
+  const transactionsToday = transactions.filter(tx => {
+    const txDate = new Date(tx.date);
+    const today = new Date();
+    return txDate.getDate() === today.getDate() &&
+           txDate.getMonth() === today.getMonth() &&
+           txDate.getFullYear() === today.getFullYear();
+  });
+
   return (
     <>
     <div className="p-4 md:p-6 flex flex-col h-full bg-secondary/30">
@@ -129,7 +139,7 @@ export default function CartPage({ setView }: CartPageProps) {
                 Transaksi Ditahan
                 {heldCarts.length > 0 && <Badge className="absolute -top-2 -right-2 px-2">{heldCarts.length}</Badge>}
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setIsHistoryOpen(true)}>
                 <History className="mr-2 h-4 w-4" />
                 Riwayat Hari Ini
             </Button>
@@ -320,24 +330,64 @@ export default function CartPage({ setView }: CartPageProps) {
               <DialogTitle>Transaksi Ditahan</DialogTitle>
               <DialogDescription>Pilih transaksi untuk dilanjutkan atau hapus.</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="-mx-6 px-6 max-h-96">
-            <div className="py-4 space-y-4">
-                {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
-                    heldCarts.map(held => (
-                    <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
-                        <div>
-                            <p className="font-semibold">{held.customerName}</p>
-                            <p className="text-sm">Ditahan pada: {format(held.heldAt, 'HH:mm')}</p>
-                            <p className="text-sm">{held.cart.length} item - {formatCurrency(held.cart.reduce((sum, item) => sum + item.quantity * item.price, 0))}</p>
+          <div className="py-4">
+            <ScrollArea className="max-h-96">
+                <div className="space-y-4 px-1">
+                    {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
+                        heldCarts.map(held => (
+                        <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
+                            <div>
+                                <p className="font-semibold">{held.customerName}</p>
+                                <p className="text-sm">Ditahan pada: {format(held.heldAt, 'HH:mm')}</p>
+                                <p className="text-sm">{held.cart.length} item - {formatCurrency(held.cart.reduce((sum, item) => sum + item.quantity * item.price, 0))}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button size="sm" variant="default" onClick={() => handleResumeCart(held.id)}>Lanjutkan</Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteHeldCart(held.id)}><Trash2 className="h-4 w-4"/></Button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Button size="sm" variant="default" onClick={() => handleResumeCart(held.id)}>Lanjutkan</Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDeleteHeldCart(held.id)}><Trash2 className="h-4 w-4"/></Button>
-                        </div>
+                    ))}
+                </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* History Dialog */}
+      <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Riwayat Transaksi Hari Ini</DialogTitle>
+            <DialogDescription>Daftar semua transaksi yang berhasil hari ini.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="space-y-2 py-4">
+              {transactionsToday.length === 0 ? (
+                <p className="text-center text-muted-foreground">Belum ada transaksi kasir hari ini.</p>
+              ) : (
+                transactionsToday.map(tx => (
+                  <div key={tx.id} className="p-3 border rounded-lg flex justify-between items-center text-sm">
+                    <div>
+                      <p className="font-mono text-xs">{tx.id}</p>
+                      <p className="font-semibold">{formatCurrency(tx.total)}</p>
                     </div>
-                ))}
+                    <div className="flex items-center gap-2">
+                      <p className="text-muted-foreground">{format(new Date(tx.date), 'HH:mm')}</p>
+                      <Button size="sm" variant="outline">
+                        <Edit className="mr-2 h-4 w-4" /> Cetak Ulang
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </ScrollArea>
+          <DialogFooter>
+            <div className="w-full flex justify-between items-center font-bold text-lg">
+              <span>Total:</span>
+              <span>{formatCurrency(transactionsToday.reduce((sum, tx) => sum + tx.total, 0))}</span>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
