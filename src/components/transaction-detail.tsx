@@ -49,7 +49,7 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
   const PaymentIcon = paymentConfig?.icon || CreditCard;
   
   const subtotal = Array.isArray(transaction.items) 
-    ? transaction.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    ? transaction.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
     : 0;
   const shipping = transaction.total > subtotal ? transaction.total - subtotal : 0;
 
@@ -64,7 +64,7 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                 </Badge>
             </SheetTitle>
             <div className="text-left flex items-center gap-4 text-sm pt-1 text-muted-foreground">
-                <span className="font-mono">{transaction.id}</span>
+                <span className="font-mono">{transaction.transactionNumber || transaction.id}</span>
                 <span className="text-xs">•</span>
                 <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
@@ -83,20 +83,20 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                 </CardHeader>
                 <CardContent className="space-y-3">
                     {Array.isArray(transaction.items) && transaction.items.map((item, index) => (
-                    <div key={`${transaction.id}-${item.id}-${index}`} className="flex items-center gap-4">
+                    <div key={`${transaction.id}-${item.productId}-${index}`} className="flex items-center gap-4">
                         <Image 
                             src={item.imageUrl || 'https://placehold.co/64x64.png'} 
-                            alt={item.name || 'Gambar produk'} 
+                            alt={item.productName || 'Gambar produk'} 
                             width={64} 
                             height={64} 
                             className="rounded-md object-cover"
                             data-ai-hint="product image"
                         />
                         <div className="flex-grow">
-                            <p className="font-semibold">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(item.price)}</p>
+                            <p className="font-semibold">{item.productName}</p>
+                            <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(item.unitPrice)}</p>
                         </div>
-                        <p className="font-semibold">{formatCurrency(item.quantity * item.price)}</p>
+                        <p className="font-semibold">{formatCurrency(item.quantity * item.unitPrice)}</p>
                     </div>
                     ))}
                 </CardContent>

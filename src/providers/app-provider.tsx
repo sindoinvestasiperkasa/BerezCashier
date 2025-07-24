@@ -14,12 +14,21 @@ export interface CartItem extends Product {
   quantity: number;
 }
 
+export interface SaleItem {
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    cogs: number;
+    imageUrl?: string;
+}
+
 export interface Transaction {
   id: string;
   date: Date;
   total: number;
   status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan' | 'Lunas';
-  items: CartItem[];
+  items: SaleItem[];
   paymentMethod: string;
   paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
   amount?: number;
