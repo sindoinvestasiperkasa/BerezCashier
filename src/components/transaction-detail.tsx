@@ -86,7 +86,7 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                     <div key={`${transaction.id}-${item.id}-${index}`} className="flex items-center gap-4">
                         <Image 
                             src={item.imageUrl || 'https://placehold.co/64x64.png'} 
-                            alt={item.name} 
+                            alt={item.name || 'Gambar produk'} 
                             width={64} 
                             height={64} 
                             className="rounded-md object-cover"
