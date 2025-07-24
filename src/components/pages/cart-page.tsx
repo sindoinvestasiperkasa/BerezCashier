@@ -278,6 +278,9 @@ export default function CartPage({ setView }: CartPageProps) {
   const handlePrintReceipt = () => {
     if (!lastTransactionForReceipt || !user) return;
   
+    console.log('User object for receipt:', user);
+    console.log('umkmName from user object:', user?.umkmName);
+
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -846,4 +849,5 @@ export default function CartPage({ setView }: CartPageProps) {
     
 
     
+
 
