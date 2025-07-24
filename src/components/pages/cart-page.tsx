@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -28,7 +28,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, isSameDay } from 'date-fns';
 import jsPDF from 'jspdf';
-import type { Transaction, CartItem as AppCartItem } from "@/providers/app-provider"; // Using types from provider
+import type { Transaction, CartItem as AppCartItem, UserData } from "@/providers/app-provider"; // Using types from provider
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -72,6 +72,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const [isHeldCartsOpen, setIsHeldCartsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  const [isShiftOpen, setIsShiftOpen] = useState(false);
   
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
@@ -394,7 +395,7 @@ export default function CartPage({ setView }: CartPageProps) {
       cashReceived: tx.paidAmount || tx.total || 0,
       changeAmount: Math.max(0, (tx.paidAmount || 0) - (tx.total || 0)),
       transactionNumber: tx.transactionNumber || tx.id,
-      transactionDate: tx.date,
+      date: tx.date,
     };
   
     setLastTransactionForReceipt(receiptData);
@@ -426,6 +427,17 @@ export default function CartPage({ setView }: CartPageProps) {
     return transactionsToday.reduce((sum, tx) => sum + (tx.total || 0), 0);
   }, [transactionsToday]);
 
+  const shiftSummary = useMemo(() => {
+    const cashSales = transactionsToday.filter(t => t.paymentMethod === 'Cash');
+    const nonCashSales = transactionsToday.filter(t => t.paymentMethod !== 'Cash');
+    return {
+      totalTransactions: transactionsToday.length,
+      cashRevenue: cashSales.reduce((sum, t) => sum + (t.total || 0), 0),
+      nonCashRevenue: nonCashSales.reduce((sum, t) => sum + (t.total || 0), 0),
+      totalRevenue: transactionsToday.reduce((sum, t) => sum + (t.total || 0), 0),
+    };
+  }, [transactionsToday]);
+
   return (
     <>
     <div className="p-4 md:p-6 flex flex-col h-full bg-secondary/30">
@@ -444,27 +456,8 @@ export default function CartPage({ setView }: CartPageProps) {
                 <History className="mr-2 h-4 w-4" />
                 Riwayat Hari Ini
             </Button>
-            <Button variant="outline">
-                 <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mr-2 h-4 w-4"
-                >
-                    <path d="M12 22h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v1" />
-                    <path d="m7 14 5-5 5 5" />
-                    <path d="M12 19V9" />
-                    <path d="M12 2v4" />
-                    <path d="M18 2v4" />
-                    <path d="M6 2v4" />
-                    <path d="M2 12h20" />
-                </svg>
+            <Button variant="outline" onClick={() => setIsShiftOpen(true)}>
+                <BadgeCent className="mr-2 h-4 w-4" />
                 Tutup Shift
             </Button>
             <Button variant="outline" onClick={handleHoldCart}>
@@ -825,6 +818,35 @@ export default function CartPage({ setView }: CartPageProps) {
                   </div>
               </DialogFooter>
           </DialogContent>
+      </Dialog>
+
+      {/* Shift Dialog */}
+      <Dialog open={isShiftOpen} onOpenChange={setIsShiftOpen}>
+        <DialogContent>
+            <DialogHeader><DialogTitle>Ringkasan Shift</DialogTitle><DialogDescription>Rekapitulasi transaksi kasir Anda pada sesi ini.</DialogDescription></DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                  <p>Total Transaksi</p>
+                  <p className="font-bold text-lg">{shiftSummary.totalTransactions}</p>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                  <p>Pendapatan Tunai</p>
+                  <p className="font-bold text-lg">{formatCurrency(shiftSummary.cashRevenue)}</p>
+              </div>
+                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                  <p>Pendapatan Non-Tunai</p>
+                  <p className="font-bold text-lg">{formatCurrency(shiftSummary.nonCashRevenue)}</p>
+              </div>
+              <Separator/>
+              <div className="flex justify-between items-center p-3 rounded-lg text-xl font-bold">
+                  <p>Total Pendapatan</p>
+                  <p>{formatCurrency(shiftSummary.totalRevenue)}</p>
+              </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsShiftOpen(false)}>Tutup</Button>
+            </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {/* New Customer Dialog */}
