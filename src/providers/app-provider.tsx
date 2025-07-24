@@ -28,10 +28,16 @@ export type NewTransactionData = {
     paymentMethod: string;
 }
 
+export type Customer = {
+  id: string;
+  name: string;
+}
+
 export type HeldCart = {
   id: number;
   cart: CartItem[];
-  customerName?: string;
+  customerName: string;
+  customerId?: string;
   heldAt: Date;
 };
 
@@ -53,6 +59,7 @@ interface AppContextType {
   cart: CartItem[];
   wishlist: Product[];
   transactions: Transaction[];
+  customers: Customer[];
   heldCarts: HeldCart[];
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
@@ -62,7 +69,8 @@ interface AppContextType {
   isInWishlist: (productId: string) => boolean;
   addTransaction: (data: NewTransactionData) => void;
   clearCart: () => void;
-  holdCart: (customerName: string) => void;
+  addCustomer: (name: string) => Customer;
+  holdCart: (customerName: string, customerId?: string) => void;
   resumeCart: (cartId: number) => void;
   deleteHeldCart: (cartId: number) => void;
   isAuthenticated: boolean;
@@ -80,6 +88,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [heldCarts, setHeldCarts] = useState<HeldCart[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([
+    { id: 'cust1', name: 'Budi Santoso' },
+    { id: 'cust2', name: 'Citra Lestari' },
+  ]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
   const { toast } = useToast();
@@ -215,7 +227,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const transaction: Transaction = {
         ...data,
         id: `TRX${Math.floor(10000 + Math.random() * 90000)}`,
-        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        date: new Date().toISOString(),
         status: 'Diproses',
         paymentStatus: 'Berhasil'
     };
@@ -226,12 +238,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setCart([]);
   };
 
-  const holdCart = (customerName: string) => {
+  const addCustomer = (name: string): Customer => {
+    const newCustomer = { id: `cust${Date.now()}`, name };
+    setCustomers(prev => [...prev, newCustomer]);
+    return newCustomer;
+  };
+
+  const holdCart = (customerName: string, customerId?: string) => {
     if (cart.length === 0) return;
     const newHeldCart: HeldCart = {
       id: Date.now(),
       cart: [...cart],
       customerName: customerName || 'Pelanggan Umum',
+      customerId: customerId,
       heldAt: new Date(),
     };
     setHeldCarts(prev => [...prev, newHeldCart]);
@@ -258,6 +277,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         cart, 
         wishlist, 
         transactions,
+        customers,
         heldCarts,
         addToCart, 
         removeFromCart, 
@@ -267,6 +287,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isInWishlist,
         addTransaction,
         clearCart,
+        addCustomer,
         holdCart,
         resumeCart,
         deleteHeldCart,

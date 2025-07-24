@@ -28,21 +28,24 @@ import {
 import { ScrollArea } from '../ui/scroll-area';
 import { format } from 'date-fns';
 
-
 interface CartPageProps {
   setView: (view: View) => void;
 }
 
 export default function CartPage({ setView }: CartPageProps) {
-  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart, transactions } = useApp();
+  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart, transactions, customers, addCustomer } = useApp();
   const { toast } = useToast();
 
   const [discountPercent, setDiscountPercent] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [amountReceived, setAmountReceived] = useState(0);
-  const [selectedCustomer, setSelectedCustomer] = useState("Pelanggan Umum");
+  const [selectedCustomerId, setSelectedCustomerId] = useState("_general_");
   const [isHeldCartsOpen, setIsHeldCartsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  
+  const [newCustomerName, setNewCustomerName] = useState('');
+
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = (subtotal * discountPercent) / 100;
@@ -85,6 +88,7 @@ export default function CartPage({ setView }: CartPageProps) {
     clearCart();
     setDiscountPercent(0);
     setAmountReceived(0);
+    setSelectedCustomerId("_general_");
     
     toast({
         title: "Transaksi Berhasil!",
@@ -103,19 +107,38 @@ export default function CartPage({ setView }: CartPageProps) {
 
   const handleHoldCart = () => {
     if (cart.length === 0) return;
-    holdCart(selectedCustomer);
+    const customer = customers.find(c => c.id === selectedCustomerId);
+    const customerName = customer ? customer.name : "Pelanggan Umum";
+    holdCart(customerName, selectedCustomerId);
     setDiscountPercent(0);
     setAmountReceived(0);
+    setSelectedCustomerId("_general_");
   };
 
   const handleResumeCart = (cartId: number) => {
-    resumeCart(cartId);
-    setIsHeldCartsOpen(false);
+    const held = heldCarts.find(h => h.id === cartId);
+    if(held) {
+      resumeCart(held.id);
+      setSelectedCustomerId(held.customerId || "_general_");
+      setIsHeldCartsOpen(false);
+    }
   };
   
   const handleDeleteHeldCart = (cartId: number) => {
     deleteHeldCart(cartId);
   }
+
+  const handleAddNewCustomer = () => {
+    if (newCustomerName.trim() === '') {
+        toast({ title: 'Nama tidak boleh kosong', variant: 'destructive' });
+        return;
+    }
+    const newCustomer = addCustomer(newCustomerName);
+    setSelectedCustomerId(newCustomer.id);
+    setNewCustomerName('');
+    setIsCustomerDialogOpen(false);
+    toast({ title: 'Pelanggan baru ditambahkan!' });
+  };
 
   const transactionsToday = transactions.filter(tx => {
     const txDate = new Date(tx.date);
@@ -124,6 +147,8 @@ export default function CartPage({ setView }: CartPageProps) {
            txDate.getMonth() === today.getMonth() &&
            txDate.getFullYear() === today.getFullYear();
   });
+  
+  const selectedCustomerName = customers.find(c => c.id === selectedCustomerId)?.name || 'Pelanggan Umum';
 
   return (
     <>
@@ -178,16 +203,18 @@ export default function CartPage({ setView }: CartPageProps) {
                 <CardContent className="p-4">
                     <Label>Pelanggan</Label>
                     <div className="flex gap-2 mt-1">
-                        <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                        <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Pilih pelanggan" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Pelanggan Umum">Pelanggan Umum</SelectItem>
-                                <SelectItem value="Member Satu">Member Satu</SelectItem>
+                                <SelectItem value="_general_">Pelanggan Umum</SelectItem>
+                                {customers.map(customer => (
+                                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
-                        <Button variant="outline" size="icon"><UserPlus className="h-5 w-5"/></Button>
+                        <Button variant="outline" size="icon" onClick={() => setIsCustomerDialogOpen(true)}><UserPlus className="h-5 w-5"/></Button>
                     </div>
                 </CardContent>
             </Card>
@@ -388,6 +415,29 @@ export default function CartPage({ setView }: CartPageProps) {
               <span>{formatCurrency(transactionsToday.reduce((sum, tx) => sum + tx.total, 0))}</span>
             </div>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Customer Dialog */}
+      <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Tambah Pelanggan Baru</DialogTitle>
+                <DialogDescription>Masukkan nama pelanggan untuk menambahkannya ke daftar.</DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <Label htmlFor="customer-name">Nama Pelanggan</Label>
+                <Input 
+                    id="customer-name" 
+                    value={newCustomerName}
+                    onChange={(e) => setNewCustomerName(e.target.value)}
+                    placeholder="Contoh: John Doe" 
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCustomerDialogOpen(false)}>Batal</Button>
+                <Button onClick={handleAddNewCustomer}>Simpan</Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
