@@ -70,7 +70,7 @@ export default function CartPage({ setView }: CartPageProps) {
         const defaultInventoryAccount = accounts.find(a => a.name === 'Persediaan') || accounts.find(a => a.category === 'Aset');
         if (defaultInventoryAccount) setInventoryAccountId(defaultInventoryAccount.id);
 
-        const defaultTaxAccount = accounts.find(a => a.category === 'Liabilitas');
+        const defaultTaxAccount = accounts.find(a => a.name === 'PPN Keluaran') || accounts.find(a => a.category === 'Liabilitas');
         if (defaultTaxAccount) setTaxAccountId(defaultTaxAccount.id);
     }
   }, [accounts]);
@@ -430,9 +430,9 @@ export default function CartPage({ setView }: CartPageProps) {
               <DialogTitle>Transaksi Ditahan</DialogTitle>
               <DialogDescription>Pilih transaksi untuk dilanjutkan atau hapus.</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <ScrollArea className="max-h-96">
-              <div className="space-y-4 px-1">
+          <ScrollArea className="max-h-96">
+            <div className="p-4">
+              <div className="space-y-4">
                   {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
                       heldCarts.map(held => (
                       <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
@@ -448,8 +448,8 @@ export default function CartPage({ setView }: CartPageProps) {
                       </div>
                   ))}
               </div>
-            </ScrollArea>
-          </div>
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
       
@@ -544,3 +544,4 @@ export default function CartPage({ setView }: CartPageProps) {
     
 
     
+
