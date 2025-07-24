@@ -10,8 +10,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { collection, doc, increment, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // Impor instance db yang sudah diinisialisasi
+import { adminDb } from '@/services/firebase-admin'; // Impor instance Admin DB
+import { FieldValue } from 'firebase-admin/firestore';
 
 const CartItemSchema = z.object({
   id: z.string(),
@@ -21,6 +21,7 @@ const CartItemSchema = z.object({
   hpp: z.number().optional().default(0), // Harga Pokok Penjualan per item
 });
 
+export type CreateTransactionInput = z.infer<typeof CreateTransactionInputSchema>;
 const CreateTransactionInputSchema = z.object({
   items: z.array(CartItemSchema),
   subtotal: z.number(),
@@ -37,14 +38,14 @@ const CreateTransactionInputSchema = z.object({
   taxAccountId: z.string().optional(),
   cashAccountId: z.string(), // Asumsi ada akun default untuk kas/bank
 });
-export type CreateTransactionInput = z.infer<typeof CreateTransactionInputSchema>;
 
+
+export type CreateTransactionOutput = z.infer<typeof CreateTransactionOutputSchema>;
 const CreateTransactionOutputSchema = z.object({
   success: z.boolean(),
   transactionId: z.string(),
   journalId: z.string().optional(),
 });
-export type CreateTransactionOutput = z.infer<typeof CreateTransactionOutputSchema>;
 
 // Fungsi wrapper yang akan dipanggil dari aplikasi Next.js
 export async function createTransaction(input: CreateTransactionInput): Promise<CreateTransactionOutput> {
@@ -58,10 +59,11 @@ const createTransactionFlow = ai.defineFlow(
     outputSchema: CreateTransactionOutputSchema,
   },
   async (input) => {
-    const batch = writeBatch(db);
+    const db = adminDb();
+    const batch = db.batch();
 
     // 1. Simpan data transaksi
-    const transactionRef = doc(collection(db, 'transactions'));
+    const transactionRef = db.collection('transactions').doc();
     batch.set(transactionRef, {
       idUMKM: input.idUMKM,
       customerId: input.customerId,
@@ -77,7 +79,7 @@ const createTransactionFlow = ai.defineFlow(
     });
 
     // 2. Buat Jurnal Umum
-    const journalRef = doc(collection(db, 'journals'));
+    const journalRef = db.collection('journals').doc();
     const journalEntries = [];
     
     const totalHpp = input.items.reduce((sum, item) => sum + (item.hpp || 0) * item.quantity, 0);
@@ -114,9 +116,9 @@ const createTransactionFlow = ai.defineFlow(
 
     // 3. Update Stok Produk
     input.items.forEach(item => {
-      const productRef = doc(db, 'products', item.id);
+      const productRef = db.collection('products').doc(item.id);
       // Asumsi ada field 'stock' di dokumen produk
-      batch.update(productRef, { stock: increment(-item.quantity) });
+      batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
     });
 
     await batch.commit();
