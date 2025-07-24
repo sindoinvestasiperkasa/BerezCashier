@@ -13,6 +13,11 @@ import { z } from 'zod';
 import { adminDb } from '@/services/firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
+const AttributeValueSchema = z.object({
+  attributeId: z.string(),
+  attributeName: z.string(),
+  value: z.any(),
+});
 
 const CartItemSchema = z.object({
   id: z.string(),
@@ -20,6 +25,7 @@ const CartItemSchema = z.object({
   price: z.number(),
   quantity: z.number(),
   hpp: z.number().optional().default(0), // Harga Pokok Penjualan per item
+  attributeValues: z.array(AttributeValueSchema).optional(),
 });
 
 export type CreateTransactionInput = z.infer<typeof CreateTransactionInputSchema>;
@@ -31,7 +37,7 @@ const CreateTransactionInputSchema = z.object({
   total: z.number(),
   paymentMethod: z.string(),
   customerId: z.string(),
-  customerName: z.string(), // Ditambahkan
+  customerName: z.string(),
   idUMKM: z.string(),
   isPkp: z.boolean().optional().default(false),
   // Account IDs
@@ -114,7 +120,7 @@ const createTransactionFlow = ai.defineFlow(
       taxAmount: input.taxAmount,
       items: input.items.map(({ hpp, ...rest }) => rest), // Hapus HPP dari item yang disimpan
       customerId: input.customerId,
-      customerName: input.customerName, // Ditambahkan
+      customerName: input.customerName,
       paymentMethod: input.paymentMethod,
       isPkp: input.isPkp,
       lines: journalLines,
