@@ -1,10 +1,10 @@
 "use client";
 
-import React, { createContext, useState, ReactNode } from 'react';
+import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import type { Product } from '@/lib/data';
-import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore } from "firebase/firestore";
 
 export interface CartItem extends Product {
   quantity: number;
@@ -26,6 +26,20 @@ export type NewTransactionData = {
     paymentMethod: string;
 }
 
+export type UserData = {
+    uid: string;
+    role: 'UMKM' | 'Employee' | 'SuperAdmin';
+    email: string;
+    // UMKM fields
+    ownerName?: string;
+    umkm_photo?: string;
+    // Employee fields
+    name?: string;
+    photo_url?: string;
+    [key: string]: any;
+};
+
+
 interface AppContextType {
   cart: CartItem[];
   wishlist: Product[];
@@ -39,6 +53,7 @@ interface AppContextType {
   addTransaction: (data: NewTransactionData) => void;
   clearCart: () => void;
   isAuthenticated: boolean;
+  user: UserData | null;
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
 }
@@ -52,26 +67,49 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseAuthUser | null) => {
+        if (firebaseUser) {
+            const storedUser = localStorage.getItem('sagara-user-data');
+            if(storedUser) {
+                setUser(JSON.parse(storedUser));
+                setIsAuthenticated(true);
+            }
+        } else {
+            setUser(null);
+            setIsAuthenticated(false);
+            localStorage.removeItem('sagara-user-data');
+        }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     try {
+      const db = getFirestore();
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      const user = userCredential.user;
+      const firebaseUser = userCredential.user;
 
-      if (!user.emailVerified) {
-        await auth.signOut();
+      if (!firebaseUser.emailVerified) {
+        await signOut(auth);
         throw new Error("Silakan periksa kotak masuk email Anda dan klik tautan verifikasi sebelum login.");
       }
 
-      let userData: any = null;
-      let userRole: string = '';
+      let userData: UserData | null = null;
+      let userRole: 'UMKM' | 'Employee' | 'SuperAdmin' = 'Employee';
 
-      const umkmDocRef = doc(db, 'dataUMKM', user.uid);
+      const umkmDocRef = doc(db, 'dataUMKM', firebaseUser.uid);
       const umkmDocSnap = await getDoc(umkmDocRef);
 
       if (umkmDocSnap.exists()) {
-        userData = { uid: user.uid, ...umkmDocSnap.data() };
-        userRole = userData.role || 'UMKM';
+        const data = umkmDocSnap.data();
+        userRole = data.role || 'UMKM';
+        userData = { uid: firebaseUser.uid, ...data, role: userRole } as UserData;
+
       } else {
         const employeeQuery = query(collection(db, 'employees'), where('email', '==', email));
         const employeeQuerySnapshot = await getDocs(employeeQuery);
@@ -81,39 +119,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const employeeData = employeeDoc.data();
 
           if (employeeData.canLogin !== true) {
-              await auth.signOut();
+              await signOut(auth);
               throw new Error("Akun karyawan Anda tidak aktif. Silakan hubungi administrator.");
           }
 
-          if (employeeData.uid === user.uid) {
-            userData = { id: employeeDoc.id, ...employeeData };
+          if (employeeData.uid === firebaseUser.uid) {
             userRole = 'Employee';
+            userData = { id: employeeDoc.id, ...employeeData, role: userRole } as UserData;
           }
         }
       }
 
       if (userData) {
-        userData.role = userRole;
+        setUser(userData);
         localStorage.setItem('sagara-user-data', JSON.stringify(userData));
         setIsAuthenticated(true);
         return true;
       } else {
-        await auth.signOut();
+        await signOut(auth);
         throw new Error("Data pengguna tidak ditemukan di database. Silakan hubungi administrator.");
       }
     } catch (error: any) {
         if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
             throw new Error("Kombinasi email dan password salah. Mohon periksa kembali.");
         }
-        // Re-throw other errors to be caught by the calling component
         throw error;
     }
   };
 
   const logout = async () => {
-    await auth.signOut();
-    localStorage.removeItem('sagara-user-data');
-    setIsAuthenticated(false);
+    await signOut(auth);
   };
 
   const addToCart = (product: Product) => {
@@ -191,6 +226,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addTransaction,
         clearCart,
         isAuthenticated,
+        user,
         login,
         logout,
       }}

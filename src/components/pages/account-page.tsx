@@ -11,7 +11,7 @@ interface AccountPageProps {
 }
 
 export default function AccountPage({ setView }: AccountPageProps) {
-  const { logout } = useApp();
+  const { logout, user } = useApp();
   const menuItems = [
     { icon: User, text: "Edit Profil", action: () => setView('edit-profile') },
     { icon: MapPin, text: "Alamat Saya", action: () => setView('my-address') },
@@ -19,17 +19,23 @@ export default function AccountPage({ setView }: AccountPageProps) {
     { icon: Settings, text: "Pengaturan", action: () => setView('settings') },
   ];
 
+  const userName = user?.role === 'UMKM' ? user.ownerName : user?.name;
+  const userEmail = user?.email;
+  const userPhoto = user?.role === 'UMKM' ? user.umkm_photo : user?.photo_url;
+  const nameFallback = userName ? userName.charAt(0).toUpperCase() : "U";
+
+
   return (
     <div className="bg-secondary/50 min-h-full">
       <div className="p-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-b-3xl">
         <div className="flex items-center gap-4 pt-8 pb-4">
           <Avatar className="h-20 w-20 border-4 border-primary-foreground/50">
-            <AvatarImage src="https://placehold.co/100x100.png" alt="User" />
-            <AvatarFallback>U</AvatarFallback>
+            <AvatarImage src={userPhoto} alt={userName} />
+            <AvatarFallback>{nameFallback}</AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="text-2xl font-bold">User Keren</h1>
-            <p className="text-sm opacity-90">user.keren@email.com</p>
+            <h1 className="text-2xl font-bold">{userName || "User Keren"}</h1>
+            <p className="text-sm opacity-90">{userEmail || "user.keren@email.com"}</p>
           </div>
         </div>
       </div>
