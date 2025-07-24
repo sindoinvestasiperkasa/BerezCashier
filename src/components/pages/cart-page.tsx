@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from "next/image";
 import { useApp } from "@/hooks/use-app";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -25,16 +25,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import jsPDF from 'jspdf';
-import type { Transaction } from "@/providers/app-provider";
+import type { Transaction, CartItem as AppCartItem } from "@/providers/app-provider"; // Using types from provider
+import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-interface CartPageProps {
-  setView: (view: View) => void;
-}
-
+// Data for receipt printing
 interface ReceiptData {
-    items: any[];
+    items: any[]; // Kept as any to match original logic for flexibility
     subtotal: number;
     discountAmount: number;
     taxAmount: number;
@@ -46,9 +45,17 @@ interface ReceiptData {
     transactionDate: Date;
 }
 
+interface CartPageProps {
+  setView: (view: View) => void;
+}
+
 
 export default function CartPage({ setView }: CartPageProps) {
-  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart, transactions, customers, addCustomer, accounts, user } = useApp();
+  const { 
+    cart, updateQuantity, removeFromCart, clearCart, addTransaction, 
+    heldCarts, holdCart, resumeCart, deleteHeldCart, 
+    transactions, customers, addCustomer, accounts, user 
+  } = useApp();
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -69,7 +76,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
 
-  const [isPkp, setIsPkp] = useState(false);
+  const [isPkp, setIsPkp] = useState(user?.isPkp || false);
   const [paymentAccountId, setPaymentAccountId] = useState<string | undefined>();
   const [salesAccountId, setSalesAccountId] = useState<string | undefined>();
   const [discountAccountId, setDiscountAccountId] = useState<string | undefined>();
@@ -79,10 +86,9 @@ export default function CartPage({ setView }: CartPageProps) {
 
   useEffect(() => {
     if (accounts.length > 0) {
-        // Find and set default accounts with specific names, with fallbacks
         const findAcc = (keywords: string[], category?: string) => accounts.find(a => (!category || a.category === category) && keywords.some(kw => a.name.toLowerCase().includes(kw)));
         
-        setSalesAccountId(prev => prev ?? findAcc(['penjualan produk'], 'Pendapatan')?.id);
+        setSalesAccountId(prev => prev ?? findAcc(['penjualan produk', 'penjualan'], 'Pendapatan')?.id);
         setDiscountAccountId(prev => prev ?? findAcc(['diskon penjualan', 'potongan penjualan'])?.id);
         setCogsAccountId(prev => prev ?? findAcc(['harga pokok penjualan', 'hpp'], 'Beban')?.id);
         setInventoryAccountId(prev => prev ?? findAcc(['persediaan'], 'Aset')?.id);
@@ -114,13 +120,17 @@ export default function CartPage({ setView }: CartPageProps) {
   const total = taxableAmount + taxAmount;
   const change = amountReceived > total ? amountReceived - total : 0;
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+        return "RpNaN";
+    }
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(amount);
   };
+  
 
   const handleOpenPaymentDialog = () => {
     if (cart.length === 0) {
@@ -169,7 +179,7 @@ export default function CartPage({ setView }: CartPageProps) {
             quantity: item.quantity,
             unitPrice: item.price,
             cogs: item.hpp || 0,
-            attributeValues: [], // Add attribute values if they exist on the item
+            attributeValues: [],
         }));
 
         const result = await addTransaction({
@@ -281,7 +291,7 @@ export default function CartPage({ setView }: CartPageProps) {
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [58, 210] // Standard thermal receipt paper width
+      format: [58, 210] 
     });
   
     const pageWidth = 58;
@@ -370,45 +380,48 @@ export default function CartPage({ setView }: CartPageProps) {
   };
 
   const handleReprintReceipt = (tx: Transaction) => {
-    // Make sure we have the necessary fields, providing defaults if they are missing
-    const items = tx.items || [];
-    const subtotal = items.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0);
-    const taxAmount = tx.taxAmount || 0;
-    const discountAmount = tx.discountAmount || 0;
-    const totalAmount = tx.amount || 0;
-    const paidAmount = tx.paidAmount || totalAmount;
+    const itemsForReceipt = tx.items || [];
+    const subtotal = itemsForReceipt.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0);
   
     const receiptData: ReceiptData = {
-      items: items.map(item => ({
-        ...item,
-        unitPrice: item.unitPrice || item.price, // Fallback to price for safety
-      })),
+      items: itemsForReceipt,
       subtotal,
-      discountAmount,
-      taxAmount,
-      total: totalAmount,
+      discountAmount: tx.discountAmount || 0,
+      taxAmount: tx.taxAmount || 0,
+      total: tx.amount || 0,
       paymentMethod: tx.paymentMethod || 'N/A',
-      cashReceived: paidAmount,
-      changeAmount: Math.max(0, paidAmount - totalAmount),
+      cashReceived: tx.paidAmount || tx.amount || 0,
+      changeAmount: Math.max(0, (tx.paidAmount || 0) - (tx.amount || 0)),
       transactionNumber: tx.id,
       transactionDate: new Date(tx.date),
     };
   
     setLastTransactionForReceipt(receiptData);
-    // Use a short timeout to ensure state is set before printing
     setTimeout(() => handlePrintReceipt(), 100);
   };
 
 
-  const transactionsToday = transactions.filter(tx => {
-    const txDate = new Date(tx.date);
-    const today = new Date();
-    return txDate.getDate() === today.getDate() &&
-           txDate.getMonth() === today.getMonth() &&
-           txDate.getFullYear() === today.getFullYear();
-  });
+  const transactionsToday = useMemo(() => {
+    return transactions
+      .filter(tx => {
+        const txDate = new Date(tx.date);
+        const today = new Date();
+        return isSameDay(txDate, today);
+      })
+      .map(tx => {
+        const debits = tx.lines?.reduce((sum, line) => sum + line.debit, 0) || 0;
+        const credits = tx.lines?.reduce((sum, line) => sum + line.credit, 0) || 0;
+        return {
+          ...tx,
+          isBalanced: Math.abs(debits - credits) < 0.01
+        };
+      })
+      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions]);
   
-  const selectedCustomerName = customers.find(c => c.id === selectedCustomerId)?.name || 'Pelanggan Umum';
+  const todayTotal = useMemo(() => {
+    return transactionsToday.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  }, [transactionsToday]);
 
   return (
     <>
@@ -766,40 +779,49 @@ export default function CartPage({ setView }: CartPageProps) {
       
       {/* History Dialog */}
       <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Riwayat Transaksi Hari Ini</DialogTitle>
-            <DialogDescription>Daftar semua transaksi yang berhasil hari ini.</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-2 py-4">
-              {transactionsToday.length === 0 ? (
-                <p className="text-center text-muted-foreground">Belum ada transaksi kasir hari ini.</p>
-              ) : (
-                transactionsToday.map(tx => (
-                  <div key={tx.id} className="p-3 border rounded-lg flex justify-between items-center text-sm">
-                    <div>
-                      <p className="font-mono text-xs">{tx.id}</p>
-                      <p className="font-semibold">{formatCurrency(tx.amount || 0)}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-muted-foreground">{format(new Date(tx.date), 'HH:mm')}</p>
-                      <Button size="sm" variant="outline" onClick={() => handleReprintReceipt(tx)}>
-                        <Printer className="mr-2 h-4 w-4" /> Cetak Ulang
-                      </Button>
-                    </div>
+          <DialogContent className="max-w-2xl">
+              <DialogHeader><DialogTitle>Riwayat Transaksi Hari Ini</DialogTitle></DialogHeader>
+              <ScrollArea className="max-h-[60vh]">
+                <div className="space-y-2 py-4">
+                    {transactionsToday.length === 0 ? (
+                        <p className="text-center text-muted-foreground">Belum ada transaksi kasir hari ini.</p>
+                     ) : (
+                        transactionsToday.map(tx => (
+                            <div key={tx.id} className="p-3 border rounded-lg flex justify-between items-center text-sm">
+                                <div>
+                                    <p className="font-mono text-xs">{tx.id}</p>
+                                    <p className="font-semibold">{formatCurrency(tx.amount)}</p>
+                                    <div className="mt-1">
+                                        {(tx as any).isBalanced ? (
+                                            <Badge variant="outline" className="text-green-600 border-green-500"><CheckCircle className="mr-1.5 h-3 w-3"/> Seimbang</Badge>
+                                        ) : (
+                                            <Badge variant="destructive"><AlertTriangle className="mr-1.5 h-3 w-3"/> Tidak Seimbang</Badge>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-muted-foreground">{format(new Date(tx.date), 'HH:mm')}</p>
+                                     {!(tx as any).isBalanced && (
+                                        <Button size="sm" variant="secondary" onClick={() => { /* Placeholder */ }}>
+                                            <Edit className="mr-2 h-4 w-4" /> Edit Akun
+                                        </Button>
+                                    )}
+                                    <Button size="sm" variant="outline" onClick={() => handleReprintReceipt(tx)}>
+                                        <Printer className="mr-2 h-4 w-4" /> Cetak Ulang
+                                    </Button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+              </ScrollArea>
+               <DialogFooter>
+                  <div className="w-full flex justify-between items-center font-bold text-lg">
+                      <span>Total:</span>
+                      <span>{formatCurrency(todayTotal)}</span>
                   </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-          <DialogFooter>
-            <div className="w-full flex justify-between items-center font-bold text-lg">
-              <span>Total:</span>
-              <span>{formatCurrency(transactionsToday.reduce((sum, tx) => sum + (tx.amount || 0), 0))}</span>
-            </div>
-          </DialogFooter>
-        </DialogContent>
+              </DialogFooter>
+          </DialogContent>
       </Dialog>
 
       {/* New Customer Dialog */}
@@ -849,15 +871,3 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
-
-    
-    
-
-    
-
-
-
-
-    
-
-    

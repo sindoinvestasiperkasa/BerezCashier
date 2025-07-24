@@ -26,6 +26,7 @@ export interface Transaction {
   paidAmount?: number;
   taxAmount?: number;
   discountAmount?: number;
+  lines?: { accountId: string; debit: number; credit: number; description: string }[];
 }
 
 export type NewTransactionClientData = {
@@ -193,7 +194,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return {
             id: doc.id,
             ...rest,
-            amount: data.amount,
+            amount: data.amount, // Using amount as per the latest logic
             date: jsDate.toISOString(),
         } as Transaction;
       });
@@ -422,5 +423,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    
