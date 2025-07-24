@@ -7,6 +7,8 @@ import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
+import { createTransaction, CreateTransactionInput, CreateTransactionOutput } from '@/ai/flows/create-transaction-flow';
+
 
 export interface CartItem extends Product {
   quantity: number;
@@ -22,11 +24,20 @@ export interface Transaction {
   paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
 }
 
-export type NewTransactionData = {
-    total: number;
+export type NewTransactionClientData = {
     items: CartItem[];
+    subtotal: number;
+    discountAmount: number;
+    taxAmount: number;
+    total: number;
     paymentMethod: string;
-}
+    customerId: string;
+    salesAccountId: string;
+    cogsAccountId: string;
+    inventoryAccountId: string;
+    discountAccountId?: string;
+    taxAccountId?: string;
+};
 
 export type Customer = {
   id: string;
@@ -80,7 +91,7 @@ interface AppContextType {
   addToWishlist: (product: Product) => void;
   removeFromWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
-  addTransaction: (data: NewTransactionData) => void;
+  addTransaction: (data: NewTransactionClientData) => Promise<CreateTransactionOutput>;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
@@ -132,6 +143,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setCustomers([]);
         setProducts([]);
         setAccounts([]);
+        setTransactions([]);
         return;
     };
     
@@ -160,11 +172,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setAccounts(accountsData);
     });
 
+    const transactionsQuery = query(collection(db, "transactions"), where("idUMKM", "==", idUMKM));
+    const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+        const transactionsData = snapshot.docs.map(doc => ({ 
+          id: doc.id,
+          date: new Date(doc.data().date.seconds * 1000).toISOString(),
+          ...doc.data() 
+        } as Transaction));
+        setTransactions(transactionsData);
+    });
+
 
     return () => {
         unsubCustomers();
         unsubProducts();
         unsubAccounts();
+        unsubTransactions();
     };
   }, [user, db]);
 
@@ -276,15 +299,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return wishlist.some(item => item.id === productId);
   };
 
-  const addTransaction = (data: NewTransactionData) => {
-    const transaction: Transaction = {
-        ...data,
-        id: `TRX${Math.floor(10000 + Math.random() * 90000)}`,
-        date: new Date().toISOString(),
-        status: 'Diproses',
-        paymentStatus: 'Berhasil'
+  const addTransaction = async (data: NewTransactionClientData): Promise<CreateTransactionOutput> => {
+    if (!user) throw new Error("User not authenticated");
+    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+    if (!idUMKM) throw new Error("UMKM ID not found");
+
+    const cashAccount = accounts.find(a => a.name === "Kas" || a.category === "Aset");
+    if (!cashAccount) throw new Error("Akun Kas/Bank default tidak ditemukan.");
+
+    const transactionData: CreateTransactionInput = {
+      ...data,
+      idUMKM,
+      cashAccountId: cashAccount.id,
     };
-    setTransactions(prev => [transaction, ...prev]);
+    
+    // onSnapshot akan memperbarui state transaksi secara otomatis
+    return await createTransaction(transactionData);
   };
 
   const clearCart = () => {

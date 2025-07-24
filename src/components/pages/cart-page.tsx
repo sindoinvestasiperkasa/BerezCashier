@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, Settings2, PlayCircle, Edit } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, Settings2, PlayCircle, Edit, Loader2 } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
@@ -33,9 +33,10 @@ interface CartPageProps {
 }
 
 export default function CartPage({ setView }: CartPageProps) {
-  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart, transactions, customers, addCustomer, accounts } = useApp();
+  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart, transactions, customers, addCustomer, accounts, user } = useApp();
   const { toast } = useToast();
 
+  const [isProcessing, setIsProcessing] = useState(false);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [amountReceived, setAmountReceived] = useState(0);
@@ -61,7 +62,7 @@ export default function CartPage({ setView }: CartPageProps) {
         const defaultSalesAccount = accounts.find(a => a.name === 'Penjualan Produk') || accounts.find(a => a.category === 'Pendapatan');
         if (defaultSalesAccount) setSalesAccountId(defaultSalesAccount.id);
 
-        const defaultDiscountAccount = accounts.find(a => a.name === 'Diskon Penjualan') || accounts.find(a => a.category === 'Pendapatan');
+        const defaultDiscountAccount = accounts.find(a => a.name === 'Diskon Penjualan') || accounts.find(a => a.category === 'Pendapatan' || a.category === 'Beban');
         if (defaultDiscountAccount) setDiscountAccountId(defaultDiscountAccount.id);
 
         const defaultCogsAccount = accounts.find(a => a.name === 'Harga Pokok Penjualan (HPP)') || accounts.find(a => a.category === 'Beban');
@@ -93,40 +94,58 @@ export default function CartPage({ setView }: CartPageProps) {
     }).format(amount);
   };
   
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (cart.length === 0) {
-      toast({
-        title: "Keranjang Kosong",
-        description: "Silakan tambahkan produk terlebih dahulu.",
-        variant: "destructive"
-      });
+      toast({ title: "Keranjang Kosong", description: "Silakan tambahkan produk terlebih dahulu.", variant: "destructive" });
       return;
     }
     
     if (paymentMethod === 'Cash' && amountReceived < total) {
-      toast({
-        title: "Uang Tidak Cukup",
-        description: "Uang yang diterima kurang dari total belanja.",
-        variant: "destructive"
-      });
+      toast({ title: "Uang Tidak Cukup", description: "Uang yang diterima kurang dari total belanja.", variant: "destructive" });
       return;
     }
 
-    addTransaction({
-      total,
-      items: cart,
-      paymentMethod: paymentMethod,
-    });
+    if (!salesAccountId || !cogsAccountId || !inventoryAccountId || (isPkp && !taxAccountId) || (discountAmount > 0 && !discountAccountId)) {
+        toast({ title: "Akun Belum Lengkap", description: "Silakan pilih semua akun yang diperlukan di Pengaturan Akun.", variant: "destructive" });
+        return;
+    }
 
-    clearCart();
-    setDiscountPercent(0);
-    setAmountReceived(0);
-    setSelectedCustomerId("_general_");
-    
-    toast({
-        title: "Transaksi Berhasil!",
-        description: "Transaksi telah berhasil disimpan.",
-    });
+    setIsProcessing(true);
+
+    try {
+        const result = await addTransaction({
+            items: cart,
+            subtotal,
+            discountAmount,
+            taxAmount,
+            total,
+            paymentMethod,
+            customerId: selectedCustomerId,
+            salesAccountId,
+            cogsAccountId,
+            inventoryAccountId,
+            discountAccountId: discountAmount > 0 ? discountAccountId : undefined,
+            taxAccountId: isPkp ? taxAccountId : undefined,
+        });
+
+        if (result.success) {
+            clearCart();
+            setDiscountPercent(0);
+            setAmountReceived(0);
+            setSelectedCustomerId("_general_");
+            toast({
+                title: "Transaksi Berhasil!",
+                description: `Transaksi #${result.transactionId.substring(0,5)} berhasil disimpan.`,
+            });
+        } else {
+             toast({ title: "Transaksi Gagal", description: "Terjadi kesalahan saat memproses transaksi.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error(error);
+        toast({ title: "Transaksi Gagal", description: "Terjadi kesalahan yang tidak terduga.", variant: "destructive" });
+    } finally {
+        setIsProcessing(false);
+    }
   }
   
   const handleClearCart = () => {
@@ -411,13 +430,13 @@ export default function CartPage({ setView }: CartPageProps) {
             </div>
 
             <div className="flex gap-4">
-                <Button variant="outline" className="h-12 text-md font-bold flex-1" onClick={handleHoldCart} disabled={cart.length === 0}>
+                <Button variant="outline" className="h-12 text-md font-bold flex-1" onClick={handleHoldCart} disabled={cart.length === 0 || isProcessing}>
                     <PauseCircle className="mr-2 h-5 w-5" />
                     Tahan
                 </Button>
-                <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handlePayment} disabled={cart.length === 0}>
-                    <DollarSign className="mr-2 h-5 w-5" />
-                    Bayar
+                <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handlePayment} disabled={cart.length === 0 || isProcessing}>
+                    {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <DollarSign className="mr-2 h-5 w-5" />}
+                    {isProcessing ? 'Memproses...' : 'Bayar'}
                 </Button>
             </div>
         </div>
@@ -544,4 +563,3 @@ export default function CartPage({ setView }: CartPageProps) {
     
 
     
-

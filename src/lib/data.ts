@@ -4,6 +4,8 @@ export type Product = {
   categoryId: string;
   categoryName?: string; // Will be populated after fetching from productCategories
   price: number;
+  hpp?: number; // Harga Pokok Penjualan
+  stock?: number;
   imageUrl: string;
   imageUrls?: string[];
   description: string;
