@@ -39,7 +39,7 @@ interface AppContextType {
   addTransaction: (data: NewTransactionData) => void;
   clearCart: () => void;
   isAuthenticated: boolean;
-  login: (email: string, pass: string) => Promise<void>;
+  login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -54,16 +54,65 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const login = async (email: string, pass: string) => {
-    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-    const user = userCredential.user;
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      const user = userCredential.user;
 
-    // In a real app, you would fetch user data from your database
-    // For this prototype, we'll just set isAuthenticated to true
-    setIsAuthenticated(true);
+      if (!user.emailVerified) {
+        await auth.signOut();
+        throw new Error("Silakan periksa kotak masuk email Anda dan klik tautan verifikasi sebelum login.");
+      }
+
+      let userData: any = null;
+      let userRole: string = '';
+
+      const umkmDocRef = doc(db, 'dataUMKM', user.uid);
+      const umkmDocSnap = await getDoc(umkmDocRef);
+
+      if (umkmDocSnap.exists()) {
+        userData = { uid: user.uid, ...umkmDocSnap.data() };
+        userRole = userData.role || 'UMKM';
+      } else {
+        const employeeQuery = query(collection(db, 'employees'), where('email', '==', email));
+        const employeeQuerySnapshot = await getDocs(employeeQuery);
+
+        if (!employeeQuerySnapshot.empty) {
+          const employeeDoc = employeeQuerySnapshot.docs[0];
+          const employeeData = employeeDoc.data();
+
+          if (employeeData.canLogin !== true) {
+              await auth.signOut();
+              throw new Error("Akun karyawan Anda tidak aktif. Silakan hubungi administrator.");
+          }
+
+          if (employeeData.uid === user.uid) {
+            userData = { id: employeeDoc.id, ...employeeData };
+            userRole = 'Employee';
+          }
+        }
+      }
+
+      if (userData) {
+        userData.role = userRole;
+        localStorage.setItem('sagara-user-data', JSON.stringify(userData));
+        setIsAuthenticated(true);
+        return true;
+      } else {
+        await auth.signOut();
+        throw new Error("Data pengguna tidak ditemukan di database. Silakan hubungi administrator.");
+      }
+    } catch (error: any) {
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            throw new Error("Kombinasi email dan password salah. Mohon periksa kembali.");
+        }
+        // Re-throw other errors to be caught by the calling component
+        throw error;
+    }
   };
 
   const logout = async () => {
     await auth.signOut();
+    localStorage.removeItem('sagara-user-data');
     setIsAuthenticated(false);
   };
 

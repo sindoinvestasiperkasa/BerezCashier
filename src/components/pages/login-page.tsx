@@ -11,6 +11,7 @@ import { Input } from "../ui/input";
 import { useApp } from "@/hooks/use-app";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 const loginSchema = z.object({
   email: z.string().email("Alamat email tidak valid"),
@@ -22,6 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage({ setView }: { setView: (view: AuthView) => void; }) {
   const { login } = useApp();
   const { toast } = useToast();
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   
   const form = useForm<LoginFormValues>({
@@ -36,8 +38,14 @@ export default function LoginPage({ setView }: { setView: (view: AuthView) => vo
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      await login(data.email, data.password);
-      // The app state will change via the context, and AppShellManager will handle the redirect.
+      const loginSuccess = await login(data.email, data.password);
+      if (loginSuccess) {
+          toast({
+            title: "Login Berhasil",
+            description: "Selamat datang! Mengarahkan Anda ke dasbor.",
+          });
+          router.push('/dashboard');
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
