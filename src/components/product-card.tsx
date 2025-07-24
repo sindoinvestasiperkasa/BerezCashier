@@ -78,7 +78,7 @@ export default function ProductCard({ product, onProductClick }: ProductCardProp
         </div>
         <div className="p-3">
           <h3 className="font-bold text-sm truncate">{product.name}</h3>
-          <p className="text-xs text-muted-foreground">{product.category}</p>
+          <p className="text-xs text-muted-foreground">{product.categoryName}</p>
           <div className="flex justify-between items-center mt-3">
             <span className="font-bold text-primary">
               {formatCurrency(product.price)}

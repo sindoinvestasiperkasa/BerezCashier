@@ -31,74 +31,94 @@ const iconMap: { [key: string]: React.ElementType } = {
   "Potong Rambut": Scissors,
   Laundry: Shirt,
   Transportasi: Car,
-  // Default/fallback icon
   Default: ShoppingBasket,
 };
+
+interface ProductCategory {
+  id: string;
+  name: string;
+  icon?: string;
+}
 
 export default function HomePage() {
   const { user } = useApp();
   const [products, setProducts] = useState<Product[]>([]);
+  const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchProductsAndCategories = async () => {
       if (!user) return;
 
       setIsLoading(true);
       const db = getFirestore();
-      const productsCollection = collection(db, "products");
-      
       const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
 
       if (!idUMKM) {
         setProducts([]);
+        setProductCategories([]);
         setIsLoading(false);
         return;
       }
 
-      const q = query(
-        productsCollection, 
-        where("productType", "==", "Jasa"),
-        where("idUMKM", "==", idUMKM)
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const productsData: Product[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        productsData.push({
-          id: doc.id,
-          name: data.name,
-          category: data.category,
-          price: data.price,
-          imageUrl: data.imageUrls?.[0] || "https://placehold.co/300x300.png",
-          description: data.description,
-          productType: data.productType,
-          imageUrls: data.imageUrls,
+      try {
+        // 1. Fetch Categories
+        const categoriesQuery = query(collection(db, "productCategories"), where("idUMKM", "==", idUMKM));
+        const categoriesSnapshot = await getDocs(categoriesQuery);
+        const categoriesData: ProductCategory[] = categoriesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name,
+            icon: doc.data().name // Use name for icon mapping, can be changed
+        }));
+        setProductCategories(categoriesData);
+
+        // 2. Fetch Products
+        const productsQuery = query(
+          collection(db, "products"),
+          where("productType", "==", "Jasa"),
+          where("idUMKM", "==", idUMKM)
+        );
+        const productsSnapshot = await getDocs(productsQuery);
+        
+        // 3. Map products with category names
+        const productsData: Product[] = productsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const category = categoriesData.find(cat => cat.id === data.categoryId);
+          return {
+            id: doc.id,
+            name: data.name,
+            categoryId: data.categoryId,
+            categoryName: category ? category.name : "Uncategorized",
+            price: data.price,
+            imageUrl: data.imageUrls?.[0] || "https://placehold.co/300x300.png",
+            description: data.description,
+            productType: data.productType,
+            imageUrls: data.imageUrls,
+          };
         });
-      });
-      setProducts(productsData);
-      setIsLoading(false);
+
+        setProducts(productsData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    fetchProducts();
+    fetchProductsAndCategories();
   }, [user]);
 
-  const categories = useMemo(() => {
-    const uniqueCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
-    const dynamicCategories = uniqueCategories.map(cat => ({
-        name: cat,
-        icon: Object.keys(iconMap).includes(cat) ? cat : "Default",
-    }));
-    return [{ name: "All", icon: "All" }, ...dynamicCategories];
-  }, [products]);
+  const displayCategories = useMemo(() => {
+    const allCategory: ProductCategory = { id: "All", name: "All", icon: "All" };
+    return [allCategory, ...productCategories];
+  }, [productCategories]);
 
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
-      selectedCategory === "All" || product.category === selectedCategory;
+      selectedCategoryId === "All" || product.categoryId === selectedCategoryId;
     const matchesSearch = product.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -141,15 +161,15 @@ export default function HomePage() {
       <section className="p-4 md:p-6">
         <h2 className="text-xl font-bold mb-3 text-foreground">Kategori</h2>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
-          {categories.map((category) => {
-            const Icon = iconMap[category.icon] || iconMap["Default"];
+          {displayCategories.map((category) => {
+            const Icon = iconMap[category.icon || "Default"] || iconMap["Default"];
             return (
               <button
-                key={category.name}
-                onClick={() => setSelectedCategory(category.name)}
+                key={category.id}
+                onClick={() => setSelectedCategoryId(category.id)}
                 className={cn(
                   "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-lg border transition-colors flex-shrink-0",
-                  selectedCategory === category.name
+                  selectedCategoryId === category.id
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-card text-foreground hover:bg-secondary"
                 )}

@@ -1,7 +1,8 @@
 export type Product = {
   id: string;
   name: string;
-  category: string;
+  categoryId: string;
+  categoryName?: string; // Will be populated after fetching from productCategories
   price: number;
   imageUrl: string;
   imageUrls?: string[];
@@ -20,7 +21,7 @@ export const products: Product[] = [
   {
     id: "1",
     name: "Beras Pandan Wangi",
-    category: "Beras",
+    categoryId: "Beras",
     price: 68000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Beras Pandan Wangi asli Cianjur, pulen dan wangi alami. Kualitas terjamin.",
@@ -38,7 +39,7 @@ export const products: Product[] = [
   {
     id: "2",
     name: "Minyak Goreng Sania",
-    category: "Groceries",
+    categoryId: "Groceries",
     price: 35000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Minyak goreng kelapa sawit, bening dan tidak cepat hitam. Cocok untuk segala jenis masakan.",
@@ -51,7 +52,7 @@ export const products: Product[] = [
   {
     id: "3",
     name: "Wortel Berastagi",
-    category: "Sayuran",
+    categoryId: "Sayuran",
     price: 12000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Wortel segar dari dataran tinggi Berastagi, kaya akan vitamin A. Manis dan renyah.",
@@ -61,7 +62,7 @@ export const products: Product[] = [
   {
     id: "4",
     name: "Apel Fuji",
-    category: "Buah",
+    categoryId: "Buah",
     price: 45000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Apel Fuji impor berkualitas, rasa manis dengan tekstur renyah dan juicy.",
@@ -71,7 +72,7 @@ export const products: Product[] = [
   {
     id: "5",
     name: "Daging Sapi Has Dalam",
-    category: "Daging",
+    categoryId: "Daging",
     price: 135000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Daging sapi bagian has dalam (tenderloin), sangat empuk dan cocok untuk steak atau rendang.",
@@ -81,7 +82,7 @@ export const products: Product[] = [
   {
     id: "6",
     name: "Telur Ayam Negeri",
-    category: "Telur",
+    categoryId: "Telur",
     price: 28000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Telur ayam negeri segar, cangkang bersih dan tebal. Sumber protein hewani yang baik.",
@@ -91,7 +92,7 @@ export const products: Product[] = [
   {
     id: "7",
     name: "Susu UHT Full Cream",
-    category: "Susu",
+    categoryId: "Susu",
     price: 18000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Susu UHT full cream, kaya kalsium dan vitamin. Rasa gurih dan creamy.",
@@ -104,7 +105,7 @@ export const products: Product[] = [
   {
     id: "8",
     name: "Bawang Merah Brebes",
-    category: "Bawang",
+    categoryId: "Bawang",
     price: 25000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Bawang merah asli Brebes, ukuran sedang, aroma kuat dan menyengat. Cocok untuk bumbu dasar masakan.",
@@ -114,7 +115,7 @@ export const products: Product[] = [
   {
     id: "9",
     name: "Gula Pasir Gulaku",
-    category: "Groceries",
+    categoryId: "Groceries",
     price: 16000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Gula pasir putih bersih dari tebu pilihan, manis alami.",
@@ -125,7 +126,7 @@ export const products: Product[] = [
   {
     id: "10",
     name: "Bayam Segar",
-    category: "Sayuran",
+    categoryId: "Sayuran",
     price: 5000,
     imageUrl: "https://placehold.co/300x300.png",
     description: "Bayam hijau segar, petikan baru. Kaya akan zat besi.",

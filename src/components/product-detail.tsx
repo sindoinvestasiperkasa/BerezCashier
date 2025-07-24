@@ -70,7 +70,7 @@ export default function ProductDetail({ product, isOpen, onClose }: ProductDetai
         <div className="p-6 flex-grow flex flex-col overflow-y-auto">
             <SheetHeader>
               <SheetTitle className="text-2xl font-bold text-left">{product.name}</SheetTitle>
-              <SheetDescription className="text-left">{product.category}</SheetDescription>
+              <SheetDescription className="text-left">{product.categoryName}</SheetDescription>
             </SheetHeader>
             <p className="text-foreground mt-4">{product.description}</p>
             
