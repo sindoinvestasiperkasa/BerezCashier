@@ -21,7 +21,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
 
   const userName = user?.role === 'UMKM' ? user.ownerName : user?.name;
   const userEmail = user?.email;
-  const userPhoto = user?.role === 'UMKM' ? user.umkm_photo : user?.photo_url;
+  const userPhoto = user?.role === 'UMKM' ? user.photoUrl : user?.photo_url;
   const nameFallback = userName ? userName.charAt(0).toUpperCase() : "U";
 
 
