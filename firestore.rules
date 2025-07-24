@@ -1,10 +1,11 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
+    // WARNING: These rules are insecure and are only intended for development.
+    // You should secure your database before going to production.
+    // https://firebase.google.com/docs/firestore/security/get-started
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }
