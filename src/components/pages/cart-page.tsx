@@ -192,7 +192,7 @@ export default function CartPage({ setView }: CartPageProps) {
 
         if (result.success) {
             setLastTransactionForReceipt({
-                items: cart,
+                items: cartItemsForTransaction,
                 subtotal: subtotal,
                 discountAmount: discountAmount,
                 taxAmount: taxAmount,
@@ -320,10 +320,10 @@ export default function CartPage({ setView }: CartPageProps) {
     y += 4;
   
     lastTransactionForReceipt.items.forEach(item => {
-      doc.text(item.name, margin, y);
+      doc.text(item.productName, margin, y);
       y += 3;
-      const itemLine = `${item.quantity} x ${item.price.toLocaleString('id-ID')}`;
-      const itemTotal = (item.quantity * item.price).toLocaleString('id-ID');
+      const itemLine = `${item.quantity} x ${item.unitPrice.toLocaleString('id-ID')}`;
+      const itemTotal = (item.quantity * item.unitPrice).toLocaleString('id-ID');
       doc.text(itemLine, margin, y);
       doc.text(itemTotal, pageWidth - margin, y, { align: 'right' });
       y += 3;
