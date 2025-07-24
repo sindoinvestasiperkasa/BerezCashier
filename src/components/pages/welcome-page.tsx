@@ -67,8 +67,8 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
   );
 
   return (
-    <div className="flex flex-col h-full justify-center">
-        <div className="w-full max-w-xs mx-auto text-center p-6">
+    <div className="h-full flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-xs mx-auto text-center">
             <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Cashier</h1>
             <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk kasir Anda.</p>
             <Carousel 
