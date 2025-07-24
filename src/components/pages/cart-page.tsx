@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -9,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, Settings2, PlayCircle, Edit, Loader2 } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, Settings2, PlayCircle, Edit, Loader2, CheckCircle } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
@@ -41,6 +40,11 @@ export default function CartPage({ setView }: CartPageProps) {
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [amountReceived, setAmountReceived] = useState(0);
   const [selectedCustomerId, setSelectedCustomerId] = useState("_general_");
+  
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [lastTransactionId, setLastTransactionId] = useState<string | null>(null);
+
   const [isHeldCartsOpen, setIsHeldCartsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
@@ -93,8 +97,8 @@ export default function CartPage({ setView }: CartPageProps) {
       minimumFractionDigits: 0,
     }).format(amount);
   };
-  
-  const handlePayment = async () => {
+
+  const handleOpenPaymentDialog = () => {
     if (cart.length === 0) {
       toast({ title: "Keranjang Kosong", description: "Silakan tambahkan produk terlebih dahulu.", variant: "destructive" });
       return;
@@ -110,6 +114,11 @@ export default function CartPage({ setView }: CartPageProps) {
         return;
     }
 
+    setIsConfirmOpen(true);
+  }
+  
+  const handleConfirmPayment = async () => {
+    setIsConfirmOpen(false);
     setIsProcessing(true);
 
     try {
@@ -121,22 +130,16 @@ export default function CartPage({ setView }: CartPageProps) {
             total,
             paymentMethod,
             customerId: selectedCustomerId,
-            salesAccountId,
-            cogsAccountId,
-            inventoryAccountId,
+            salesAccountId: salesAccountId!,
+            cogsAccountId: cogsAccountId!,
+            inventoryAccountId: inventoryAccountId!,
             discountAccountId: discountAmount > 0 ? discountAccountId : undefined,
             taxAccountId: isPkp ? taxAccountId : undefined,
         });
 
         if (result.success) {
-            clearCart();
-            setDiscountPercent(0);
-            setAmountReceived(0);
-            setSelectedCustomerId("_general_");
-            toast({
-                title: "Transaksi Berhasil!",
-                description: `Transaksi #${result.transactionId.substring(0,5)} berhasil disimpan.`,
-            });
+            setLastTransactionId(result.transactionId);
+            setIsSuccessOpen(true);
         } else {
              toast({ title: "Transaksi Gagal", description: "Terjadi kesalahan saat memproses transaksi.", variant: "destructive" });
         }
@@ -147,13 +150,21 @@ export default function CartPage({ setView }: CartPageProps) {
         setIsProcessing(false);
     }
   }
+
+  const handleFinishTransaction = () => {
+    setIsSuccessOpen(false);
+    clearCart();
+    setDiscountPercent(0);
+    setAmountReceived(0);
+    setSelectedCustomerId("_general_");
+    setLastTransactionId(null);
+  }
   
   const handleClearCart = () => {
     clearCart();
     toast({
       title: 'Keranjang Dikosongkan',
       description: 'Semua item telah dihapus dari keranjang.',
-      variant: 'destructive',
     });
   }
 
@@ -434,13 +445,99 @@ export default function CartPage({ setView }: CartPageProps) {
                     <PauseCircle className="mr-2 h-5 w-5" />
                     Tahan
                 </Button>
-                <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handlePayment} disabled={cart.length === 0 || isProcessing}>
+                <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handleOpenPaymentDialog} disabled={cart.length === 0 || isProcessing}>
                     {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <DollarSign className="mr-2 h-5 w-5" />}
                     {isProcessing ? 'Memproses...' : 'Bayar'}
                 </Button>
             </div>
         </div>
     </div>
+    
+      {/* Confirmation Dialog */}
+      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Konfirmasi Pembayaran</DialogTitle>
+                  <DialogDescription>
+                      Harap periksa kembali pesanan Anda sebelum melanjutkan.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="my-4">
+                  <h4 className="font-semibold mb-2">Item Pesanan:</h4>
+                  <ScrollArea className="max-h-32 pr-4">
+                      <div className="space-y-2">
+                      {cart.map((item, index) => (
+                          <div key={index} className="flex justify-between text-sm">
+                              <span>{item.name} <span className="text-muted-foreground">x{item.quantity}</span></span>
+                              <span>{formatCurrency(item.price * item.quantity)}</span>
+                          </div>
+                      ))}
+                      </div>
+                  </ScrollArea>
+                  <Separator className="my-3"/>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                        <span>Subtotal</span>
+                        <span>{formatCurrency(subtotal)}</span>
+                    </div>
+                     <div className="flex justify-between">
+                        <span>Diskon ({discountPercent}%)</span>
+                        <span className="text-destructive">- {formatCurrency(discountAmount)}</span>
+                    </div>
+                     {isPkp && <div className="flex justify-between">
+                        <span>Pajak (11%)</span>
+                        <span>{formatCurrency(taxAmount)}</span>
+                    </div>}
+                  </div>
+                  <Separator className="my-3"/>
+                   <div className="flex justify-between font-bold text-lg mt-1">
+                      <span>Total</span>
+                      <span>{formatCurrency(total)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-base mt-2">
+                      <span>Metode Pembayaran</span>
+                      <span>{paymentMethod}</span>
+                  </div>
+                  {paymentMethod === 'Cash' && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                          <span>Uang Tunai</span>
+                          <span>{formatCurrency(amountReceived)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-semibold">
+                          <span>Kembalian</span>
+                          <span>{formatCurrency(change)}</span>
+                      </div>
+                    </>
+                  )}
+              </div>
+              <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>Batal</Button>
+                  <Button onClick={handleConfirmPayment}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Konfirmasi & Bayar
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={isSuccessOpen} onOpenChange={handleFinishTransaction}>
+        <DialogContent className="sm:max-w-sm text-center">
+            <DialogHeader>
+                <DialogTitle className="text-center w-full">Pembayaran Berhasil!</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                <div className="animate-in fade-in zoom-in-50 duration-500">
+                    <CheckCircle className="h-24 w-24 text-green-500" />
+                </div>
+                <p className="text-muted-foreground">Transaksi <span className="font-mono font-semibold">{lastTransactionId?.substring(0,5)}</span> berhasil disimpan.</p>
+            </div>
+            <DialogFooter className="sm:justify-center gap-2">
+                <Button variant="outline" onClick={handleFinishTransaction}>Transaksi Baru</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     
       {/* Held Carts Dialog */}
       <Dialog open={isHeldCartsOpen} onOpenChange={setIsHeldCartsOpen}>
@@ -557,9 +654,5 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
-
-
-
-    
 
     
