@@ -85,7 +85,7 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                     {Array.isArray(transaction.items) && transaction.items.map((item, index) => (
                     <div key={`${transaction.id}-${item.id}-${index}`} className="flex items-center gap-4">
                         <Image 
-                            src={item.imageUrl} 
+                            src={item.imageUrl || 'https://placehold.co/64x64.png'} 
                             alt={item.name} 
                             width={64} 
                             height={64} 
