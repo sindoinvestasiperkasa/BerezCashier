@@ -57,14 +57,14 @@ export default function CartPage({ setView }: CartPageProps) {
 
   useEffect(() => {
     if (accounts.length > 0) {
-        // Find and set default accounts
-        const defaultSalesAccount = accounts.find(a => a.category === 'Pendapatan');
+        // Find and set default accounts with specific names, with fallbacks
+        const defaultSalesAccount = accounts.find(a => a.name === 'Penjualan Produk') || accounts.find(a => a.category === 'Pendapatan');
         if (defaultSalesAccount) setSalesAccountId(defaultSalesAccount.id);
 
-        const defaultCogsAccount = accounts.find(a => a.category === 'Beban');
+        const defaultCogsAccount = accounts.find(a => a.name === 'Harga Pokok Penjualan') || accounts.find(a => a.category === 'Beban');
         if (defaultCogsAccount) setCogsAccountId(defaultCogsAccount.id);
 
-        const defaultInventoryAccount = accounts.find(a => a.category === 'Aset');
+        const defaultInventoryAccount = accounts.find(a => a.name === 'Persediaan') || accounts.find(a => a.category === 'Aset');
         if (defaultInventoryAccount) setInventoryAccountId(defaultInventoryAccount.id);
 
         const defaultTaxAccount = accounts.find(a => a.category === 'Liabilitas');
