@@ -320,8 +320,8 @@ export default function CartPage({ setView }: CartPageProps) {
               <DialogTitle>Transaksi Ditahan</DialogTitle>
               <DialogDescription>Pilih transaksi untuk dilanjutkan atau hapus.</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-96 -mx-6 px-6">
-            <div className="py-4 px-4 space-y-4">
+          <ScrollArea className="-mx-6 px-6 max-h-96">
+            <div className="py-4 space-y-4">
                 {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
                     heldCarts.map(held => (
                     <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
