@@ -11,7 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb } from '@/services/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 
 const CartItemSchema = z.object({
@@ -32,12 +32,14 @@ const CreateTransactionInputSchema = z.object({
   paymentMethod: z.string(),
   customerId: z.string(),
   idUMKM: z.string(),
+  isPkp: z.boolean().optional().default(false),
+  // Account IDs
   salesAccountId: z.string(),
   discountAccountId: z.string().optional(),
   cogsAccountId: z.string(),
   inventoryAccountId: z.string(),
   taxAccountId: z.string().optional(),
-  cashAccountId: z.string(), // Asumsi ada akun default untuk kas/bank
+  paymentAccountId: z.string(),
 });
 
 
@@ -45,7 +47,6 @@ export type CreateTransactionOutput = z.infer<typeof CreateTransactionOutputSche
 const CreateTransactionOutputSchema = z.object({
   success: z.boolean(),
   transactionId: z.string(),
-  journalId: z.string().optional(),
 });
 
 // Fungsi wrapper yang akan dipanggil dari aplikasi Next.js
@@ -63,62 +64,72 @@ const createTransactionFlow = ai.defineFlow(
     const db = adminDb();
     const batch = db.batch();
 
-    // 1. Simpan data transaksi
     const transactionRef = db.collection('transactions').doc();
-    batch.set(transactionRef, {
-      idUMKM: input.idUMKM,
-      customerId: input.customerId,
-      date: new Date(),
-      items: input.items.map(({ hpp, ...rest }) => rest), // Hapus HPP dari item yang disimpan
-      subtotal: input.subtotal,
-      discountAmount: input.discountAmount,
-      taxAmount: input.taxAmount,
-      total: input.total,
-      paymentMethod: input.paymentMethod,
-      status: 'Selesai',
-      paymentStatus: 'Berhasil',
-    });
-
-    // 2. Buat Jurnal Umum
-    const journalRef = db.collection('journals').doc();
-    const journalEntries = [];
+    const transactionTimestamp = Timestamp.now();
     
+    // 1. Buat Entri Jurnal (`lines`)
+    const journalLines = [];
     const totalHpp = input.items.reduce((sum, item) => sum + (item.hpp || 0) * item.quantity, 0);
 
-    // Debit: Kas/Bank sejumlah total yang dibayar
-    journalEntries.push({ accountId: input.cashAccountId, debit: input.total, credit: 0 });
-    // Debit: HPP sejumlah total HPP
+    // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
+    journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
+    
+    // Debit: HPP
     if (totalHpp > 0) {
-      journalEntries.push({ accountId: input.cogsAccountId, debit: totalHpp, credit: 0 });
+      journalLines.push({ accountId: input.cogsAccountId, debit: totalHpp, credit: 0, description: 'HPP Penjualan dari Kasir' });
     }
-    // Debit: Diskon Penjualan jika ada
+    
+    // Debit: Diskon Penjualan (jika ada)
     if (input.discountAmount > 0 && input.discountAccountId) {
-      journalEntries.push({ accountId: input.discountAccountId, debit: input.discountAmount, credit: 0 });
+      journalLines.push({ accountId: input.discountAccountId, debit: input.discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
     }
 
     // Credit: Pendapatan Penjualan sejumlah subtotal
-    journalEntries.push({ accountId: input.salesAccountId, debit: 0, credit: input.subtotal });
-     // Credit: PPN Keluaran jika ada
+    journalLines.push({ accountId: input.salesAccountId, debit: 0, credit: input.subtotal, description: 'Pendapatan Penjualan dari Kasir' });
+    
+    // Credit: PPN Keluaran (jika ada)
     if (input.taxAmount > 0 && input.taxAccountId) {
-      journalEntries.push({ accountId: input.taxAccountId, debit: 0, credit: input.taxAmount });
+      journalLines.push({ accountId: input.taxAccountId, debit: 0, credit: input.taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
     }
-    // Credit: Persediaan sejumlah total HPP
+    
+    // Credit: Persediaan
     if (totalHpp > 0) {
-        journalEntries.push({ accountId: input.inventoryAccountId, debit: 0, credit: totalHpp });
+        journalLines.push({ accountId: input.inventoryAccountId, debit: 0, credit: totalHpp, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
     }
 
-    batch.set(journalRef, {
+    // 2. Siapkan data transaksi untuk disimpan
+    const transactionData = {
       idUMKM: input.idUMKM,
-      transactionId: transactionRef.id,
-      date: new Date(),
-      description: `Penjualan - Transaksi #${transactionRef.id.substring(0, 5)}`,
-      entries: journalEntries
-    });
+      date: transactionTimestamp,
+      description: `Penjualan Kasir - Transaksi #${transactionRef.id.substring(0, 5)}`,
+      type: 'Sale',
+      status: 'Selesai',
+      paymentStatus: 'Berhasil', // Dianggap berhasil karena ini alur backend
+      transactionNumber: `KSR-${Date.now()}`,
+      amount: input.total,
+      paidAmount: input.total,
+      subtotal: input.subtotal,
+      discountAmount: input.discountAmount,
+      taxAmount: input.taxAmount,
+      items: input.items.map(({ hpp, ...rest }) => rest), // Hapus HPP dari item yang disimpan
+      customerId: input.customerId,
+      paymentMethod: input.paymentMethod,
+      isPkp: input.isPkp,
+      lines: journalLines,
+      // Simpan juga ID akun yang digunakan
+      paymentAccountId: input.paymentAccountId,
+      salesAccountId: input.salesAccountId,
+      cogsAccountId: input.cogsAccountId,
+      inventoryAccountId: input.inventoryAccountId,
+      discountAccountId: input.discountAccountId || null,
+      taxAccountId: input.taxAccountId || null,
+    };
+    
+    batch.set(transactionRef, transactionData);
 
     // 3. Update Stok Produk
     input.items.forEach(item => {
       const productRef = db.collection('products').doc(item.id);
-      // Asumsi ada field 'stock' di dokumen produk
       batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
     });
 
@@ -127,7 +138,6 @@ const createTransactionFlow = ai.defineFlow(
     return {
       success: true,
       transactionId: transactionRef.id,
-      journalId: journalRef.id,
     };
   }
 );
