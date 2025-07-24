@@ -48,7 +48,9 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
   const paymentConfig = paymentStatusConfig[transaction.paymentStatus];
   const PaymentIcon = paymentConfig?.icon || CreditCard;
   
-  const subtotal = transaction.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = Array.isArray(transaction.items) 
+    ? transaction.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    : 0;
   const shipping = transaction.total > subtotal ? transaction.total - subtotal : 0;
 
   return (
@@ -80,7 +82,7 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {transaction.items.map(item => (
+                    {Array.isArray(transaction.items) && transaction.items.map(item => (
                     <div key={item.id} className="flex items-center gap-4">
                         <Image 
                             src={item.imageUrl} 
