@@ -4,7 +4,9 @@ export type Product = {
   category: string;
   price: number;
   imageUrl: string;
+  imageUrls?: string[];
   description: string;
+  productType?: 'Barang' | 'Jasa';
   netWeight?: string;
   ingredients?: string[];
   productionCode?: string;

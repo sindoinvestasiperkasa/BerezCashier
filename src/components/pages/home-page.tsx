@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +17,12 @@ import {
   Frown,
   ShoppingBasket,
 } from "lucide-react";
-import { products as productData, categories as categoryData, type Product } from "@/lib/data";
+import { categories as categoryData, type Product } from "@/lib/data";
 import ProductCard from "../product-card";
 import { cn } from "@/lib/utils";
 import ProductDetail from "../product-detail";
+import { collection, getDocs, query, where, getFirestore } from "firebase/firestore";
+import { Skeleton } from "../ui/skeleton";
 
 const iconMap: { [key: string]: React.ElementType } = {
   LayoutGrid,
@@ -35,11 +37,41 @@ const iconMap: { [key: string]: React.ElementType } = {
 };
 
 export default function HomePage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const filteredProducts = productData.filter((product) => {
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      const db = getFirestore();
+      const productsCollection = collection(db, "products");
+      const q = query(productsCollection, where("productType", "==", "Jasa"));
+      const querySnapshot = await getDocs(q);
+      const productsData: Product[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        productsData.push({
+          id: doc.id,
+          name: data.name,
+          category: data.category,
+          price: data.price,
+          imageUrl: data.imageUrls?.[0] || "https://placehold.co/300x300.png",
+          description: data.description,
+          productType: data.productType,
+          imageUrls: data.imageUrls,
+        });
+      });
+      setProducts(productsData);
+      setIsLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
+
+  const filteredProducts = products.filter((product) => {
     const matchesCategory =
       selectedCategory === "All" || product.category === selectedCategory;
     const matchesSearch = product.name
@@ -114,7 +146,23 @@ export default function HomePage() {
             Lihat Semua
           </Button>
         </div>
-        {filteredProducts.length > 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[...Array(8)].map((_, i) => (
+              <Card key={i}>
+                <Skeleton className="w-full aspect-square" />
+                <CardContent className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <div className="flex justify-between items-center mt-3">
+                    <Skeleton className="h-5 w-1/3" />
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredProducts.map((product) => (
               <ProductCard 
@@ -129,7 +177,7 @@ export default function HomePage() {
             <Frown className="w-16 h-16 text-muted-foreground" />
             <h3 className="text-lg font-semibold">Produk tidak ditemukan</h3>
             <p className="text-muted-foreground max-w-xs">
-              Coba ganti kata kunci atau kategori pencarian Anda.
+              Tidak ada produk 'Jasa' yang tersedia saat ini.
             </p>
           </div>
         )}
