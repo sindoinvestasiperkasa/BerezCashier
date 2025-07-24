@@ -278,9 +278,6 @@ export default function CartPage({ setView }: CartPageProps) {
   const handlePrintReceipt = () => {
     if (!lastTransactionForReceipt || !user) return;
   
-    console.log('User object for receipt:', user);
-    console.log('umkmName from user object:', user?.umkmName);
-
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -293,7 +290,7 @@ export default function CartPage({ setView }: CartPageProps) {
   
     doc.setFont('Courier', 'bold');
     doc.setFontSize(9);
-    doc.text(user.umkmName || 'Toko Anda', pageWidth / 2, y, { align: 'center' });
+    doc.text(user.businessName || 'Toko Anda', pageWidth / 2, y, { align: 'center' });
     y += 4;
   
     doc.setFont('Courier', 'normal');
@@ -851,3 +848,6 @@ export default function CartPage({ setView }: CartPageProps) {
     
 
 
+
+
+    
