@@ -407,7 +407,9 @@ export default function CartPage({ setView }: CartPageProps) {
       .filter(tx => {
         const txDate = tx.date;
         const today = new Date();
-        return isSameDay(txDate, today);
+        const isToday = isSameDay(txDate, today);
+        const isCashierSale = tx.status === 'Lunas' && tx.transactionNumber?.startsWith('KSR');
+        return isToday && isCashierSale;
       })
       .map(tx => {
         const debits = tx.lines?.reduce((sum, line) => sum + line.debit, 0) || 0;
