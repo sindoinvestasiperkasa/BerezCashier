@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, Play, History } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '../ui/badge';
 
 interface CartPageProps {
   setView: (view: View) => void;
@@ -91,11 +92,24 @@ export default function CartPage({ setView }: CartPageProps) {
     <div className="p-4 md:p-6 flex flex-col h-full bg-secondary/30">
         <header className="flex justify-between items-center pb-4">
             <h1 className="text-2xl font-bold flex items-center gap-2"><ShoppingCart className="w-6 h-6" /> Keranjang</h1>
-            <div className='flex items-center gap-2'>
-                <Button variant="outline"><PauseCircle className="mr-2 h-4 w-4" /> Tahan Transaksi</Button>
-                <Button variant="destructive" size="icon" onClick={handleClearCart}><Trash2 className="h-4 w-4" /></Button>
-            </div>
+            <Button variant="destructive" size="icon" onClick={handleClearCart} aria-label="Kosongkan Keranjang"><Trash2 className="h-4 w-4" /></Button>
         </header>
+
+        <div className="flex gap-2 pb-4">
+            <Button variant="outline" className="flex-1 justify-start">
+                <Play className="mr-2 h-4 w-4" />
+                Transaksi Ditahan
+                <Badge className="ml-auto bg-cyan-400 text-cyan-900">0</Badge>
+            </Button>
+            <Button variant="outline">
+                <History className="mr-2 h-4 w-4" />
+                Riwayat Hari Ini
+            </Button>
+             <Button variant="outline">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M12 2v2"/><path d="M12 20v2"/><path d="M5 12H3"/><path d="M21 12h-2"/><path d="m16.2 7.8-.1.1"/><path d="M5.8 18.2-.1.1"/><path d="m16.3 16.2.1.1"/><path d="m5.8 5.8-.1.1"/><circle cx="12" cy="12" r="4"/><path d="M14 12h-4"/><path d="M15 12c0 1.7-1.3 3-3 3s-3-1.3-3-3 1.3-3 3-3c.8 0 1.5.3 2 .8"/></svg>
+                Tutup Shift
+            </Button>
+        </div>
         
         <div className="flex-grow overflow-y-auto space-y-4 pb-64">
             <Card>
@@ -211,29 +225,27 @@ export default function CartPage({ setView }: CartPageProps) {
         </div>
         
         <div className="fixed bottom-[4.5rem] left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-4xl p-4 bg-background border-t space-y-4">
-            <div>
-              <Label>Metode Pembayaran</Label>
-              <RadioGroup defaultValue="Cash" className="flex mt-2" onValueChange={setPaymentMethod}>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="cash" /><Label htmlFor="cash">Cash</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="Transfer" id="transfer" /><Label htmlFor="transfer">Transfer</Label></div>
-              </RadioGroup>
-            </div>
-            
-            <div className='flex justify-between items-center'>
-                <Label htmlFor="received">Uang Diterima</Label>
-                <Input id="received" type="number" placeholder='0' className="w-32" value={amountReceived || ''} onChange={(e) => setAmountReceived(Number(e.target.value))} />
-            </div>
-
-            <Separator />
-
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Kembalian</span>
-              <span className="text-lg font-bold">{formatCurrency(change)}</span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-lg">Total</span>
-              <span className="text-2xl font-bold text-primary">{formatCurrency(total)}</span>
+             <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                    <Label>Metode Pembayaran</Label>
+                    <RadioGroup defaultValue="Cash" className="flex" onValueChange={setPaymentMethod}>
+                        <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="cash" /><Label htmlFor="cash">Cash</Label></div>
+                        <div className="flex items-center space-x-2"><RadioGroupItem value="Transfer" id="transfer" /><Label htmlFor="transfer">Transfer</Label></div>
+                    </RadioGroup>
+                </div>
+                <div className='flex justify-between items-center'>
+                    <Label htmlFor="received">Uang Diterima</Label>
+                    <Input id="received" type="number" placeholder='0' className="w-40 text-right" value={amountReceived || ''} onChange={(e) => setAmountReceived(Number(e.target.value))} />
+                </div>
+                <Separator />
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Kembalian</span>
+                  <span className="text-lg font-bold">{formatCurrency(change)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-lg">Total</span>
+                  <span className="text-2xl font-bold text-primary">{formatCurrency(total)}</span>
+                </div>
             </div>
 
             <Button className="w-full h-12 text-lg font-bold" onClick={handlePayment}>
@@ -244,3 +256,5 @@ export default function CartPage({ setView }: CartPageProps) {
     </div>
   );
 }
+
+    
