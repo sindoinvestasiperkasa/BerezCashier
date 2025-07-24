@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
@@ -45,6 +45,15 @@ export default function CartPage({ setView }: CartPageProps) {
       toast({
         title: "Keranjang Kosong",
         description: "Silakan tambahkan produk terlebih dahulu.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (paymentMethod === 'Cash' && amountReceived < total) {
+      toast({
+        title: "Uang Tidak Cukup",
+        description: "Uang yang diterima kurang dari total belanja.",
         variant: "destructive"
       });
       return;
@@ -88,7 +97,7 @@ export default function CartPage({ setView }: CartPageProps) {
             </div>
         </header>
         
-        <div className="flex-grow overflow-y-auto space-y-4 pb-28">
+        <div className="flex-grow overflow-y-auto space-y-4 pb-64">
             <Card>
                 <CardContent className="p-4">
                     <Label>Pelanggan</Label>
@@ -201,34 +210,34 @@ export default function CartPage({ setView }: CartPageProps) {
             </Card>
         </div>
         
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-4xl p-4 bg-background border-t">
-            <div className="grid grid-cols-2 gap-4">
-                <div className='space-y-2'>
-                    <Label>Metode Pembayaran</Label>
-                    <RadioGroup defaultValue="Cash" className="flex" onValueChange={setPaymentMethod}>
-                        <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="cash" /><Label htmlFor="cash">Cash</Label></div>
-                        <div className="flex items-center space-x-2"><RadioGroupItem value="Transfer" id="transfer" /><Label htmlFor="transfer">Transfer</Label></div>
-                    </RadioGroup>
-                    
-                    <div className='space-y-1 pt-1'>
-                        <Label htmlFor="received">Uang Diterima</Label>
-                        <Input id="received" type="number" placeholder='0' value={amountReceived || ''} onChange={(e) => setAmountReceived(Number(e.target.value))} />
-                    </div>
-                </div>
-
-                <div className='space-y-2'>
-                    <div className='text-right'>
-                        <p className="text-muted-foreground">Total</p>
-                        <p className="text-2xl font-bold text-primary">{formatCurrency(total)}</p>
-                    </div>
-                    <div className='text-right'>
-                        <p className="text-muted-foreground">Kembalian</p>
-                        <p className="text-lg font-bold">{formatCurrency(change)}</p>
-                    </div>
-                </div>
+        <div className="fixed bottom-[4.5rem] left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-4xl p-4 bg-background border-t space-y-4">
+            <div>
+              <Label>Metode Pembayaran</Label>
+              <RadioGroup defaultValue="Cash" className="flex mt-2" onValueChange={setPaymentMethod}>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="cash" /><Label htmlFor="cash">Cash</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="Transfer" id="transfer" /><Label htmlFor="transfer">Transfer</Label></div>
+              </RadioGroup>
             </div>
-            <Separator className='my-3'/>
+            
+            <div className='flex justify-between items-center'>
+                <Label htmlFor="received">Uang Diterima</Label>
+                <Input id="received" type="number" placeholder='0' className="w-32" value={amountReceived || ''} onChange={(e) => setAmountReceived(Number(e.target.value))} />
+            </div>
+
+            <Separator />
+
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Kembalian</span>
+              <span className="text-lg font-bold">{formatCurrency(change)}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-lg">Total</span>
+              <span className="text-2xl font-bold text-primary">{formatCurrency(total)}</span>
+            </div>
+
             <Button className="w-full h-12 text-lg font-bold" onClick={handlePayment}>
+                <DollarSign className="mr-2 h-5 w-5" />
                 Bayar
             </Button>
         </div>
