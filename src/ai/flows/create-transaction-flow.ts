@@ -10,8 +10,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import * as admin from 'firebase-admin';
 import { adminDb } from '@/services/firebase-admin'; // Impor instance Admin DB
-import { FieldValue } from 'firebase-admin/firestore';
 
 const CartItemSchema = z.object({
   id: z.string(),
@@ -118,7 +118,7 @@ const createTransactionFlow = ai.defineFlow(
     input.items.forEach(item => {
       const productRef = db.collection('products').doc(item.id);
       // Asumsi ada field 'stock' di dokumen produk
-      batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
+      batch.update(productRef, { stock: admin.firestore.FieldValue.increment(-item.quantity) });
     });
 
     await batch.commit();
