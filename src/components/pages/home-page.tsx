@@ -19,7 +19,7 @@ import type { Product } from "@/lib/data";
 import ProductCard from "../product-card";
 import { cn } from "@/lib/utils";
 import ProductDetail from "../product-detail";
-import { collection, getDocs, query, where, getFirestore } from "firebase/firestore";
+import { collection, getDocs, query, where, getFirestore, documentId } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import { Card, CardContent } from "../ui/card";
 import { useApp } from "@/hooks/use-app";
@@ -65,33 +65,19 @@ export default function HomePage() {
       }
 
       try {
-        // 1. Fetch Categories
-        const categoriesQuery = query(collection(db, "productCategories"), where("idUMKM", "==", idUMKM));
-        const categoriesSnapshot = await getDocs(categoriesQuery);
-        const categoriesData: ProductCategory[] = categoriesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            icon: doc.data().name // Use name for icon mapping, can be changed
-        }));
-        setProductCategories(categoriesData);
-
-        // 2. Fetch Products
+        // 1. Fetch Products of type "Jasa"
         const productsQuery = query(
           collection(db, "products"),
           where("productType", "==", "Jasa"),
           where("idUMKM", "==", idUMKM)
         );
         const productsSnapshot = await getDocs(productsQuery);
-        
-        // 3. Map products with category names
-        const productsData: Product[] = productsSnapshot.docs.map(doc => {
+        const productsData: Omit<Product, 'categoryName'>[] = productsSnapshot.docs.map(doc => {
           const data = doc.data();
-          const category = categoriesData.find(cat => cat.id === data.categoryId);
           return {
             id: doc.id,
             name: data.name,
             categoryId: data.categoryId,
-            categoryName: category ? category.name : "Uncategorized",
             price: data.price,
             imageUrl: data.imageUrls?.[0] || "https://placehold.co/300x300.png",
             description: data.description,
@@ -100,7 +86,34 @@ export default function HomePage() {
           };
         });
 
-        setProducts(productsData);
+        // 2. Get unique category IDs from the fetched products
+        const activeCategoryIds = [...new Set(productsData.map(p => p.categoryId))];
+
+        let categoriesData: ProductCategory[] = [];
+        if (activeCategoryIds.length > 0) {
+          // 3. Fetch only the active categories
+          const categoriesQuery = query(collection(db, "productCategories"), where(documentId(), "in", activeCategoryIds));
+          const categoriesSnapshot = await getDocs(categoriesQuery);
+          categoriesData = categoriesSnapshot.docs.map(doc => ({
+              id: doc.id,
+              name: doc.data().name,
+              icon: doc.data().name 
+          }));
+        }
+        
+        setProductCategories(categoriesData);
+
+        // 4. Map products with category names
+        const productsWithCategoryNames: Product[] = productsData.map(product => {
+          const category = categoriesData.find(cat => cat.id === product.categoryId);
+          return {
+            ...product,
+            categoryName: category ? category.name : "Uncategorized",
+          };
+        });
+
+        setProducts(productsWithCategoryNames);
+
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -110,7 +123,7 @@ export default function HomePage() {
 
     fetchProductsAndCategories();
   }, [user]);
-
+  
   const displayCategories = useMemo(() => {
     const allCategory: ProductCategory = { id: "All", name: "All", icon: "All" };
     return [allCategory, ...productCategories];
