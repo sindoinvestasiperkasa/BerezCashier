@@ -20,11 +20,12 @@ const AttributeValueSchema = z.object({
 });
 
 const CartItemSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  price: z.number(),
+  productId: z.string(),
+  productName: z.string(),
+  productType: z.enum(['Barang', 'Jasa']).optional(),
   quantity: z.number(),
-  hpp: z.number().optional().default(0), // Harga Pokok Penjualan per item
+  unitPrice: z.number(),
+  cogs: z.number().default(0),
   attributeValues: z.array(AttributeValueSchema).optional(),
 });
 
@@ -76,14 +77,14 @@ const createTransactionFlow = ai.defineFlow(
     
     // 1. Buat Entri Jurnal (`lines`)
     const journalLines = [];
-    const totalHpp = input.items.reduce((sum, item) => sum + (item.hpp || 0) * item.quantity, 0);
+    const totalCogs = input.items.reduce((sum, item) => sum + (item.cogs || 0), 0);
 
     // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
     journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
     
     // Debit: HPP
-    if (totalHpp > 0) {
-      journalLines.push({ accountId: input.cogsAccountId, debit: totalHpp, credit: 0, description: 'HPP Penjualan dari Kasir' });
+    if (totalCogs > 0) {
+      journalLines.push({ accountId: input.cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
     }
     
     // Debit: Diskon Penjualan (jika ada)
@@ -100,8 +101,8 @@ const createTransactionFlow = ai.defineFlow(
     }
     
     // Credit: Persediaan
-    if (totalHpp > 0) {
-        journalLines.push({ accountId: input.inventoryAccountId, debit: 0, credit: totalHpp, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
+    if (totalCogs > 0) {
+        journalLines.push({ accountId: input.inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
     }
 
     // 2. Siapkan data transaksi untuk disimpan
@@ -118,7 +119,7 @@ const createTransactionFlow = ai.defineFlow(
       subtotal: input.subtotal,
       discountAmount: input.discountAmount,
       taxAmount: input.taxAmount,
-      items: input.items.map(({ hpp, ...rest }) => rest), // Hapus HPP dari item yang disimpan
+      items: input.items, // Simpan semua data item, termasuk cogs dan attributes
       customerId: input.customerId,
       customerName: input.customerName,
       paymentMethod: input.paymentMethod,
@@ -137,8 +138,8 @@ const createTransactionFlow = ai.defineFlow(
 
     // 3. Update Stok Produk
     input.items.forEach(item => {
-      if (item.hpp > 0) { // Hanya update stok untuk barang, bukan jasa
-        const productRef = db.collection('products').doc(item.id);
+      if (item.productType === 'Barang') { // Hanya update stok untuk barang
+        const productRef = db.collection('products').doc(item.productId);
         batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
       }
     });
