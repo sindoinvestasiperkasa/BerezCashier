@@ -24,6 +24,7 @@ import ProductDetail from "../product-detail";
 import { collection, getDocs, query, where, getFirestore } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import { Card, CardContent } from "../ui/card";
+import { useApp } from "@/hooks/use-app";
 
 const iconMap: { [key: string]: React.ElementType } = {
   LayoutGrid,
@@ -38,6 +39,7 @@ const iconMap: { [key: string]: React.ElementType } = {
 };
 
 export default function HomePage() {
+  const { user } = useApp();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -46,10 +48,26 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchProducts = async () => {
+      if (!user) return;
+
       setIsLoading(true);
       const db = getFirestore();
       const productsCollection = collection(db, "products");
-      const q = query(productsCollection, where("productType", "==", "Jasa"));
+      
+      const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+
+      if (!idUMKM) {
+        setProducts([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const q = query(
+        productsCollection, 
+        where("productType", "==", "Jasa"),
+        where("idUMKM", "==", idUMKM)
+      );
+      
       const querySnapshot = await getDocs(q);
       const productsData: Product[] = [];
       querySnapshot.forEach((doc) => {
@@ -70,7 +88,7 @@ export default function HomePage() {
     };
 
     fetchProducts();
-  }, []);
+  }, [user]);
 
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
@@ -178,7 +196,7 @@ export default function HomePage() {
             <Frown className="w-16 h-16 text-muted-foreground" />
             <h3 className="text-lg font-semibold">Produk tidak ditemukan</h3>
             <p className="text-muted-foreground max-w-xs">
-              Tidak ada produk 'Jasa' yang tersedia saat ini.
+              Tidak ada produk 'Jasa' yang tersedia untuk UMKM Anda saat ini.
             </p>
           </div>
         )}
