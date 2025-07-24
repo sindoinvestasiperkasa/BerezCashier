@@ -100,6 +100,7 @@ export default function CartPage({ setView }: CartPageProps) {
   }
 
   const handleHoldCart = () => {
+    if (cart.length === 0) return;
     holdCart(selectedCustomer);
     setDiscountPercent(0);
     setAmountReceived(0);
@@ -109,6 +110,10 @@ export default function CartPage({ setView }: CartPageProps) {
     resumeCart(cartId);
     setIsHeldCartsOpen(false);
   };
+  
+  const handleDeleteHeldCart = (cartId: number) => {
+    deleteHeldCart(cartId);
+  }
 
   return (
     <>
@@ -151,7 +156,7 @@ export default function CartPage({ setView }: CartPageProps) {
                 </svg>
                 Tutup Shift
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleHoldCart}>
                 <PauseCircle className="mr-2 h-4 w-4" />
                 Tahan Transaksi
             </Button>
@@ -316,7 +321,7 @@ export default function CartPage({ setView }: CartPageProps) {
               <DialogDescription>Pilih transaksi untuk dilanjutkan atau hapus.</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-96 -mx-6 px-6">
-            <div className="space-y-4 py-4">
+            <div className="py-4 px-4 space-y-4">
                 {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
                     heldCarts.map(held => (
                     <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
@@ -326,8 +331,8 @@ export default function CartPage({ setView }: CartPageProps) {
                             <p className="text-sm">{held.cart.length} item - {formatCurrency(held.cart.reduce((sum, item) => sum + item.quantity * item.price, 0))}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button size="sm" onClick={() => handleResumeCart(held.id)}>Lanjutkan</Button>
-                            <Button size="sm" variant="destructive" onClick={() => deleteHeldCart(held.id)}><Trash2 className="h-4 w-4"/></Button>
+                            <Button size="sm" variant="default" onClick={() => handleResumeCart(held.id)}>Lanjutkan</Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleDeleteHeldCart(held.id)}><Trash2 className="h-4 w-4"/></Button>
                         </div>
                     </div>
                 ))}
@@ -338,7 +343,3 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
-
-
-
-
