@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, Settings2 } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, Settings2, PlayCircle } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
@@ -15,18 +16,30 @@ import { Switch } from '../ui/switch';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from '../ui/scroll-area';
+import { format } from 'date-fns';
+
 
 interface CartPageProps {
   setView: (view: View) => void;
 }
 
 export default function CartPage({ setView }: CartPageProps) {
-  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction } = useApp();
+  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart } = useApp();
   const { toast } = useToast();
 
   const [discountPercent, setDiscountPercent] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [amountReceived, setAmountReceived] = useState(0);
+  const [selectedCustomer, setSelectedCustomer] = useState("Pelanggan Umum");
+  const [isHeldCartsOpen, setIsHeldCartsOpen] = useState(false);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = (subtotal * discountPercent) / 100;
@@ -74,9 +87,6 @@ export default function CartPage({ setView }: CartPageProps) {
         title: "Transaksi Berhasil!",
         description: "Transaksi telah berhasil disimpan.",
     });
-
-    // Optional: navigate to transactions page
-    // setView('transactions');
   }
   
   const handleClearCart = () => {
@@ -88,7 +98,19 @@ export default function CartPage({ setView }: CartPageProps) {
     });
   }
 
+  const handleHoldCart = () => {
+    holdCart(selectedCustomer);
+    setDiscountPercent(0);
+    setAmountReceived(0);
+  };
+
+  const handleResumeCart = (cartId: number) => {
+    resumeCart(cartId);
+    setIsHeldCartsOpen(false);
+  };
+
   return (
+    <>
     <div className="p-4 md:p-6 flex flex-col h-full bg-secondary/30">
         <header className="flex justify-between items-center pb-4">
             <h1 className="text-2xl font-bold flex items-center gap-2"><ShoppingCart className="w-6 h-6" /> Keranjang</h1>
@@ -96,10 +118,10 @@ export default function CartPage({ setView }: CartPageProps) {
         </header>
 
         <div className="grid grid-cols-2 gap-2 mb-4">
-            <Button variant="outline" className="relative">
-                <PauseCircle className="mr-2 h-4 w-4" />
+            <Button variant="outline" className="relative" onClick={() => setIsHeldCartsOpen(true)}>
+                <PlayCircle className="mr-2 h-4 w-4" />
                 Transaksi Ditahan
-                <Badge className="absolute -top-2 -right-2 px-2">3</Badge>
+                {heldCarts.length > 0 && <Badge className="absolute -top-2 -right-2 px-2">{heldCarts.length}</Badge>}
             </Button>
             <Button variant="outline">
                 <History className="mr-2 h-4 w-4" />
@@ -140,13 +162,13 @@ export default function CartPage({ setView }: CartPageProps) {
                 <CardContent className="p-4">
                     <Label>Pelanggan</Label>
                     <div className="flex gap-2 mt-1">
-                        <Select defaultValue="umum">
+                        <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Pilih pelanggan" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="umum">Pelanggan Umum</SelectItem>
-                                <SelectItem value="member1">Member Satu</SelectItem>
+                                <SelectItem value="Pelanggan Umum">Pelanggan Umum</SelectItem>
+                                <SelectItem value="Member Satu">Member Satu</SelectItem>
                             </SelectContent>
                         </Select>
                         <Button variant="outline" size="icon"><UserPlus className="h-5 w-5"/></Button>
@@ -273,16 +295,46 @@ export default function CartPage({ setView }: CartPageProps) {
             </div>
 
             <div className="flex gap-4">
-                <Button variant="outline" className="h-12 text-md font-bold flex-1">
+                <Button variant="outline" className="h-12 text-md font-bold flex-1" onClick={handleHoldCart} disabled={cart.length === 0}>
                     <PauseCircle className="mr-2 h-5 w-5" />
                     Tahan
                 </Button>
-                <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handlePayment}>
+                <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handlePayment} disabled={cart.length === 0}>
                     <DollarSign className="mr-2 h-5 w-5" />
                     Bayar
                 </Button>
             </div>
         </div>
     </div>
+    
+      {/* Held Carts Dialog */}
+      <Dialog open={isHeldCartsOpen} onOpenChange={setIsHeldCartsOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Transaksi Ditahan</DialogTitle>
+                  <DialogDescription>Pilih transaksi untuk dilanjutkan atau hapus.</DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-96">
+                <div className="space-y-4 py-4">
+                    {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
+                        heldCarts.map(held => (
+                        <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
+                            <div>
+                                <p className="font-semibold">{held.customerName}</p>
+                                <p className="text-sm text-muted-foreground">Ditahan pada: {format(held.heldAt, 'HH:mm')}</p>
+                                <p className="text-xs text-muted-foreground">{held.cart.length} item - {formatCurrency(held.cart.reduce((sum, item) => sum + item.quantity * item.price, 0))}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button size="sm" onClick={() => handleResumeCart(held.id)}>Lanjutkan</Button>
+                                <Button size="icon" variant="destructive" onClick={() => deleteHeldCart(held.id)}><Trash2 className="h-4 w-4"/></Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+              </ScrollArea>
+          </DialogContent>
+      </Dialog>
+    </>
   );
 }
+

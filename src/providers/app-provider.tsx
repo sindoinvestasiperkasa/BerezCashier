@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
@@ -5,6 +6,7 @@ import type { Product } from '@/lib/data';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs, getFirestore } from "firebase/firestore";
+import { useToast } from '@/hooks/use-toast';
 
 export interface CartItem extends Product {
   quantity: number;
@@ -26,6 +28,13 @@ export type NewTransactionData = {
     paymentMethod: string;
 }
 
+export type HeldCart = {
+  id: number;
+  cart: CartItem[];
+  customerName?: string;
+  heldAt: Date;
+};
+
 export type UserData = {
     uid: string;
     role: 'UMKM' | 'Employee' | 'SuperAdmin';
@@ -44,6 +53,7 @@ interface AppContextType {
   cart: CartItem[];
   wishlist: Product[];
   transactions: Transaction[];
+  heldCarts: HeldCart[];
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -52,6 +62,9 @@ interface AppContextType {
   isInWishlist: (productId: string) => boolean;
   addTransaction: (data: NewTransactionData) => void;
   clearCart: () => void;
+  holdCart: (customerName: string) => void;
+  resumeCart: (cartId: number) => void;
+  deleteHeldCart: (cartId: number) => void;
   isAuthenticated: boolean;
   user: UserData | null;
   login: (email: string, pass: string) => Promise<boolean>;
@@ -66,8 +79,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [heldCarts, setHeldCarts] = useState<HeldCart[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseAuthUser | null) => {
@@ -211,12 +226,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setCart([]);
   };
 
+  const holdCart = (customerName: string) => {
+    if (cart.length === 0) return;
+    const newHeldCart: HeldCart = {
+      id: Date.now(),
+      cart: [...cart],
+      customerName: customerName || 'Pelanggan Umum',
+      heldAt: new Date(),
+    };
+    setHeldCarts(prev => [...prev, newHeldCart]);
+    toast({ title: 'Transaksi Ditahan', description: `Keranjang untuk ${newHeldCart.customerName} telah ditahan.` });
+    clearCart();
+  };
+
+  const resumeCart = (cartId: number) => {
+    const cartToResume = heldCarts.find(h => h.id === cartId);
+    if (cartToResume) {
+      setCart(cartToResume.cart);
+      setHeldCarts(prev => prev.filter(h => h.id !== cartId));
+    }
+  };
+
+  const deleteHeldCart = (cartId: number) => {
+    setHeldCarts(prev => prev.filter(h => h.id !== cartId));
+  };
+
+
   return (
     <AppContext.Provider
       value={{ 
         cart, 
         wishlist, 
         transactions,
+        heldCarts,
         addToCart, 
         removeFromCart, 
         updateQuantity, 
@@ -225,6 +267,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isInWishlist,
         addTransaction,
         clearCart,
+        holdCart,
+        resumeCart,
+        deleteHeldCart,
         isAuthenticated,
         user,
         login,
