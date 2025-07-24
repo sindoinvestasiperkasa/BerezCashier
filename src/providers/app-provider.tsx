@@ -80,6 +80,7 @@ export type UserData = {
     umkm_photo?: string;
     address?: string;
     phone?: string;
+    businessName?: string;
     // Employee fields
     name?: string;
     photo_url?: string;
@@ -192,7 +193,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return {
             id: doc.id,
             ...rest,
-            total: data.amount,
+            total: data.total,
             date: jsDate.toISOString(),
         } as Transaction;
       });
