@@ -67,13 +67,12 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
   );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-grow flex items-center justify-center p-6">
-        <div className="w-full max-w-xs text-center">
+    <div className="flex flex-col h-full p-6 justify-center">
+        <div className="w-full max-w-xs mx-auto text-center">
             <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Cashier</h1>
             <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk kasir Anda.</p>
             <Carousel 
-              className="w-full" 
+              className="w-full mb-8" 
               opts={{ loop: true }}
               plugins={[plugin.current]}
               onMouseEnter={plugin.current.stop}
@@ -107,16 +106,15 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
                 ))}
               </CarouselContent>
             </Carousel>
+             <div className="space-y-4">
+                <Button onClick={() => setView('signup')} className="w-full h-14 text-lg font-bold">
+                    Buat Akun Baru
+                </Button>
+                <Button onClick={() => setView('login')} variant="outline" className="w-full h-14 text-lg font-bold">
+                    Masuk
+                </Button>
+            </div>
         </div>
-      </div>
-      <div className="p-6 space-y-4">
-        <Button onClick={() => setView('signup')} className="w-full h-14 text-lg font-bold">
-            Buat Akun Baru
-        </Button>
-        <Button onClick={() => setView('login')} variant="outline" className="w-full h-14 text-lg font-bold">
-            Masuk
-        </Button>
-      </div>
     </div>
   );
 }
