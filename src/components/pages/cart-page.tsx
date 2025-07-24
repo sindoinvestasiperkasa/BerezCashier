@@ -33,7 +33,7 @@ interface CartPageProps {
 }
 
 export default function CartPage({ setView }: CartPageProps) {
-  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart, transactions, customers, addCustomer } = useApp();
+  const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart, transactions, customers, addCustomer, accounts } = useApp();
   const { toast } = useToast();
 
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -48,10 +48,20 @@ export default function CartPage({ setView }: CartPageProps) {
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
 
+  const [isPkp, setIsPkp] = useState(false);
+  const [salesAccountId, setSalesAccountId] = useState<string>();
+  const [discountAccountId, setDiscountAccountId] = useState<string>();
+  const [cogsAccountId, setCogsAccountId] = useState<string>();
+  const [inventoryAccountId, setInventoryAccountId] = useState<string>();
+  const [taxAccountId, setTaxAccountId] = useState<string>();
+
+  const TAX_RATE = 0.11;
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = (subtotal * discountPercent) / 100;
-  const total = subtotal - discountAmount;
+  const taxableAmount = subtotal - discountAmount;
+  const taxAmount = isPkp ? taxableAmount * TAX_RATE : 0;
+  const total = taxableAmount + taxAmount;
   const change = amountReceived > total ? amountReceived - total : 0;
 
   const formatCurrency = (amount: number) => {
@@ -285,38 +295,64 @@ export default function CartPage({ setView }: CartPageProps) {
                     <div className="grid grid-cols-2 gap-4">
                         <div className='space-y-1'>
                             <Label>Akun Pendapatan</Label>
-                             <Select defaultValue="4.1.1">
-                                <SelectTrigger><SelectValue/></SelectTrigger>
+                             <Select value={salesAccountId} onValueChange={setSalesAccountId}>
+                                <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="4.1.1">Penjualan Produk (4.1.1)</SelectItem>
+                                    {accounts.filter(a => a.category === 'Pendapatan').map(acc => (
+                                        <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className='space-y-1'>
                             <Label>Akun Potongan Penjualan</Label>
-                             <Select><SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger></Select>
+                             <Select value={discountAccountId} onValueChange={setDiscountAccountId}>
+                                <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
+                                <SelectContent>
+                                    {accounts.filter(a => a.category === 'Pendapatan' || a.category === 'Beban').map(acc => (
+                                        <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                    ))}
+                                </SelectContent>
+                             </Select>
                         </div>
                         <div className='space-y-1'>
                             <Label>Akun HPP</Label>
-                             <Select defaultValue="5.1.9">
-                                <SelectTrigger><SelectValue/></SelectTrigger>
+                             <Select value={cogsAccountId} onValueChange={setCogsAccountId}>
+                                <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="5.1.9">Harga Pokok Penjualan (HPP) (5.1.9)</SelectItem>
+                                    {accounts.filter(a => a.category === 'Beban').map(acc => (
+                                        <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className='space-y-1'>
                             <Label>Akun Persediaan</Label>
-                             <Select defaultValue="1.1.4">
-                                <SelectTrigger><SelectValue/></SelectTrigger>
+                             <Select value={inventoryAccountId} onValueChange={setInventoryAccountId}>
+                                <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="1.1.4">Persediaan (1.1.4)</SelectItem>
+                                     {accounts.filter(a => a.category === 'Aset').map(acc => (
+                                        <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
+                        {isPkp && (
+                             <div className='space-y-1 col-span-2'>
+                                <Label>Akun PPN Keluaran</Label>
+                                <Select value={taxAccountId} onValueChange={setTaxAccountId}>
+                                    <SelectTrigger><SelectValue placeholder="Pilih akun PPN..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {accounts.filter(a => a.category === 'Liabilitas').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center space-x-2 mt-4">
-                        <Switch id="pkp" />
+                        <Switch id="pkp" checked={isPkp} onCheckedChange={setIsPkp}/>
                         <Label htmlFor="pkp">Perusahaan Kena Pajak (PKP)</Label>
                     </div>
                 </CardContent>
@@ -332,15 +368,21 @@ export default function CartPage({ setView }: CartPageProps) {
                         <div className="flex items-center space-x-2"><RadioGroupItem value="Transfer" id="transfer" /><Label htmlFor="transfer">Transfer</Label></div>
                     </RadioGroup>
                 </div>
-                <div className='flex justify-between items-center'>
+                {paymentMethod === 'Cash' && <div className='flex justify-between items-center'>
                     <Label htmlFor="received">Uang Diterima</Label>
                     <Input id="received" type="number" placeholder='0' className="w-40 text-right" value={amountReceived || ''} onChange={(e) => setAmountReceived(Number(e.target.value))} />
-                </div>
+                </div>}
                 <Separator />
-                <div className="flex justify-between items-center">
+                 {isPkp && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Pajak (11%)</span>
+                      <span className="font-medium">{formatCurrency(taxAmount)}</span>
+                    </div>
+                 )}
+                 {paymentMethod === 'Cash' && <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Kembalian</span>
                   <span className="text-lg font-bold">{formatCurrency(change)}</span>
-                </div>
+                </div>}
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-lg">Total</span>
                   <span className="text-2xl font-bold text-primary">{formatCurrency(total)}</span>
@@ -476,3 +518,6 @@ export default function CartPage({ setView }: CartPageProps) {
   );
 }
 
+
+
+    

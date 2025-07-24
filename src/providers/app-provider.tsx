@@ -36,6 +36,14 @@ export type Customer = {
   [key: string]: any;
 }
 
+export type Account = {
+  id: string;
+  name: string;
+  category: 'Aset' | 'Liabilitas' | 'Ekuitas' | 'Pendapatan' | 'Beban';
+  [key: string]: any;
+};
+
+
 export type HeldCart = {
   id: number;
   cart: CartItem[];
@@ -65,6 +73,7 @@ interface AppContextType {
   transactions: Transaction[];
   customers: Customer[];
   heldCarts: HeldCart[];
+  accounts: Account[];
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -94,6 +103,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [heldCarts, setHeldCarts] = useState<HeldCart[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
   const { toast } = useToast();
@@ -121,6 +131,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!user) {
         setCustomers([]);
         setProducts([]);
+        setAccounts([]);
         return;
     };
     
@@ -143,9 +154,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setProducts(productsData);
     });
 
+    const accountsQuery = query(collection(db, "accounts"), where("idUMKM", "==", idUMKM));
+    const unsubAccounts = onSnapshot(accountsQuery, (snapshot) => {
+        const accountsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
+        setAccounts(accountsData);
+    });
+
+
     return () => {
         unsubCustomers();
         unsubProducts();
+        unsubAccounts();
     };
   }, [user, db]);
 
@@ -336,6 +355,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         transactions,
         customers,
         heldCarts,
+        accounts,
         addToCart, 
         removeFromCart, 
         updateQuantity, 
@@ -358,3 +378,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    
