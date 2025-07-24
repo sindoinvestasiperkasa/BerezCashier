@@ -88,7 +88,7 @@ export default function HomePage() {
   }, [user]);
 
   const categories = useMemo(() => {
-    const uniqueCategories = [...new Set(products.map(p => p.category))];
+    const uniqueCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
     const dynamicCategories = uniqueCategories.map(cat => ({
         name: cat,
         icon: Object.keys(iconMap).includes(cat) ? cat : "Default",
