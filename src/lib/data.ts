@@ -133,15 +133,3 @@ export const products: Product[] = [
     storageInstructions: "Segera olah atau simpan di kulkas dalam wadah tertutup."
   }
 ];
-
-export const categories = [
-  { name: "All", icon: "LayoutGrid" },
-  { name: "Groceries", icon: "ShoppingBasket" },
-  { name: "Beras", icon: "Wheat" },
-  { name: "Sayuran", icon: "Carrot" },
-  { name: "Buah", icon: "Apple" },
-  { name: "Daging", icon: "Beef" },
-  { name: "Telur", icon: "Egg" },
-  { name: "Susu", icon: "Milk" },
-  { name: "Bawang", icon: "Salad" },
-];

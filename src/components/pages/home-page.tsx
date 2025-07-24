@@ -1,23 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Search,
   Bell,
   LayoutGrid,
-  Wheat,
-  Carrot,
-  Apple,
-  Beef,
-  Egg,
-  Milk,
-  Salad,
-  Frown,
   ShoppingBasket,
+  Frown,
+  ConciergeBell,
+  Wrench,
+  Scissors,
+  Shirt,
+  Car,
 } from "lucide-react";
-import { categories as categoryData, type Product } from "@/lib/data";
+import type { Product } from "@/lib/data";
 import ProductCard from "../product-card";
 import { cn } from "@/lib/utils";
 import ProductDetail from "../product-detail";
@@ -27,15 +25,14 @@ import { Card, CardContent } from "../ui/card";
 import { useApp } from "@/hooks/use-app";
 
 const iconMap: { [key: string]: React.ElementType } = {
-  LayoutGrid,
-  Wheat,
-  Carrot,
-  Apple,
-  Beef,
-  Egg,
-  Milk,
-  Salad,
-  ShoppingBasket,
+  All: LayoutGrid,
+  Layanan: ConciergeBell,
+  Perbaikan: Wrench,
+  "Potong Rambut": Scissors,
+  Laundry: Shirt,
+  Transportasi: Car,
+  // Default/fallback icon
+  Default: ShoppingBasket,
 };
 
 export default function HomePage() {
@@ -90,6 +87,18 @@ export default function HomePage() {
     fetchProducts();
   }, [user]);
 
+  const categories = useMemo(() => {
+    if (products.length === 0) {
+      return [{ name: "All", icon: "All" }];
+    }
+    const uniqueCategories = [...new Set(products.map(p => p.category))];
+    const dynamicCategories = uniqueCategories.map(cat => ({
+        name: cat,
+        icon: Object.keys(iconMap).includes(cat) ? cat : "Default",
+    }));
+    return [{ name: "All", icon: "All" }, ...dynamicCategories];
+  }, [products]);
+
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
       selectedCategory === "All" || product.category === selectedCategory;
@@ -135,8 +144,8 @@ export default function HomePage() {
       <section className="p-4 md:p-6">
         <h2 className="text-xl font-bold mb-3 text-foreground">Kategori</h2>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
-          {categoryData.map((category) => {
-            const Icon = iconMap[category.icon];
+          {categories.map((category) => {
+            const Icon = iconMap[category.icon] || iconMap["Default"];
             return (
               <button
                 key={category.name}
