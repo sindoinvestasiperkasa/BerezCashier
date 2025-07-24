@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -202,7 +203,7 @@ export default function CartPage({ setView }: CartPageProps) {
 
         if (result.success) {
             setLastTransactionForReceipt({
-                items: cartItemsForTransaction,
+                items: cart.map(i => ({ productName: i.name, quantity: i.quantity, unitPrice: i.price })),
                 subtotal: subtotal,
                 discountAmount: discountAmount,
                 taxAmount: taxAmount,
@@ -381,17 +382,17 @@ export default function CartPage({ setView }: CartPageProps) {
 
   const handleReprintReceipt = (tx: Transaction) => {
     const itemsForReceipt = tx.items || [];
-    const subtotal = itemsForReceipt.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0);
-  
+    const subtotal = tx.total / (tx.taxAmount ? 1.11 : 1) + (tx.discountAmount || 0);
+
     const receiptData: ReceiptData = {
-      items: itemsForReceipt,
+      items: itemsForReceipt.map(i => ({ productName: i.name, quantity: i.quantity, unitPrice: i.price })),
       subtotal,
       discountAmount: tx.discountAmount || 0,
       taxAmount: tx.taxAmount || 0,
-      total: tx.amount || 0,
+      total: tx.total || 0,
       paymentMethod: tx.paymentMethod || 'N/A',
-      cashReceived: tx.paidAmount || tx.amount || 0,
-      changeAmount: Math.max(0, (tx.paidAmount || 0) - (tx.amount || 0)),
+      cashReceived: tx.paidAmount || tx.total || 0,
+      changeAmount: Math.max(0, (tx.paidAmount || 0) - (tx.total || 0)),
       transactionNumber: tx.transactionNumber || tx.id,
       transactionDate: tx.date,
     };

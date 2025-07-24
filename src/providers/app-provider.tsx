@@ -79,10 +79,10 @@ export type UserData = {
     // UMKM fields
     ownerName?: string;
     umkmName?: string;
+    businessName?: string;
     umkm_photo?: string;
     address?: string;
     phone?: string;
-    businessName?: string;
     // Employee fields
     name?: string;
     photo_url?: string;
