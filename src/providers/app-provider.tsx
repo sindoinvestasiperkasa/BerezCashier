@@ -129,19 +129,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [setUser, setUseUser] = useState<UserData | null>(null);
+  const [localUser, setLocalUser] = useState<UserData | null>(null);
   const { toast } = useToast();
   const db = getFirestore();
 
   const user = useMemo(() => {
+    if (localUser) return localUser;
     if (typeof window !== 'undefined') {
         const storedUser = localStorage.getItem('sagara-user-data');
         if (storedUser) {
-            return JSON.parse(storedUser);
+            try {
+              return JSON.parse(storedUser);
+            } catch (e) {
+              console.error("Failed to parse user data from localStorage", e);
+              return null;
+            }
         }
     }
     return null;
-  }, []);
+  }, [localUser]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseAuthUser | null) => {
@@ -149,11 +155,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const storedUser = localStorage.getItem('sagara-user-data');
             if(storedUser) {
                 const parsedUser = JSON.parse(storedUser);
-                setUseUser(parsedUser);
+                setLocalUser(parsedUser);
                 setIsAuthenticated(true);
             }
         } else {
-            setUseUser(null);
+            setLocalUser(null);
             setIsAuthenticated(false);
             localStorage.removeItem('sagara-user-data');
         }
@@ -206,7 +212,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             id: doc.id,
             ...rest,
             date: jsDate,
-            total: data.amount,
+            total: data.total || data.amount || 0,
+            transactionNumber: data.transactionNumber || doc.id,
         } as Transaction;
       });
       setTransactions(transactionsData);
@@ -264,7 +271,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (userData) {
-        setUseUser(userData);
+        setLocalUser(userData);
         localStorage.setItem('sagara-user-data', JSON.stringify(userData));
         setIsAuthenticated(true);
         return true;

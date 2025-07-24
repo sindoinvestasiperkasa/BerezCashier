@@ -393,7 +393,7 @@ export default function CartPage({ setView }: CartPageProps) {
       cashReceived: tx.paidAmount || tx.amount || 0,
       changeAmount: Math.max(0, (tx.paidAmount || 0) - (tx.amount || 0)),
       transactionNumber: tx.transactionNumber || tx.id,
-      transactionDate: new Date(tx.date),
+      transactionDate: tx.date,
     };
   
     setLastTransactionForReceipt(receiptData);
@@ -404,7 +404,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const transactionsToday = useMemo(() => {
     return transactions
       .filter(tx => {
-        const txDate = new Date(tx.date);
+        const txDate = tx.date;
         const today = new Date();
         return isSameDay(txDate, today);
       })
@@ -416,11 +416,11 @@ export default function CartPage({ setView }: CartPageProps) {
           isBalanced: Math.abs(debits - credits) < 0.01
         };
       })
-      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a,b) => b.date.getTime() - a.date.getTime());
   }, [transactions]);
   
   const todayTotal = useMemo(() => {
-    return transactionsToday.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    return transactionsToday.reduce((sum, tx) => sum + (tx.total || 0), 0);
   }, [transactionsToday]);
 
   return (
@@ -790,7 +790,7 @@ export default function CartPage({ setView }: CartPageProps) {
                             <div key={tx.id} className="p-3 border rounded-lg flex justify-between items-center text-sm">
                                 <div>
                                     <p className="font-mono text-xs">{tx.transactionNumber || tx.id}</p>
-                                    <p className="font-semibold">{formatCurrency(tx.amount)}</p>
+                                    <p className="font-semibold">{formatCurrency(tx.total)}</p>
                                     <div className="mt-1">
                                         {(tx as any).isBalanced ? (
                                             <Badge variant="outline" className="text-green-600 border-green-500"><CheckCircle className="mr-1.5 h-3 w-3"/> Seimbang</Badge>
@@ -800,7 +800,7 @@ export default function CartPage({ setView }: CartPageProps) {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <p className="text-muted-foreground">{format(new Date(tx.date), 'HH:mm')}</p>
+                                    <p className="text-muted-foreground">{format(tx.date, 'HH:mm')}</p>
                                      {!(tx as any).isBalanced && (
                                         <Button size="sm" variant="secondary" onClick={() => { /* Placeholder */ }}>
                                             <Edit className="mr-2 h-4 w-4" /> Edit Akun
