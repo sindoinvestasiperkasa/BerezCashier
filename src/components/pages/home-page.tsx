@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import ProductDetail from "../product-detail";
 import { collection, getDocs, query, where, getFirestore } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
+import { Card, CardContent } from "../ui/card";
 
 const iconMap: { [key: string]: React.ElementType } = {
   LayoutGrid,
