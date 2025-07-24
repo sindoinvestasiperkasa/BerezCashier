@@ -72,6 +72,16 @@ export type Account = {
   [key: string]: any;
 };
 
+export type Notification = {
+  id: string;
+  type: 'low_stock' | 'daily_summary' | 'transaction_failed' | 'shift_report';
+  title: string;
+  message: string;
+  timestamp: Date;
+  isRead: boolean;
+  relatedId?: string; // e.g., productId for low_stock
+};
+
 
 export type HeldCart = {
   id: number;
@@ -107,6 +117,7 @@ interface AppContextType {
   customers: Customer[];
   heldCarts: HeldCart[];
   accounts: Account[];
+  notifications: Notification[];
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -119,6 +130,7 @@ interface AppContextType {
   holdCart: (customerName: string, customerId?: string) => void;
   resumeCart: (cartId: number) => void;
   deleteHeldCart: (cartId: number) => void;
+  markNotificationAsRead: (notificationId: string) => void;
   isAuthenticated: boolean;
   user: UserData | null;
   login: (email: string, pass: string) => Promise<boolean>;
@@ -129,6 +141,8 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const initialTransactions: Transaction[] = [];
 
+const LOW_STOCK_THRESHOLD = 5;
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -137,6 +151,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [heldCarts, setHeldCarts] = useState<HeldCart[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [localUser, setLocalUser] = useState<UserData | null>(null);
   const { toast } = useToast();
@@ -236,6 +251,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         unsubTransactions();
     };
   }, [user, db]);
+
+  // Low Stock Notification Logic
+  useEffect(() => {
+    const lowStockProducts = products.filter(p => p.productType === 'Barang' && typeof p.stock === 'number' && p.stock <= LOW_STOCK_THRESHOLD && p.stock > 0);
+    
+    setNotifications(prevNotifs => {
+        const newNotifs: Notification[] = [...prevNotifs];
+        lowStockProducts.forEach(p => {
+            const existingNotif = newNotifs.find(n => n.type === 'low_stock' && n.relatedId === p.id);
+            if (!existingNotif) {
+                newNotifs.push({
+                    id: `low_stock_${p.id}`,
+                    type: 'low_stock',
+                    title: 'Peringatan Stok Rendah',
+                    message: `Stok untuk ${p.name} tersisa ${p.stock}. Segera lakukan pemesanan ulang.`,
+                    timestamp: new Date(),
+                    isRead: false,
+                    relatedId: p.id
+                });
+            }
+        });
+        return newNotifs;
+    });
+
+  }, [products]);
 
 
   const login = async (email: string, pass: string): Promise<boolean> => {
@@ -416,6 +456,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const deleteHeldCart = (cartId: number) => {
     setHeldCarts(prev => prev.filter(h => h.id !== cartId));
   };
+  
+  const markNotificationAsRead = (notificationId: string) => {
+    setNotifications(prevNotifs => 
+      prevNotifs.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
+    );
+  };
 
 
   return (
@@ -428,6 +474,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         customers,
         heldCarts,
         accounts,
+        notifications,
         addToCart, 
         removeFromCart, 
         updateQuantity, 
@@ -440,6 +487,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         holdCart,
         resumeCart,
         deleteHeldCart,
+        markNotificationAsRead,
         isAuthenticated,
         user,
         login,

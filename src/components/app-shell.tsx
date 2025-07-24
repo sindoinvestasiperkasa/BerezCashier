@@ -12,9 +12,10 @@ import PaymentPage from "./pages/payment-page";
 import EditProfilePage from "./pages/edit-profile-page";
 import MyAddressPage from "./pages/my-address-page";
 import SettingsPage from "./pages/settings-page";
+import NotificationsPage from "./pages/notifications-page";
 
 export type Tab = "home" | "wishlist" | "cart" | "transactions" | "account";
-export type View = Tab | "checkout" | "payment" | "edit-profile" | "my-address" | "settings";
+export type View = Tab | "checkout" | "payment" | "edit-profile" | "my-address" | "settings" | "notifications";
 
 export default function AppShell() {
   const [view, setView] = useState<View>("home");
@@ -22,7 +23,7 @@ export default function AppShell() {
   const renderContent = () => {
     switch (view) {
       case "home":
-        return <HomePage />;
+        return <HomePage setView={setView} />;
       case "wishlist":
         return <WishlistPage />;
       case "cart":
@@ -41,8 +42,10 @@ export default function AppShell() {
         return <MyAddressPage setView={setView} />;
       case "settings":
         return <SettingsPage setView={setView} />;
+      case "notifications":
+        return <NotificationsPage setView={setView} />;
       default:
-        return <HomePage />;
+        return <HomePage setView={setView} />;
     }
   };
   

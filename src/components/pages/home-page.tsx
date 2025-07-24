@@ -25,6 +25,7 @@ import { Skeleton } from "../ui/skeleton";
 import { Card, CardContent } from "../ui/card";
 import { useApp } from "@/hooks/use-app";
 import { useToast } from "@/hooks/use-toast";
+import type { View } from "../app-shell";
 
 const iconMap: { [key: string]: React.ElementType } = {
   All: LayoutGrid,
@@ -42,8 +43,12 @@ interface ProductCategory {
   icon?: string;
 }
 
-export default function HomePage() {
-  const { user, products } = useApp();
+interface HomePageProps {
+  setView: (view: View) => void;
+}
+
+export default function HomePage({ setView }: HomePageProps) {
+  const { user, products, notifications } = useApp();
   const { toast } = useToast();
   const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -156,12 +161,7 @@ export default function HomePage() {
     setSelectedProduct(null);
   };
   
-  const handleNotificationClick = () => {
-    toast({
-      title: "Belum Ada Notifikasi",
-      description: "Semua notifikasi Anda sudah terbaca.",
-    });
-  };
+  const unreadNotifications = notifications.filter(n => !n.isRead).length;
 
   return (
     <div className="flex flex-col">
@@ -173,8 +173,13 @@ export default function HomePage() {
               {locationName || "Mencari lokasi..."}
             </h1>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleNotificationClick}>
+          <Button variant="ghost" size="icon" onClick={() => setView('notifications')} className="relative">
             <Bell className="h-6 w-6" />
+            {unreadNotifications > 0 && (
+              <div className="absolute top-0 right-0 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center text-xs font-bold">
+                {unreadNotifications}
+              </div>
+            )}
           </Button>
         </div>
         <div className="relative">
