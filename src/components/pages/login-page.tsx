@@ -19,12 +19,11 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage({ setView }: AuthView) {
+export default function LoginPage({ setView }: { setView: (view: AuthView) => void; }) {
   const { login } = useApp();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+  
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -33,8 +32,9 @@ export default function LoginPage({ setView }: AuthView) {
     },
   });
 
+  const { isSubmitting } = form.formState;
+
   const onSubmit = async (data: LoginFormValues) => {
-    setIsSubmitting(true);
     try {
       await login(data.email, data.password);
       // The app state will change via the context, and AppShellManager will handle the redirect.
@@ -45,8 +45,6 @@ export default function LoginPage({ setView }: AuthView) {
         description: error.message || "Terjadi kesalahan. Silakan coba lagi.",
       });
       form.setValue('password', '');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

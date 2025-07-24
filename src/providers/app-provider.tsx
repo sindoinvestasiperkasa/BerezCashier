@@ -54,47 +54,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const login = async (email: string, pass: string) => {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      const user = userCredential.user;
+    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    const user = userCredential.user;
 
-      // In a real app, you might check for email verification.
-      // For this prototype, we'll assume it's not needed to match the simple login.
-      // If you need verification, you can add it here.
-      // if (!user.emailVerified) {
-      //   await auth.signOut();
-      //   throw new Error("Silakan verifikasi email Anda terlebih dahulu.");
-      // }
-
-      // Simplified logic: If login is successful, we set isAuthenticated to true.
-      // The complex role-checking logic from your example can be integrated here
-      // if you need to differentiate between user types (UMKM, Employee, etc.).
-      
-      // Example of checking Firestore (adapted from your logic)
-      const umkmDocRef = doc(db, 'dataUMKM', user.uid);
-      const umkmDocSnap = await getDoc(umkmDocRef);
-
-      const employeeQuery = query(collection(db, 'employees'), where('email', '==', email));
-      const employeeQuerySnapshot = await getDocs(employeeQuery);
-
-      if (umkmDocSnap.exists() || !employeeQuerySnapshot.empty) {
-        setIsAuthenticated(true);
-        // In a real app, you'd store user data in state.
-      } else {
-        await auth.signOut();
-        throw new Error("Data pengguna tidak ditemukan di database. Silakan hubungi administrator.");
-      }
-      
-    } catch (error: any) {
-      let errorMessage = "Terjadi kesalahan. Silakan coba lagi.";
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        errorMessage = "Kombinasi email dan password salah. Mohon periksa kembali.";
-      } else if (error.message.includes("Data pengguna tidak ditemukan")) {
-        errorMessage = error.message;
-      }
-      // Re-throw the error so the component can catch it and display a toast
-      throw new Error(errorMessage);
-    }
+    // In a real app, you would fetch user data from your database
+    // For this prototype, we'll just set isAuthenticated to true
+    setIsAuthenticated(true);
   };
 
   const logout = async () => {
