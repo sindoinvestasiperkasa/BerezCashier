@@ -51,7 +51,11 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
   const subtotal = Array.isArray(transaction.items) 
     ? transaction.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
     : 0;
-  const shipping = transaction.total > subtotal ? transaction.total - subtotal : 0;
+  
+  const discount = transaction.discountAmount || 0;
+  const tax = transaction.taxAmount || 0;
+  const shipping = transaction.total - (subtotal - discount + tax);
+
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -108,10 +112,18 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                       <span>Subtotal</span>
                       <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-muted-foreground">
+                   {discount > 0 && <div className="flex justify-between text-muted-foreground">
+                      <span>Diskon</span>
+                      <span className="font-medium text-destructive">- {formatCurrency(discount)}</span>
+                  </div>}
+                  {shipping > 0 && <div className="flex justify-between text-muted-foreground">
                       <span>Ongkos Kirim</span>
                       <span className="font-medium text-foreground">{formatCurrency(shipping)}</span>
-                  </div>
+                  </div>}
+                   {tax > 0 && <div className="flex justify-between text-muted-foreground">
+                      <span>Pajak</span>
+                      <span className="font-medium text-foreground">{formatCurrency(tax)}</span>
+                  </div>}
                   <Separator/>
                   <div className="flex justify-between font-bold text-lg">
                       <span>Total</span>
