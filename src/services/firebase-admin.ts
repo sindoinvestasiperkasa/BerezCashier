@@ -1,16 +1,20 @@
 // src/services/firebase-admin.ts
 import * as admin from 'firebase-admin';
+import dotenv from 'dotenv';
 
-// Correctly parse the service account key from environment variables.
-const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+dotenv.config();
+
 let serviceAccount: admin.ServiceAccount | undefined;
+const base64Key = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
 
-if (serviceAccountString) {
+if (base64Key) {
   try {
-    // The key is stored as a string, so it needs to be parsed into a JSON object.
-    serviceAccount = JSON.parse(serviceAccountString);
+    // Decode the Base64 string into a JSON string
+    const serviceAccountJson = Buffer.from(base64Key, 'base64').toString('utf8');
+    // Parse the JSON string into an object
+    serviceAccount = JSON.parse(serviceAccountJson);
   } catch (e) {
-    console.error('Failed to parse Firebase service account key from environment variables.', e);
+    console.error('Failed to parse Firebase service account key from Base64.', e);
   }
 }
 
@@ -20,7 +24,7 @@ function initializeAdminApp() {
   if (admin.apps.length === 0) {
     if (!serviceAccount) {
       throw new Error(
-        'Firebase service account key not found or failed to parse. Please check FIREBASE_SERVICE_ACCOUNT_KEY in your .env file.'
+        'Firebase service account key not found or failed to parse. Please check FIREBASE_SERVICE_ACCOUNT_BASE64 in your .env file.'
       );
     }
     admin.initializeApp({
