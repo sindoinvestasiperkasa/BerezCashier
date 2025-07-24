@@ -53,7 +53,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const login = async (email: string, pass: string) => {
+  const login = async (email: string, pass: string): Promise<boolean> => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;

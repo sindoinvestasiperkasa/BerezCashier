@@ -11,7 +11,6 @@ import { Input } from "../ui/input";
 import { useApp } from "@/hooks/use-app";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
 
 const loginSchema = z.object({
   email: z.string().email("Alamat email tidak valid"),
@@ -23,7 +22,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage({ setView }: { setView: (view: AuthView) => void; }) {
   const { login } = useApp();
   const { toast } = useToast();
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   
   const form = useForm<LoginFormValues>({
@@ -42,9 +40,9 @@ export default function LoginPage({ setView }: { setView: (view: AuthView) => vo
       if (loginSuccess) {
           toast({
             title: "Login Berhasil",
-            description: "Selamat datang! Mengarahkan Anda ke dasbor.",
+            description: "Selamat datang kembali!",
           });
-          router.push('/dashboard');
+          // AppShellManager will handle the redirect to home
       }
     } catch (error: any) {
       toast({
