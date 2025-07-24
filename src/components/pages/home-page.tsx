@@ -14,6 +14,7 @@ import {
   Scissors,
   Shirt,
   Car,
+  MapPin,
 } from "lucide-react";
 import type { Product } from "@/lib/data";
 import ProductCard from "../product-card";
@@ -49,6 +50,40 @@ export default function HomePage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [locationName, setLocationName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLocation = async (latitude: number, longitude: number) => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+        const data = await response.json();
+        const city = data.address.city || data.address.town || data.address.village;
+        const country = data.address.country;
+        if (city && country) {
+          setLocationName(`${city}, ${country}`);
+        } else {
+          setLocationName(user?.address || "Lokasi tidak diatur");
+        }
+      } catch (error) {
+        console.error("Error fetching location name:", error);
+        setLocationName(user?.address || "Lokasi tidak diatur");
+      }
+    };
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          fetchLocation(position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setLocationName(user?.address || "Lokasi tidak diatur");
+        }
+      );
+    } else {
+      setLocationName(user?.address || "Lokasi tidak diatur");
+    }
+  }, [user?.address]);
 
   const serviceProducts = useMemo(() => {
     return products.filter(p => p.productType === 'Jasa');
@@ -133,9 +168,9 @@ export default function HomePage() {
       <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <p className="text-muted-foreground text-sm">Lokasi</p>
+            <p className="text-muted-foreground text-sm flex items-center gap-1"><MapPin className="w-4 h-4"/> Lokasi Anda</p>
             <h1 className="font-bold text-lg text-foreground">
-              {user?.address || "Lokasi tidak diatur"}
+              {locationName || "Mencari lokasi..."}
             </h1>
           </div>
           <Button variant="ghost" size="icon" onClick={handleNotificationClick}>
