@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -14,6 +15,8 @@ import { Package, Calendar, CreditCard } from "lucide-react";
 import type { Transaction } from "@/providers/app-provider";
 import { cn } from "@/lib/utils";
 import { statusVariant, paymentStatusConfig } from "./pages/transactions-page";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 
 interface TransactionDetailProps {
   transaction: Transaction | null;
@@ -28,6 +31,14 @@ const formatCurrency = (amount: number) => {
     minimumFractionDigits: 0,
   }).format(amount);
 };
+
+const formatDate = (dateString: string) => {
+    if (!dateString || isNaN(new Date(dateString).getTime())) {
+      return "Tanggal tidak valid";
+    }
+    return format(new Date(dateString), "d MMMM yyyy, HH:mm", { locale: id });
+};
+
 
 export default function TransactionDetail({ transaction, isOpen, onClose }: TransactionDetailProps) {
   if (!transaction) {
@@ -55,7 +66,7 @@ export default function TransactionDetail({ transaction, isOpen, onClose }: Tran
                 <span className="text-xs">•</span>
                 <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
-                    <span>{transaction.date}</span>
+                    <span>{formatDate(transaction.date)}</span>
                 </div>
             </div>
         </SheetHeader>

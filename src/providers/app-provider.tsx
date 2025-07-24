@@ -5,7 +5,7 @@ import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import type { Product } from '@/lib/data';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 import { createTransaction, CreateTransactionInput, CreateTransactionOutput } from '@/ai/flows/create-transaction-flow';
 
@@ -174,12 +174,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const transactionsQuery = query(collection(db, "transactions"), where("idUMKM", "==", idUMKM));
     const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-        const transactionsData = snapshot.docs.map(doc => ({ 
-          id: doc.id,
-          date: new Date(doc.data().date.seconds * 1000).toISOString(),
-          ...doc.data() 
-        } as Transaction));
-        setTransactions(transactionsData);
+      const transactionsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const { date, ...rest } = data;
+        const jsDate = (date instanceof Timestamp) ? date.toDate() : new Date(); // Fallback to now if data is malformed
+        
+        return {
+            id: doc.id,
+            ...rest,
+            date: jsDate.toISOString(),
+        } as Transaction;
+      });
+      setTransactions(transactionsData);
     });
 
 

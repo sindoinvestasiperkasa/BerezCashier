@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -9,6 +10,8 @@ import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/providers/app-provider";
 import TransactionDetail from "../transaction-detail";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 
 export const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Selesai': 'default',
@@ -44,6 +47,14 @@ export default function TransactionsPage() {
   const handleCloseDetail = () => {
     setSelectedTransaction(null);
   };
+  
+  const formatDate = (dateString: string) => {
+    if (!dateString || isNaN(new Date(dateString).getTime())) {
+      return "Tanggal tidak valid";
+    }
+    return format(new Date(dateString), "d MMMM yyyy, HH:mm", { locale: id });
+  };
+
 
   return (
     <div className="p-4">
@@ -67,7 +78,7 @@ export default function TransactionsPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-base font-bold">{trx.id}</CardTitle>
-                  <CardDescription>{trx.date}</CardDescription>
+                  <CardDescription>{formatDate(trx.date)}</CardDescription>
                 </div>
                 <Badge variant={statusVariant[trx.status] || 'outline'} className={trx.status === 'Diproses' ? 'border-primary text-primary' : ''}>{trx.status}</Badge>
               </div>
