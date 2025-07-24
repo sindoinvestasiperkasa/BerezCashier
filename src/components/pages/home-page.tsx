@@ -48,17 +48,21 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+  const serviceProducts = useMemo(() => {
+    return products.filter(p => p.productType === 'Jasa');
+  }, [products]);
+
   useEffect(() => {
     const fetchCategories = async () => {
-      if (!user || products.length === 0) {
-        if (!user) setIsLoading(false);
+      if (!user || serviceProducts.length === 0) {
+        setIsLoading(false);
         return;
       }
       setIsLoading(true);
       const db = getFirestore();
 
       try {
-        const activeCategoryIds = [...new Set(products.map(p => p.categoryId))];
+        const activeCategoryIds = [...new Set(serviceProducts.map(p => p.categoryId))];
         
         let categoriesData: ProductCategory[] = [];
         if (activeCategoryIds.length > 0) {
@@ -79,20 +83,19 @@ export default function HomePage() {
       }
     };
     
-    // products are now coming from context, so we watch products array
     fetchCategories();
 
-  }, [products, user]);
+  }, [serviceProducts, user]);
   
   const productsWithCategoryNames = useMemo(() => {
-    return products.map(product => {
+    return serviceProducts.map(product => {
       const category = productCategories.find(cat => cat.id === product.categoryId);
       return {
         ...product,
         categoryName: category ? category.name : "Uncategorized",
       };
     });
-  }, [products, productCategories]);
+  }, [serviceProducts, productCategories]);
 
   const displayCategories = useMemo(() => {
     const allCategory: ProductCategory = { id: "All", name: "All", icon: "All" };
@@ -100,9 +103,6 @@ export default function HomePage() {
   }, [productCategories]);
 
   const filteredProducts = productsWithCategoryNames.filter((product) => {
-    const isService = product.productType === 'Jasa';
-    if (!isService) return false; // Only show 'Jasa' products on home page
-
     const matchesCategory =
       selectedCategoryId === "All" || product.categoryId === selectedCategoryId;
     const matchesSearch = product.name
