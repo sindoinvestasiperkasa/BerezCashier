@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/carousel";
 import { Button } from "../ui/button";
 import type { AuthView } from "../auth-flow";
-import { Sparkles, Truck, ShieldCheck, Tag, Store } from "lucide-react";
+import { Sparkles, Truck, ShieldCheck, Tag, Store, Wallet } from "lucide-react";
 
 interface WelcomePageProps {
   setView: (view: AuthView) => void;
@@ -30,6 +30,13 @@ const slides = [
     description: "Pantau persediaan produk Anda secara langsung untuk menghindari kehabisan stok.",
     image: "https://placehold.co/600x400.png",
     hint: "inventory management warehouse"
+  },
+  {
+    icon: Wallet,
+    title: "Integrasi Stok & Keuangan",
+    description: "Aplikasi kasir ini terintegrasi langsung dengan manajemen stok dan laporan keuangan Anda.",
+    image: "https://placehold.co/600x400.png",
+    hint: "finance integration stock"
   },
   {
     icon: ShieldCheck,
