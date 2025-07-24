@@ -20,7 +20,7 @@ const CartItemSchema = z.object({
   hpp: z.number().optional().default(0), // Harga Pokok Penjualan per item
 });
 
-export const CreateTransactionInputSchema = z.object({
+const CreateTransactionInputSchema = z.object({
   items: z.array(CartItemSchema),
   subtotal: z.number(),
   discountAmount: z.number(),
@@ -38,7 +38,7 @@ export const CreateTransactionInputSchema = z.object({
 });
 export type CreateTransactionInput = z.infer<typeof CreateTransactionInputSchema>;
 
-export const CreateTransactionOutputSchema = z.object({
+const CreateTransactionOutputSchema = z.object({
   success: z.boolean(),
   transactionId: z.string(),
   journalId: z.string().optional(),
