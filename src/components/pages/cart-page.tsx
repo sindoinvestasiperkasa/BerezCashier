@@ -10,12 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
 import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer } from "lucide-react";
 import type { View } from "../app-shell";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from '../ui/badge';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ScrollArea } from '../ui/scroll-area';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import type { Transaction } from "@/providers/app-provider";
@@ -841,3 +841,6 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
+
+    
+    
