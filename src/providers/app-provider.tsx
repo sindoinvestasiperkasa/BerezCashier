@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, ReactNode, useEffect, useMemo } from 'react';
 import type { Product } from '@/lib/data';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
@@ -16,7 +16,7 @@ export interface CartItem extends Product {
 
 export interface Transaction {
   id: string;
-  date: string;
+  date: Date;
   total: number;
   status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan' | 'Lunas';
   items: CartItem[];
@@ -26,6 +26,7 @@ export interface Transaction {
   paidAmount?: number;
   taxAmount?: number;
   discountAmount?: number;
+  transactionNumber?: string;
   lines?: { accountId: string; debit: number; credit: number; description: string }[];
 }
 
@@ -128,9 +129,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<UserData | null>(null);
+  const [setUser, setUseUser] = useState<UserData | null>(null);
   const { toast } = useToast();
   const db = getFirestore();
+
+  const user = useMemo(() => {
+    if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem('sagara-user-data');
+        if (storedUser) {
+            return JSON.parse(storedUser);
+        }
+    }
+    return null;
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseAuthUser | null) => {
@@ -138,11 +149,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const storedUser = localStorage.getItem('sagara-user-data');
             if(storedUser) {
                 const parsedUser = JSON.parse(storedUser);
-                setUser(parsedUser);
+                setUseUser(parsedUser);
                 setIsAuthenticated(true);
             }
         } else {
-            setUser(null);
+            setUseUser(null);
             setIsAuthenticated(false);
             localStorage.removeItem('sagara-user-data');
         }
@@ -194,8 +205,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return {
             id: doc.id,
             ...rest,
-            amount: data.amount, // Using amount as per the latest logic
-            date: jsDate.toISOString(),
+            date: jsDate,
+            total: data.amount,
         } as Transaction;
       });
       setTransactions(transactionsData);
@@ -253,7 +264,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (userData) {
-        setUser(userData);
+        setUseUser(userData);
         localStorage.setItem('sagara-user-data', JSON.stringify(userData));
         setIsAuthenticated(true);
         return true;

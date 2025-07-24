@@ -49,11 +49,11 @@ export default function TransactionsPage() {
     setSelectedTransaction(null);
   };
   
-  const formatDate = (dateString: string) => {
-    if (!dateString || isNaN(new Date(dateString).getTime())) {
+  const formatDate = (date: Date) => {
+    if (!date || !(date instanceof Date)) {
       return "Tanggal tidak valid";
     }
-    return format(new Date(dateString), "d MMMM yyyy, HH:mm", { locale: id });
+    return format(date, "d MMMM yyyy, HH:mm", { locale: id });
   };
 
 

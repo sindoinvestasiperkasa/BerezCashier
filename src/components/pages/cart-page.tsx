@@ -392,7 +392,7 @@ export default function CartPage({ setView }: CartPageProps) {
       paymentMethod: tx.paymentMethod || 'N/A',
       cashReceived: tx.paidAmount || tx.amount || 0,
       changeAmount: Math.max(0, (tx.paidAmount || 0) - (tx.amount || 0)),
-      transactionNumber: tx.id,
+      transactionNumber: tx.transactionNumber || tx.id,
       transactionDate: new Date(tx.date),
     };
   
@@ -789,7 +789,7 @@ export default function CartPage({ setView }: CartPageProps) {
                         transactionsToday.map(tx => (
                             <div key={tx.id} className="p-3 border rounded-lg flex justify-between items-center text-sm">
                                 <div>
-                                    <p className="font-mono text-xs">{tx.id}</p>
+                                    <p className="font-mono text-xs">{tx.transactionNumber || tx.id}</p>
                                     <p className="font-semibold">{formatCurrency(tx.amount)}</p>
                                     <div className="mt-1">
                                         {(tx as any).isBalanced ? (
