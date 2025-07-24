@@ -2,6 +2,9 @@
 
 import React, { createContext, useState, ReactNode } from 'react';
 import type { Product } from '@/lib/data';
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 export interface CartItem extends Product {
   quantity: number;
@@ -36,7 +39,7 @@ interface AppContextType {
   addTransaction: (data: NewTransactionData) => void;
   clearCart: () => void;
   isAuthenticated: boolean;
-  login: () => void;
+  login: (email: string, pass: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -50,11 +53,52 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const login = () => {
-    setIsAuthenticated(true);
+  const login = async (email: string, pass: string) => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      const user = userCredential.user;
+
+      // In a real app, you might check for email verification.
+      // For this prototype, we'll assume it's not needed to match the simple login.
+      // If you need verification, you can add it here.
+      // if (!user.emailVerified) {
+      //   await auth.signOut();
+      //   throw new Error("Silakan verifikasi email Anda terlebih dahulu.");
+      // }
+
+      // Simplified logic: If login is successful, we set isAuthenticated to true.
+      // The complex role-checking logic from your example can be integrated here
+      // if you need to differentiate between user types (UMKM, Employee, etc.).
+      
+      // Example of checking Firestore (adapted from your logic)
+      const umkmDocRef = doc(db, 'dataUMKM', user.uid);
+      const umkmDocSnap = await getDoc(umkmDocRef);
+
+      const employeeQuery = query(collection(db, 'employees'), where('email', '==', email));
+      const employeeQuerySnapshot = await getDocs(employeeQuery);
+
+      if (umkmDocSnap.exists() || !employeeQuerySnapshot.empty) {
+        setIsAuthenticated(true);
+        // In a real app, you'd store user data in state.
+      } else {
+        await auth.signOut();
+        throw new Error("Data pengguna tidak ditemukan di database. Silakan hubungi administrator.");
+      }
+      
+    } catch (error: any) {
+      let errorMessage = "Terjadi kesalahan. Silakan coba lagi.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = "Kombinasi email dan password salah. Mohon periksa kembali.";
+      } else if (error.message.includes("Data pengguna tidak ditemukan")) {
+        errorMessage = error.message;
+      }
+      // Re-throw the error so the component can catch it and display a toast
+      throw new Error(errorMessage);
+    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await auth.signOut();
     setIsAuthenticated(false);
   };
 

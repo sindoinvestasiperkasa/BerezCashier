@@ -1,22 +1,58 @@
 "use client";
 
-import { ArrowLeft, KeyRound, Mail } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { ArrowLeft, KeyRound, Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import type { AuthView } from "../auth-flow";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Label } from "../ui/label";
 import { useApp } from "@/hooks/use-app";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
+import { useToast } from "@/hooks/use-toast";
 
-interface LoginPageProps {
-  setView: (view: AuthView) => void;
-}
+const loginSchema = z.object({
+  email: z.string().email("Alamat email tidak valid"),
+  password: z.string().min(6, "Password minimal 6 karakter"),
+});
 
-export default function LoginPage({ setView }: LoginPageProps) {
+type LoginFormValues = z.infer<typeof loginSchema>;
+
+export default function LoginPage({ setView }: AuthView) {
   const { login } = useApp();
+  const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (data: LoginFormValues) => {
+    setIsSubmitting(true);
+    try {
+      await login(data.email, data.password);
+      // The app state will change via the context, and AppShellManager will handle the redirect.
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Login Gagal",
+        description: error.message || "Terjadi kesalahan. Silakan coba lagi.",
+      });
+      form.setValue('password', '');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full p-6 justify-center">
-       <div className="absolute top-4 left-4">
+      <div className="absolute top-4 left-4">
         <Button variant="ghost" size="icon" onClick={() => setView('welcome')}>
           <ArrowLeft />
         </Button>
@@ -25,19 +61,58 @@ export default function LoginPage({ setView }: LoginPageProps) {
         <h1 className="text-3xl font-bold text-primary">Selamat Datang Kembali</h1>
         <p className="text-muted-foreground">Masuk untuk melanjutkan belanja.</p>
       </div>
-      <div className="space-y-6">
-        <div className="space-y-2 relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input id="email" type="email" placeholder="Email Anda" className="pl-10 h-12"/>
-        </div>
-        <div className="space-y-2 relative">
-          <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input id="password" type="password" placeholder="Kata Sandi" className="pl-10 h-12"/>
-        </div>
-        <Button onClick={login} className="w-full h-14 text-lg font-bold">
-          Masuk
-        </Button>
-      </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <FormControl>
+                    <Input id="email" type="email" placeholder="Email Anda" className="pl-10 h-12" {...field} />
+                  </FormControl>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <FormControl>
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Kata Sandi"
+                      className="pl-10 h-12 pr-10"
+                      {...field}
+                    />
+                  </FormControl>
+                   <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                        aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full h-14 text-lg font-bold" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="mr-2 animate-spin" /> : null}
+            {isSubmitting ? 'Memproses...' : 'Masuk'}
+          </Button>
+        </form>
+      </Form>
       <div className="mt-6 text-center">
         <p className="text-sm text-muted-foreground">
           Belum punya akun?{' '}
