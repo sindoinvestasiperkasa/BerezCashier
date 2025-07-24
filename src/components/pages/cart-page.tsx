@@ -370,24 +370,32 @@ export default function CartPage({ setView }: CartPageProps) {
   };
 
   const handleReprintReceipt = (tx: Transaction) => {
-    const subtotal = tx.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    // Make sure we have the necessary fields, providing defaults if they are missing
+    const items = tx.items || [];
+    const subtotal = items.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0);
     const taxAmount = tx.taxAmount || 0;
     const discountAmount = tx.discountAmount || 0;
-    
+    const totalAmount = tx.amount || 0;
+    const paidAmount = tx.paidAmount || totalAmount;
+  
     const receiptData: ReceiptData = {
-        items: tx.items || [],
-        subtotal,
-        discountAmount,
-        taxAmount,
-        total: tx.total || 0,
-        paymentMethod: tx.paymentMethod || 'N/A',
-        cashReceived: tx.paidAmount || tx.total || 0,
-        changeAmount: (tx.paidAmount || 0) - (tx.total || 0),
-        transactionNumber: tx.id,
-        transactionDate: new Date(tx.date),
+      items: items.map(item => ({
+        ...item,
+        unitPrice: item.unitPrice || item.price, // Fallback to price for safety
+      })),
+      subtotal,
+      discountAmount,
+      taxAmount,
+      total: totalAmount,
+      paymentMethod: tx.paymentMethod || 'N/A',
+      cashReceived: paidAmount,
+      changeAmount: Math.max(0, paidAmount - totalAmount),
+      transactionNumber: tx.id,
+      transactionDate: new Date(tx.date),
     };
-
+  
     setLastTransactionForReceipt(receiptData);
+    // Use a short timeout to ensure state is set before printing
     setTimeout(() => handlePrintReceipt(), 100);
   };
 
@@ -772,7 +780,7 @@ export default function CartPage({ setView }: CartPageProps) {
                   <div key={tx.id} className="p-3 border rounded-lg flex justify-between items-center text-sm">
                     <div>
                       <p className="font-mono text-xs">{tx.id}</p>
-                      <p className="font-semibold">{formatCurrency(tx.total)}</p>
+                      <p className="font-semibold">{formatCurrency(tx.amount || 0)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-muted-foreground">{format(new Date(tx.date), 'HH:mm')}</p>
@@ -788,7 +796,7 @@ export default function CartPage({ setView }: CartPageProps) {
           <DialogFooter>
             <div className="w-full flex justify-between items-center font-bold text-lg">
               <span>Total:</span>
-              <span>{formatCurrency(transactionsToday.reduce((sum, tx) => sum + tx.total, 0))}</span>
+              <span>{formatCurrency(transactionsToday.reduce((sum, tx) => sum + (tx.amount || 0), 0))}</span>
             </div>
           </DialogFooter>
         </DialogContent>
@@ -849,5 +857,7 @@ export default function CartPage({ setView }: CartPageProps) {
 
 
 
+
+    
 
     

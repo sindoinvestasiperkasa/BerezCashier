@@ -193,7 +193,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return {
             id: doc.id,
             ...rest,
-            total: data.total,
+            amount: data.amount,
             date: jsDate.toISOString(),
         } as Transaction;
       });
@@ -422,3 +422,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    
