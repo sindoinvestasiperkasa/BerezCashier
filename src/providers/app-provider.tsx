@@ -5,7 +5,7 @@ import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import type { Product } from '@/lib/data';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, getFirestore } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 
 export interface CartItem extends Product {
@@ -31,6 +31,9 @@ export type NewTransactionData = {
 export type Customer = {
   id: string;
   name: string;
+  email?: string;
+  phone?: string;
+  [key: string]: any;
 }
 
 export type HeldCart = {
@@ -69,7 +72,7 @@ interface AppContextType {
   isInWishlist: (productId: string) => boolean;
   addTransaction: (data: NewTransactionData) => void;
   clearCart: () => void;
-  addCustomer: (name: string) => Customer;
+  addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
   resumeCart: (cartId: number) => void;
   deleteHeldCart: (cartId: number) => void;
@@ -88,20 +91,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [heldCarts, setHeldCarts] = useState<HeldCart[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([
-    { id: 'cust1', name: 'Budi Santoso' },
-    { id: 'cust2', name: 'Citra Lestari' },
-  ]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
   const { toast } = useToast();
+  const db = getFirestore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseAuthUser | null) => {
         if (firebaseUser) {
             const storedUser = localStorage.getItem('sagara-user-data');
             if(storedUser) {
-                setUser(JSON.parse(storedUser));
+                const parsedUser = JSON.parse(storedUser);
+                setUser(parsedUser);
                 setIsAuthenticated(true);
             }
         } else {
@@ -110,14 +112,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             localStorage.removeItem('sagara-user-data');
         }
     });
-
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+        setCustomers([]);
+        return;
+    };
+    
+    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+    if (!idUMKM) return;
+
+    const customersQuery = query(collection(db, "customers"), where("idUMKM", "==", idUMKM));
+    const unsubscribe = onSnapshot(customersQuery, (snapshot) => {
+        const customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
+        setCustomers(customersData);
+    });
+
+    return () => unsubscribe();
+  }, [user, db]);
 
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     try {
-      const db = getFirestore();
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
 
@@ -238,11 +256,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setCart([]);
   };
 
-  const addCustomer = (name: string): Customer => {
-    const newCustomer = { id: `cust${Date.now()}`, name };
-    setCustomers(prev => [...prev, newCustomer]);
-    return newCustomer;
+  const addCustomer = async (customerData: { name: string; email?: string; phone?: string; }): Promise<Customer | null> => {
+    if (!user) {
+        toast({ title: "Anda harus login", variant: "destructive" });
+        return null;
+    }
+    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+    if (!idUMKM) {
+        toast({ title: "Data UMKM tidak ditemukan", variant: "destructive" });
+        return null;
+    }
+
+    try {
+        const docRef = await addDoc(collection(db, "customers"), {
+            ...customerData,
+            idUMKM: idUMKM,
+            joinDate: new Date(),
+        });
+        const newCustomer: Customer = { id: docRef.id, ...customerData };
+        return newCustomer;
+    } catch (error) {
+        console.error("Error adding customer: ", error);
+        toast({ title: "Gagal menambah pelanggan", variant: "destructive" });
+        return null;
+    }
   };
+
 
   const holdCart = (customerName: string, customerId?: string) => {
     if (cart.length === 0) return;

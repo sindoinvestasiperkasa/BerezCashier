@@ -45,6 +45,8 @@ export default function CartPage({ setView }: CartPageProps) {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   
   const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerEmail, setNewCustomerEmail] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
 
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -128,16 +130,24 @@ export default function CartPage({ setView }: CartPageProps) {
     deleteHeldCart(cartId);
   }
 
-  const handleAddNewCustomer = () => {
+  const handleAddNewCustomer = async () => {
     if (newCustomerName.trim() === '') {
         toast({ title: 'Nama tidak boleh kosong', variant: 'destructive' });
         return;
     }
-    const newCustomer = addCustomer(newCustomerName);
-    setSelectedCustomerId(newCustomer.id);
-    setNewCustomerName('');
-    setIsCustomerDialogOpen(false);
-    toast({ title: 'Pelanggan baru ditambahkan!' });
+    const newCustomer = await addCustomer({ 
+        name: newCustomerName, 
+        email: newCustomerEmail, 
+        phone: newCustomerPhone 
+    });
+    if (newCustomer) {
+        setSelectedCustomerId(newCustomer.id);
+        setNewCustomerName('');
+        setNewCustomerEmail('');
+        setNewCustomerPhone('');
+        setIsCustomerDialogOpen(false);
+        toast({ title: 'Pelanggan baru ditambahkan!' });
+    }
   };
 
   const transactionsToday = transactions.filter(tx => {
@@ -359,7 +369,7 @@ export default function CartPage({ setView }: CartPageProps) {
           </DialogHeader>
           <div className="py-4">
             <ScrollArea className="max-h-96">
-                <div className="space-y-4 px-1">
+                <div className="space-y-4 px-4">
                     {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
                         heldCarts.map(held => (
                         <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
@@ -423,16 +433,38 @@ export default function CartPage({ setView }: CartPageProps) {
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Tambah Pelanggan Baru</DialogTitle>
-                <DialogDescription>Masukkan nama pelanggan untuk menambahkannya ke daftar.</DialogDescription>
+                <DialogDescription>Masukkan detail pelanggan untuk menambahkannya ke daftar.</DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-                <Label htmlFor="customer-name">Nama Pelanggan</Label>
-                <Input 
-                    id="customer-name" 
-                    value={newCustomerName}
-                    onChange={(e) => setNewCustomerName(e.target.value)}
-                    placeholder="Contoh: John Doe" 
-                />
+            <div className="py-4 space-y-4">
+                <div>
+                    <Label htmlFor="customer-name">Nama Pelanggan</Label>
+                    <Input 
+                        id="customer-name" 
+                        value={newCustomerName}
+                        onChange={(e) => setNewCustomerName(e.target.value)}
+                        placeholder="Contoh: John Doe" 
+                    />
+                </div>
+                 <div>
+                    <Label htmlFor="customer-email">Email</Label>
+                    <Input 
+                        id="customer-email" 
+                        type="email"
+                        value={newCustomerEmail}
+                        onChange={(e) => setNewCustomerEmail(e.target.value)}
+                        placeholder="Contoh: john@example.com" 
+                    />
+                </div>
+                 <div>
+                    <Label htmlFor="customer-phone">Telepon</Label>
+                    <Input 
+                        id="customer-phone" 
+                        type="tel"
+                        value={newCustomerPhone}
+                        onChange={(e) => setNewCustomerPhone(e.target.value)}
+                        placeholder="Contoh: 081234567890" 
+                    />
+                </div>
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCustomerDialogOpen(false)}>Batal</Button>
@@ -443,3 +475,4 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
+
