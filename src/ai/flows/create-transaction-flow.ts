@@ -11,7 +11,31 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import * as admin from 'firebase-admin';
-import { adminDb } from '@/services/firebase-admin'; // Impor instance Admin DB
+
+// Helper function to initialize Firebase Admin SDK
+function initializeAdminApp() {
+  if (admin.apps.length > 0) {
+    return admin.app();
+  }
+
+  const base64Key = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+  if (!base64Key) {
+    throw new Error('Firebase service account key not found in environment variables.');
+  }
+  
+  try {
+    const serviceAccountJson = Buffer.from(base64Key, 'base64').toString('utf8');
+    const serviceAccount = JSON.parse(serviceAccountJson);
+
+    return admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } catch (e) {
+      console.error('Failed to parse or initialize Firebase Admin SDK:', e);
+      throw new Error('Failed to initialize Firebase Admin SDK. Please check your FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable.');
+  }
+}
+
 
 const CartItemSchema = z.object({
   id: z.string(),
@@ -59,7 +83,8 @@ const createTransactionFlow = ai.defineFlow(
     outputSchema: CreateTransactionOutputSchema,
   },
   async (input) => {
-    const db = adminDb();
+    const adminApp = initializeAdminApp();
+    const db = adminApp.firestore();
     const batch = db.batch();
 
     // 1. Simpan data transaksi
