@@ -31,6 +31,7 @@ const CreateTransactionInputSchema = z.object({
   total: z.number(),
   paymentMethod: z.string(),
   customerId: z.string(),
+  customerName: z.string(), // Ditambahkan
   idUMKM: z.string(),
   isPkp: z.boolean().optional().default(false),
   // Account IDs
@@ -113,6 +114,7 @@ const createTransactionFlow = ai.defineFlow(
       taxAmount: input.taxAmount,
       items: input.items.map(({ hpp, ...rest }) => rest), // Hapus HPP dari item yang disimpan
       customerId: input.customerId,
+      customerName: input.customerName, // Ditambahkan
       paymentMethod: input.paymentMethod,
       isPkp: input.isPkp,
       lines: journalLines,
