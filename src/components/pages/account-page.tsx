@@ -5,6 +5,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight, User, MapPin, Heart, Settings, LogOut } from "lucide-react";
 import type { View } from "../app-shell";
 import { useApp } from "@/hooks/use-app";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "../ui/button";
+
 
 interface AccountPageProps {
   setView: (view: View) => void;
@@ -30,7 +43,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
       <div className="p-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-b-3xl">
         <div className="flex items-center gap-4 pt-8 pb-4">
           <Avatar className="h-20 w-20 border-4 border-primary-foreground/50">
-            <AvatarImage src={userPhoto} alt={userName} />
+            <AvatarImage src={userPhoto} alt={userName || ''} />
             <AvatarFallback>{nameFallback}</AvatarFallback>
           </Avatar>
           <div>
@@ -58,13 +71,30 @@ export default function AccountPage({ setView }: AccountPageProps) {
         </Card>
         
         <div className="mt-4">
-            <button
-                onClick={logout}
-                className="flex w-full items-center p-3 hover:bg-card rounded-lg transition-colors text-destructive text-left"
-              >
-                <LogOut className="w-5 h-5 mr-4" />
-                <span className="flex-grow font-medium">Keluar</span>
-            </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                  className="flex w-full items-center p-3 hover:bg-card rounded-lg transition-colors text-destructive text-left"
+                >
+                  <LogOut className="w-5 h-5 mr-4" />
+                  <span className="flex-grow font-medium">Keluar</span>
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Anda yakin ingin keluar?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Anda akan dikembalikan ke halaman login dan perlu masuk kembali untuk mengakses akun Anda.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={logout} className={Button({variant: 'destructive'}) as string}>
+                  Keluar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>
