@@ -56,7 +56,10 @@ export default function TransactionsPage() {
         {transactions.map((trx) => {
           const paymentConfig = paymentStatusConfig[trx.paymentStatus];
           const PaymentIcon = paymentConfig?.icon || Clock;
-          const itemsSummary = trx.items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+          const itemsSummary = Array.isArray(trx.items) 
+            ? trx.items.map(item => `${item.name} (x${item.quantity})`).join(', ')
+            : 'Ringkasan item tidak tersedia.';
+
 
           return (
           <Card key={trx.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedTransaction(trx)}>
