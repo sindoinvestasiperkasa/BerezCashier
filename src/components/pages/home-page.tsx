@@ -23,6 +23,7 @@ import { collection, getDocs, query, where, getFirestore, documentId } from "fir
 import { Skeleton } from "../ui/skeleton";
 import { Card, CardContent } from "../ui/card";
 import { useApp } from "@/hooks/use-app";
+import { useToast } from "@/hooks/use-toast";
 
 const iconMap: { [key: string]: React.ElementType } = {
   All: LayoutGrid,
@@ -42,6 +43,7 @@ interface ProductCategory {
 
 export default function HomePage() {
   const { user, products } = useApp();
+  const { toast } = useToast();
   const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategoryId, setSelectedCategoryId] = useState("All");
@@ -118,6 +120,13 @@ export default function HomePage() {
   const handleCloseDetail = () => {
     setSelectedProduct(null);
   };
+  
+  const handleNotificationClick = () => {
+    toast({
+      title: "Belum Ada Notifikasi",
+      description: "Semua notifikasi Anda sudah terbaca.",
+    });
+  };
 
   return (
     <div className="flex flex-col">
@@ -126,10 +135,10 @@ export default function HomePage() {
           <div>
             <p className="text-muted-foreground text-sm">Lokasi</p>
             <h1 className="font-bold text-lg text-foreground">
-              Jakarta, Indonesia
+              {user?.address || "Lokasi tidak diatur"}
             </h1>
           </div>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={handleNotificationClick}>
             <Bell className="h-6 w-6" />
           </Button>
         </div>
