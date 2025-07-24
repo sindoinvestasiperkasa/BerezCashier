@@ -38,5 +38,5 @@ export function adminDb(): admin.firestore.Firestore {
   if (!db) {
     initializeAdminApp();
   }
-  return db as admin.firestore.Firestore;
+  return db!;
 }
