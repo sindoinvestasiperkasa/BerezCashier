@@ -23,16 +23,20 @@ export interface Transaction {
   paymentMethod: string;
   paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
   amount?: number;
+  paidAmount?: number;
+  taxAmount?: number;
+  discountAmount?: number;
 }
 
 export type NewTransactionClientData = {
-    items: CartItem[];
+    items: any[];
     subtotal: number;
     discountAmount: number;
     taxAmount: number;
     total: number;
     paymentMethod: string;
     customerId: string;
+    customerName: string;
     salesAccountId: string;
     cogsAccountId: string;
     inventoryAccountId: string;
@@ -72,7 +76,10 @@ export type UserData = {
     email: string;
     // UMKM fields
     ownerName?: string;
+    umkmName?: string;
     umkm_photo?: string;
+    address?: string;
+    phone?: string;
     // Employee fields
     name?: string;
     photo_url?: string;
@@ -180,12 +187,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const transactionsData = snapshot.docs.map(doc => {
         const data = doc.data();
         const { date, ...rest } = data;
-        const jsDate = (date instanceof Timestamp) ? date.toDate() : new Date(); // Fallback to now if data is malformed
+        const jsDate = (date instanceof Timestamp) ? date.toDate() : new Date();
         
         return {
             id: doc.id,
             ...rest,
-            total: data.amount, // Map amount to total for UI consistency
+            total: data.amount,
             date: jsDate.toISOString(),
         } as Transaction;
       });

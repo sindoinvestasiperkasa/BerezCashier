@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
@@ -26,10 +26,26 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from '../ui/scroll-area';
 import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import type { Transaction } from "@/providers/app-provider";
 
 interface CartPageProps {
   setView: (view: View) => void;
 }
+
+interface ReceiptData {
+    items: any[];
+    subtotal: number;
+    discountAmount: number;
+    taxAmount: number;
+    total: number;
+    paymentMethod: string;
+    cashReceived: number;
+    changeAmount: number;
+    transactionNumber: string;
+    transactionDate: Date;
+}
+
 
 export default function CartPage({ setView }: CartPageProps) {
   const { cart, updateQuantity, removeFromCart, clearCart, addTransaction, heldCarts, holdCart, resumeCart, deleteHeldCart, transactions, customers, addCustomer, accounts, user } = useApp();
@@ -43,7 +59,7 @@ export default function CartPage({ setView }: CartPageProps) {
   
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [lastTransactionId, setLastTransactionId] = useState<string | null>(null);
+  const [lastTransactionForReceipt, setLastTransactionForReceipt] = useState<ReceiptData | null>(null);
 
   const [isHeldCartsOpen, setIsHeldCartsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -156,6 +172,8 @@ export default function CartPage({ setView }: CartPageProps) {
             attributeValues: [], // Add attribute values if they exist on the item
         }));
 
+        const transactionNumber = `KSR-${Date.now()}`;
+
         const result = await addTransaction({
             items: cartItemsForTransaction,
             subtotal,
@@ -175,7 +193,18 @@ export default function CartPage({ setView }: CartPageProps) {
         });
 
         if (result.success) {
-            setLastTransactionId(result.transactionId);
+            setLastTransactionForReceipt({
+                items: cart,
+                subtotal: subtotal,
+                discountAmount: discountAmount,
+                taxAmount: taxAmount,
+                total: total,
+                paymentMethod: paymentMethod,
+                cashReceived: amountReceived,
+                changeAmount: change,
+                transactionNumber: result.transactionId,
+                transactionDate: new Date(),
+            });
             setIsSuccessOpen(true);
         } else {
              toast({ title: "Transaksi Gagal", description: "Terjadi kesalahan saat memproses transaksi.", variant: "destructive" });
@@ -194,7 +223,7 @@ export default function CartPage({ setView }: CartPageProps) {
     setDiscountPercent(0);
     setAmountReceived(0);
     setSelectedCustomerId("_general_");
-    setLastTransactionId(null);
+    setLastTransactionForReceipt(null);
   }
   
   const handleClearCart = () => {
@@ -247,6 +276,123 @@ export default function CartPage({ setView }: CartPageProps) {
         toast({ title: 'Pelanggan baru ditambahkan!' });
     }
   };
+
+  const handlePrintReceipt = () => {
+    if (!lastTransactionForReceipt || !user) return;
+  
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [58, 210] // Standard thermal receipt paper width
+    });
+  
+    const pageWidth = 58;
+    const margin = 3;
+    let y = 5;
+  
+    doc.setFont('Courier', 'bold');
+    doc.setFontSize(9);
+    doc.text(user.umkmName || 'Toko Anda', pageWidth / 2, y, { align: 'center' });
+    y += 4;
+  
+    doc.setFont('Courier', 'normal');
+    doc.setFontSize(7);
+    if(user.address) {
+        const addressLines = doc.splitTextToSize(user.address, pageWidth - margin * 2);
+        doc.text(addressLines, pageWidth / 2, y, { align: 'center' });
+        y += addressLines.length * 3;
+    }
+    if(user.phone) {
+        doc.text(`Telp: ${user.phone}`, pageWidth / 2, y, { align: 'center' });
+        y += 4;
+    }
+    
+    doc.text('--------------------------', pageWidth / 2, y, { align: 'center' });
+    y += 4;
+    
+    const kasirName = user.name || 'Kasir';
+    doc.text(`Kasir: ${kasirName}`, margin, y);
+    y += 3;
+    doc.text(`No: ${lastTransactionForReceipt.transactionNumber.substring(0,10)}`, margin, y);
+    y += 3;
+    doc.text(`Tgl: ${format(lastTransactionForReceipt.transactionDate, 'dd/MM/yy HH:mm')}`, margin, y);
+    y += 4;
+  
+    doc.text('--------------------------', pageWidth / 2, y, { align: 'center' });
+    y += 4;
+  
+    lastTransactionForReceipt.items.forEach(item => {
+      doc.text(item.name, margin, y);
+      y += 3;
+      const itemLine = `${item.quantity} x ${item.price.toLocaleString('id-ID')}`;
+      const itemTotal = (item.quantity * item.price).toLocaleString('id-ID');
+      doc.text(itemLine, margin, y);
+      doc.text(itemTotal, pageWidth - margin, y, { align: 'right' });
+      y += 3;
+    });
+  
+    doc.text('--------------------------', pageWidth / 2, y, { align: 'center' });
+    y += 4;
+
+    const printLine = (label: string, value: string) => {
+        doc.text(label, margin, y);
+        doc.text(value, pageWidth - margin, y, { align: 'right' });
+        y += 3;
+    };
+    
+    printLine('Subtotal', lastTransactionForReceipt.subtotal.toLocaleString('id-ID'));
+    if(lastTransactionForReceipt.discountAmount > 0) printLine(`Diskon`, `-${lastTransactionForReceipt.discountAmount.toLocaleString('id-ID')}`);
+    if(lastTransactionForReceipt.taxAmount > 0) printLine(`Pajak (11%)`, lastTransactionForReceipt.taxAmount.toLocaleString('id-ID'));
+    
+    doc.text('--------------------------', pageWidth / 2, y, { align: 'center' });
+    y += 4;
+
+    doc.setFont('Courier', 'bold');
+    printLine('TOTAL', lastTransactionForReceipt.total.toLocaleString('id-ID'));
+    doc.setFont('Courier', 'normal');
+    y += 1;
+    doc.text('--------------------------', pageWidth / 2, y, { align: 'center' });
+    y += 4;
+    
+    if (lastTransactionForReceipt.paymentMethod === 'Cash') {
+        printLine('Tunai', lastTransactionForReceipt.cashReceived.toLocaleString('id-ID'));
+        printLine('Kembali', lastTransactionForReceipt.changeAmount.toLocaleString('id-ID'));
+    } else {
+        printLine('Metode Bayar', lastTransactionForReceipt.paymentMethod);
+    }
+    
+    y += 4;
+    doc.setFont('Courier', 'bold');
+    doc.text('Terima Kasih!', pageWidth / 2, y, { align: 'center' });
+    y += 3;
+    doc.text('Selamat Berbelanja Kembali', pageWidth / 2, y, { align: 'center' });
+  
+    doc.autoPrint();
+    doc.output('dataurlnewwindow');
+  };
+
+  const handleReprintReceipt = (tx: Transaction) => {
+    const subtotal = tx.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const taxAmount = tx.taxAmount || 0;
+    const discountAmount = tx.discountAmount || 0;
+    
+    const receiptData: ReceiptData = {
+        items: tx.items || [],
+        subtotal,
+        discountAmount,
+        taxAmount,
+        total: tx.total || 0,
+        paymentMethod: tx.paymentMethod || 'N/A',
+        cashReceived: tx.paidAmount || tx.total || 0,
+        changeAmount: (tx.paidAmount || 0) - (tx.total || 0),
+        transactionNumber: tx.id,
+        transactionDate: new Date(tx.date),
+    };
+
+    setLastTransactionForReceipt(receiptData);
+    setTimeout(() => handlePrintReceipt(), 100);
+  };
+
 
   const transactionsToday = transactions.filter(tx => {
     const txDate = new Date(tx.date);
@@ -573,10 +719,11 @@ export default function CartPage({ setView }: CartPageProps) {
                 <div className="animate-in fade-in zoom-in-50 duration-500">
                     <CheckCircle className="h-24 w-24 text-green-500" />
                 </div>
-                <p className="text-muted-foreground">Transaksi <span className="font-mono font-semibold">{lastTransactionId?.substring(0,5)}</span> berhasil disimpan.</p>
+                <p className="text-muted-foreground">Transaksi <span className="font-mono font-semibold">{lastTransactionForReceipt?.transactionNumber?.substring(0,10)}</span> berhasil disimpan.</p>
             </div>
             <DialogFooter className="sm:justify-center gap-2">
                 <Button variant="outline" onClick={handleFinishTransaction}>Transaksi Baru</Button>
+                <Button onClick={handlePrintReceipt}><Printer className="mr-2 h-4 w-4"/>Cetak Struk</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -631,8 +778,8 @@ export default function CartPage({ setView }: CartPageProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-muted-foreground">{format(new Date(tx.date), 'HH:mm')}</p>
-                      <Button size="sm" variant="outline">
-                        <Edit className="mr-2 h-4 w-4" /> Cetak Ulang
+                      <Button size="sm" variant="outline" onClick={() => handleReprintReceipt(tx)}>
+                        <Printer className="mr-2 h-4 w-4" /> Cetak Ulang
                       </Button>
                     </div>
                   </div>
@@ -696,5 +843,3 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
-
-    
