@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.warq.app',
-  appName: 'WarQ',
+  appId: 'com.berez.cashier',
+  appName: 'Berez Cashier',
   webDir: 'out',
   "server": {
     "allowNavigation": ["placehold.co"]

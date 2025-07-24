@@ -19,38 +19,38 @@ interface WelcomePageProps {
 const slides = [
   {
     icon: Sparkles,
-    title: "Belanja Mudah & Cepat",
-    description: "Temukan ribuan produk kebutuhan harian dengan kualitas terbaik dalam satu aplikasi.",
+    title: "Kelola Transaksi dengan Mudah",
+    description: "Catat setiap penjualan dengan cepat dan akurat menggunakan antarmuka yang intuitif.",
     image: "https://placehold.co/600x400.png",
-    hint: "groceries online"
+    hint: "cashier point of sale"
   },
   {
     icon: Truck,
-    title: "Pengiriman Super Cepat",
-    description: "Pesanan Anda akan kami antar langsung ke depan pintu Anda dengan cepat dan aman.",
+    title: "Manajemen Stok Real-time",
+    description: "Pantau persediaan produk Anda secara langsung untuk menghindari kehabisan stok.",
     image: "https://placehold.co/600x400.png",
-    hint: "delivery scooter"
+    hint: "inventory management warehouse"
   },
   {
     icon: ShieldCheck,
-    title: "Kualitas Terjamin",
-    description: "Kami hanya menyediakan produk segar dan berkualitas tinggi untuk kepuasan Anda.",
+    title: "Laporan Penjualan Lengkap",
+    description: "Dapatkan laporan harian, mingguan, dan bulanan untuk analisis bisnis yang lebih baik.",
     image: "https://placehold.co/600x400.png",
-    hint: "fresh vegetables"
+    hint: "sales analytics chart"
   },
   {
     icon: Tag,
-    title: "Promo & Diskon Menarik",
-    description: "Dapatkan penawaran terbaik dan diskon spesial setiap hari untuk belanja lebih hemat.",
+    title: "Program Loyalitas Pelanggan",
+    description: "Buat dan kelola promo atau diskon untuk meningkatkan loyalitas pelanggan setia Anda.",
     image: "https://placehold.co/600x400.png",
-    hint: "special offer"
+    hint: "customer loyalty program"
   },
   {
     icon: Store,
-    title: "Dukung Produk Lokal",
-    description: "Dengan berbelanja di WarungQ, Anda turut mendukung pertumbuhan petani dan produsen lokal.",
+    title: "Cocok untuk Berbagai Bisnis",
+    description: "Sangat fleksibel untuk digunakan di toko retail, kafe, restoran, dan berbagai jenis usaha lainnya.",
     image: "https://placehold.co/600x400.png",
-    hint: "local market"
+    hint: "small business storefront"
   }
 ];
 

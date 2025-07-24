@@ -73,7 +73,7 @@ export default function HomePage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Cari di WarungQ..."
+            placeholder="Cari di Berez Cashier..."
             className="pl-10 h-12 rounded-full"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

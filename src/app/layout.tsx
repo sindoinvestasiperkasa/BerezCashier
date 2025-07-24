@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'WarungQ',
-  description: 'Your daily needs, delivered.',
+  title: 'Berez Cashier',
+  description: 'A modern cashier app for your business.',
 };
 
 export default function RootLayout({
