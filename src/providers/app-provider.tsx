@@ -59,6 +59,7 @@ export type UserData = {
 
 
 interface AppContextType {
+  products: Product[];
   cart: CartItem[];
   wishlist: Product[];
   transactions: Transaction[];
@@ -87,6 +88,7 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 const initialTransactions: Transaction[] = [];
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
@@ -118,6 +120,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) {
         setCustomers([]);
+        setProducts([]);
         return;
     };
     
@@ -125,12 +128,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!idUMKM) return;
 
     const customersQuery = query(collection(db, "customers"), where("idUMKM", "==", idUMKM));
-    const unsubscribe = onSnapshot(customersQuery, (snapshot) => {
+    const unsubCustomers = onSnapshot(customersQuery, (snapshot) => {
         const customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
         setCustomers(customersData);
     });
 
-    return () => unsubscribe();
+    const productsQuery = query(collection(db, "products"), where("idUMKM", "==", idUMKM));
+    const unsubProducts = onSnapshot(productsQuery, (snapshot) => {
+        const productsData = snapshot.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data(),
+          imageUrl: doc.data().imageUrls?.[0] || "https://placehold.co/300x300.png",
+        } as Product));
+        setProducts(productsData);
+    });
+
+    return () => {
+        unsubCustomers();
+        unsubProducts();
+    };
   }, [user, db]);
 
 
@@ -274,6 +290,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             joinDate: new Date(),
         });
         const newCustomer: Customer = { id: docRef.id, ...customerData };
+        // The onSnapshot listener will automatically update the local state.
         return newCustomer;
     } catch (error) {
         console.error("Error adding customer: ", error);
@@ -313,6 +330,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AppContext.Provider
       value={{ 
+        products,
         cart, 
         wishlist, 
         transactions,

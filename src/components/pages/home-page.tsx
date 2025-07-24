@@ -41,8 +41,7 @@ interface ProductCategory {
 }
 
 export default function HomePage() {
-  const { user } = useApp();
-  const [products, setProducts] = useState<Product[]>([]);
+  const { user, products } = useApp();
   const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategoryId, setSelectedCategoryId] = useState("All");
@@ -50,86 +49,60 @@ export default function HomePage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
-    const fetchProductsAndCategories = async () => {
-      if (!user) return;
-
-      setIsLoading(true);
-      const db = getFirestore();
-      const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
-
-      if (!idUMKM) {
-        setProducts([]);
-        setProductCategories([]);
-        setIsLoading(false);
+    const fetchCategories = async () => {
+      if (!user || products.length === 0) {
+        if (!user) setIsLoading(false);
         return;
       }
+      setIsLoading(true);
+      const db = getFirestore();
 
       try {
-        // 1. Fetch Products of type "Jasa"
-        const productsQuery = query(
-          collection(db, "products"),
-          where("productType", "==", "Jasa"),
-          where("idUMKM", "==", idUMKM)
-        );
-        const productsSnapshot = await getDocs(productsQuery);
-        const productsData: Omit<Product, 'categoryName'>[] = productsSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.name,
-            categoryId: data.categoryId,
-            price: data.price,
-            imageUrl: data.imageUrls?.[0] || "https://placehold.co/300x300.png",
-            description: data.description,
-            productType: data.productType,
-            imageUrls: data.imageUrls,
-          };
-        });
-
-        // 2. Get unique category IDs from the fetched products
-        const activeCategoryIds = [...new Set(productsData.map(p => p.categoryId))];
-
+        const activeCategoryIds = [...new Set(products.map(p => p.categoryId))];
+        
         let categoriesData: ProductCategory[] = [];
         if (activeCategoryIds.length > 0) {
-          // 3. Fetch only the active categories
           const categoriesQuery = query(collection(db, "productCategories"), where(documentId(), "in", activeCategoryIds));
           const categoriesSnapshot = await getDocs(categoriesQuery);
           categoriesData = categoriesSnapshot.docs.map(doc => ({
-              id: doc.id,
-              name: doc.data().name,
-              icon: doc.data().name 
+            id: doc.id,
+            name: doc.data().name,
+            icon: doc.data().name 
           }));
         }
         
         setProductCategories(categoriesData);
-
-        // 4. Map products with category names
-        const productsWithCategoryNames: Product[] = productsData.map(product => {
-          const category = categoriesData.find(cat => cat.id === product.categoryId);
-          return {
-            ...product,
-            categoryName: category ? category.name : "Uncategorized",
-          };
-        });
-
-        setProducts(productsWithCategoryNames);
-
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching categories:", error);
       } finally {
         setIsLoading(false);
       }
     };
+    
+    // products are now coming from context, so we watch products array
+    fetchCategories();
 
-    fetchProductsAndCategories();
-  }, [user]);
+  }, [products, user]);
   
+  const productsWithCategoryNames = useMemo(() => {
+    return products.map(product => {
+      const category = productCategories.find(cat => cat.id === product.categoryId);
+      return {
+        ...product,
+        categoryName: category ? category.name : "Uncategorized",
+      };
+    });
+  }, [products, productCategories]);
+
   const displayCategories = useMemo(() => {
     const allCategory: ProductCategory = { id: "All", name: "All", icon: "All" };
     return [allCategory, ...productCategories];
   }, [productCategories]);
 
-  const filteredProducts = products.filter((product) => {
+  const filteredProducts = productsWithCategoryNames.filter((product) => {
+    const isService = product.productType === 'Jasa';
+    if (!isService) return false; // Only show 'Jasa' products on home page
+
     const matchesCategory =
       selectedCategoryId === "All" || product.categoryId === selectedCategoryId;
     const matchesSearch = product.name
@@ -174,37 +147,41 @@ export default function HomePage() {
       <section className="p-4 md:p-6">
         <h2 className="text-xl font-bold mb-3 text-foreground">Kategori</h2>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
-          {displayCategories.map((category) => {
-            const Icon = iconMap[category.icon || "Default"] || iconMap["Default"];
-            return (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategoryId(category.id)}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-lg border transition-colors flex-shrink-0",
-                  selectedCategoryId === category.id
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-foreground hover:bg-secondary"
-                )}
-              >
-                {Icon && <Icon className="w-6 h-6" />}
-                <span className="text-xs font-medium">{category.name}</span>
-              </button>
-            );
-          })}
+          {isLoading && productCategories.length === 0 ? (
+             [...Array(5)].map((_, i) => <Skeleton key={i} className="w-20 h-20 rounded-lg flex-shrink-0" />)
+          ) : (
+            displayCategories.map((category) => {
+              const Icon = iconMap[category.icon || "Default"] || iconMap["Default"];
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategoryId(category.id)}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-lg border transition-colors flex-shrink-0",
+                    selectedCategoryId === category.id
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-foreground hover:bg-secondary"
+                  )}
+                >
+                  {Icon && <Icon className="w-6 h-6" />}
+                  <span className="text-xs font-medium">{category.name}</span>
+                </button>
+              );
+            })
+          )}
         </div>
       </section>
 
       <section className="p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-foreground">
-            {searchQuery ? `Hasil Pencarian` : "Produk Terlaris"}
+            {searchQuery ? `Hasil Pencarian` : "Layanan Tersedia"}
           </h2>
           <Button variant="link" className="text-primary p-0 h-auto">
             Lihat Semua
           </Button>
         </div>
-        {isLoading ? (
+        {isLoading && products.length === 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => (
               <Card key={i}>
@@ -233,9 +210,9 @@ export default function HomePage() {
         ) : (
           <div className="text-center py-10 flex flex-col items-center gap-4">
             <Frown className="w-16 h-16 text-muted-foreground" />
-            <h3 className="text-lg font-semibold">Produk tidak ditemukan</h3>
+            <h3 className="text-lg font-semibold">Layanan tidak ditemukan</h3>
             <p className="text-muted-foreground max-w-xs">
-              Tidak ada produk 'Jasa' yang tersedia untuk UMKM Anda saat ini.
+              Tidak ada produk tipe 'Jasa' yang cocok dengan pencarian Anda atau tersedia untuk UMKM ini.
             </p>
           </div>
         )}
