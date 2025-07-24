@@ -68,12 +68,10 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
 
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="w-full max-w-xs mx-auto p-6">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Cashier</h1>
-          <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk kasir Anda.</p>
-        </div>
-        <Carousel 
+      <div className="w-full max-w-xs mx-auto text-center">
+        <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Cashier</h1>
+        <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk kasir Anda.</p>
+        <Carousel
           className="w-full"
           opts={{ loop: true }}
           plugins={[plugin.current]}
