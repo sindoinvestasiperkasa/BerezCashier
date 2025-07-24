@@ -89,7 +89,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Batal</AlertDialogCancel>
-                <AlertDialogAction onClick={logout} className={Button({variant: 'destructive'}) as string}>
+                <AlertDialogAction onClick={logout} variant="destructive">
                   Keluar
                 </AlertDialogAction>
               </AlertDialogFooter>
