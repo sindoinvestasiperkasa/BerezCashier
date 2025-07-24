@@ -143,16 +143,29 @@ export default function CartPage({ setView }: CartPageProps) {
     setIsProcessing(true);
 
     try {
+        const customer = customers.find(c => c.id === selectedCustomerId);
+        const customerName = customer ? customer.name : "Pelanggan Umum";
+        
+        const cartItemsForTransaction = cart.map(item => ({
+            productId: item.id,
+            productName: item.name,
+            productType: item.productType,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            cogs: item.hpp || 0,
+            attributeValues: [], // Add attribute values if they exist on the item
+        }));
+
         const result = await addTransaction({
-            items: cart,
+            items: cartItemsForTransaction,
             subtotal,
             discountAmount,
             taxAmount,
             total,
             paymentMethod,
             customerId: selectedCustomerId,
+            customerName: customerName,
             isPkp,
-            // Account IDs
             paymentAccountId: paymentAccountId!,
             salesAccountId: salesAccountId!,
             cogsAccountId: cogsAccountId!,
@@ -683,3 +696,5 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
+
+    
