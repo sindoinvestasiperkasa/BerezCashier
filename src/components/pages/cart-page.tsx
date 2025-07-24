@@ -55,7 +55,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const { 
     cart, updateQuantity, removeFromCart, clearCart, addTransaction, 
     heldCarts, holdCart, resumeCart, deleteHeldCart, 
-    transactions, customers, addCustomer, accounts, user 
+    transactions, customers, addCustomer, accounts, user, addShiftReportNotification
   } = useApp();
   const { toast } = useToast();
 
@@ -437,6 +437,11 @@ export default function CartPage({ setView }: CartPageProps) {
       totalRevenue: transactionsToday.reduce((sum, t) => sum + (t.total || 0), 0),
     };
   }, [transactionsToday]);
+  
+  const handleCloseShift = () => {
+    setIsShiftOpen(false);
+    addShiftReportNotification(shiftSummary);
+  }
 
   return (
     <>
@@ -821,7 +826,10 @@ export default function CartPage({ setView }: CartPageProps) {
       </Dialog>
 
       {/* Shift Dialog */}
-      <Dialog open={isShiftOpen} onOpenChange={setIsShiftOpen}>
+      <Dialog open={isShiftOpen} onOpenChange={(open) => {
+        if (!open) handleCloseShift();
+        else setIsShiftOpen(true);
+      }}>
         <DialogContent>
             <DialogHeader><DialogTitle>Ringkasan Shift</DialogTitle><DialogDescription>Rekapitulasi transaksi kasir Anda pada sesi ini.</DialogDescription></DialogHeader>
             <div className="space-y-4 py-4">

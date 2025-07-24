@@ -21,6 +21,7 @@ export interface SaleItem {
     unitPrice: number;
     cogs: number;
     imageUrl?: string;
+    [key: string]: any;
 }
 
 export interface Transaction {
@@ -37,6 +38,7 @@ export interface Transaction {
   discountAmount?: number;
   transactionNumber?: string;
   lines?: { accountId: string; debit: number; credit: number; description: string }[];
+  [key: string]: any;
 }
 
 export type NewTransactionClientData = {
@@ -131,6 +133,7 @@ interface AppContextType {
   resumeCart: (cartId: number) => void;
   deleteHeldCart: (cartId: number) => void;
   markNotificationAsRead: (notificationId: string) => void;
+  addShiftReportNotification: (summary: { totalTransactions: number; totalRevenue: number }) => void;
   isAuthenticated: boolean;
   user: UserData | null;
   login: (email: string, pass: string) => Promise<boolean>;
@@ -463,6 +466,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const addShiftReportNotification = (summary: { totalTransactions: number; totalRevenue: number }) => {
+    const newNotif: Notification = {
+      id: `shift_report_${Date.now()}`,
+      type: 'shift_report',
+      title: 'Laporan Tutup Shift',
+      message: `Shift selesai dengan ${summary.totalTransactions} transaksi dan total pendapatan ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(summary.totalRevenue)}.`,
+      timestamp: new Date(),
+      isRead: false,
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+  };
+
 
   return (
     <AppContext.Provider
@@ -488,6 +503,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         resumeCart,
         deleteHeldCart,
         markNotificationAsRead,
+        addShiftReportNotification,
         isAuthenticated,
         user,
         login,
