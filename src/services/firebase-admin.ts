@@ -1,8 +1,5 @@
 // src/services/firebase-admin.ts
 import * as admin from 'firebase-admin';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 let serviceAccount: admin.ServiceAccount | undefined;
 const base64Key = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
