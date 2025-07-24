@@ -10,31 +10,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import * as admin from 'firebase-admin';
-
-// Helper function to initialize Firebase Admin SDK
-function initializeAdminApp() {
-  if (admin.apps.length > 0) {
-    return admin.app();
-  }
-
-  const base64Key = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-  if (!base64Key) {
-    throw new Error('Firebase service account key not found in environment variables.');
-  }
-  
-  try {
-    const serviceAccountJson = Buffer.from(base64Key, 'base64').toString('utf8');
-    const serviceAccount = JSON.parse(serviceAccountJson);
-
-    return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (e) {
-      console.error('Failed to parse or initialize Firebase Admin SDK:', e);
-      throw new Error('Failed to initialize Firebase Admin SDK. Please check your FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable.');
-  }
-}
+import { adminDb } from '@/services/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 
 const CartItemSchema = z.object({
@@ -83,8 +60,7 @@ const createTransactionFlow = ai.defineFlow(
     outputSchema: CreateTransactionOutputSchema,
   },
   async (input) => {
-    const adminApp = initializeAdminApp();
-    const db = adminApp.firestore();
+    const db = adminDb();
     const batch = db.batch();
 
     // 1. Simpan data transaksi
@@ -143,7 +119,7 @@ const createTransactionFlow = ai.defineFlow(
     input.items.forEach(item => {
       const productRef = db.collection('products').doc(item.id);
       // Asumsi ada field 'stock' di dokumen produk
-      batch.update(productRef, { stock: admin.firestore.FieldValue.increment(-item.quantity) });
+      batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
     });
 
     await batch.commit();
