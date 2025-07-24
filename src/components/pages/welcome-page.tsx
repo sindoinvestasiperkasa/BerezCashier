@@ -67,54 +67,56 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
   );
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-xs mx-auto text-center">
-            <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Cashier</h1>
-            <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk kasir Anda.</p>
-            <Carousel 
-              className="w-full mb-8" 
-              opts={{ loop: true }}
-              plugins={[plugin.current]}
-              onMouseEnter={plugin.current.stop}
-              onMouseLeave={plugin.current.reset}
-            >
-              <CarouselContent>
-                {slides.map((slide, index) => (
-                  <CarouselItem key={index}>
-                    <div className="p-1">
-                        <div className="flex flex-col items-center justify-center gap-6 text-center">
-                            <Image
-                                src={slide.image}
-                                alt={slide.title}
-                                width={300}
-                                height={200}
-                                className="rounded-xl object-cover aspect-video"
-                                data-ai-hint={slide.hint}
-                            />
-                            <div className="space-y-2">
-                                <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
-                                    <slide.icon className="w-7 h-7 text-primary"/>
-                                    {slide.title}
-                                </h2>
-                                <p className="text-muted-foreground">
-                                    {slide.description}
-                                </p>
-                            </div>
+    <div className="flex h-full items-center justify-center p-6">
+      <div className="w-full max-w-xs mx-auto">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Cashier</h1>
+          <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk kasir Anda.</p>
+        </div>
+        <Carousel 
+          className="w-full"
+          opts={{ loop: true }}
+          plugins={[plugin.current]}
+          onMouseEnter={plugin.current.stop}
+          onMouseLeave={plugin.current.reset}
+        >
+          <CarouselContent>
+            {slides.map((slide, index) => (
+              <CarouselItem key={index}>
+                <div className="p-1">
+                    <div className="flex flex-col items-center justify-center gap-6 text-center">
+                        <Image
+                            src={slide.image}
+                            alt={slide.title}
+                            width={300}
+                            height={200}
+                            className="rounded-xl object-cover aspect-video"
+                            data-ai-hint={slide.hint}
+                        />
+                        <div className="space-y-2">
+                            <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
+                                <slide.icon className="w-7 h-7 text-primary"/>
+                                {slide.title}
+                            </h2>
+                            <p className="text-muted-foreground">
+                                {slide.description}
+                            </p>
                         </div>
                     </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
-             <div className="space-y-4">
-                <Button onClick={() => setView('signup')} className="w-full h-14 text-lg font-bold">
-                    Buat Akun Baru
-                </Button>
-                <Button onClick={() => setView('login')} variant="outline" className="w-full h-14 text-lg font-bold">
-                    Masuk
-                </Button>
-            </div>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+        <div className="space-y-4 mt-8">
+            <Button onClick={() => setView('signup')} className="w-full h-14 text-lg font-bold">
+                Buat Akun Baru
+            </Button>
+            <Button onClick={() => setView('login')} variant="outline" className="w-full h-14 text-lg font-bold">
+                Masuk
+            </Button>
         </div>
+      </div>
     </div>
   );
 }
