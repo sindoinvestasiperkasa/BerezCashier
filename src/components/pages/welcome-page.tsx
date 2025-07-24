@@ -69,41 +69,45 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow grid place-items-center p-6">
-        <Carousel 
-          className="w-full max-w-xs" 
-          opts={{ loop: true }}
-          plugins={[plugin.current]}
-          onMouseEnter={plugin.current.stop}
-          onMouseLeave={plugin.current.reset}
-        >
-          <CarouselContent>
-            {slides.map((slide, index) => (
-              <CarouselItem key={index}>
-                <div className="p-1">
-                    <div className="flex flex-col items-center justify-center gap-6 text-center">
-                        <Image
-                            src={slide.image}
-                            alt={slide.title}
-                            width={300}
-                            height={200}
-                            className="rounded-xl object-cover aspect-video"
-                            data-ai-hint={slide.hint}
-                        />
-                        <div className="space-y-2">
-                            <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
-                                <slide.icon className="w-7 h-7 text-primary"/>
-                                {slide.title}
-                            </h2>
-                            <p className="text-muted-foreground">
-                                {slide.description}
-                            </p>
+        <div className="w-full max-w-xs text-center">
+            <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Cashier</h1>
+            <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk kasir Anda.</p>
+            <Carousel 
+              className="w-full" 
+              opts={{ loop: true }}
+              plugins={[plugin.current]}
+              onMouseEnter={plugin.current.stop}
+              onMouseLeave={plugin.current.reset}
+            >
+              <CarouselContent>
+                {slides.map((slide, index) => (
+                  <CarouselItem key={index}>
+                    <div className="p-1">
+                        <div className="flex flex-col items-center justify-center gap-6 text-center">
+                            <Image
+                                src={slide.image}
+                                alt={slide.title}
+                                width={300}
+                                height={200}
+                                className="rounded-xl object-cover aspect-video"
+                                data-ai-hint={slide.hint}
+                            />
+                            <div className="space-y-2">
+                                <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
+                                    <slide.icon className="w-7 h-7 text-primary"/>
+                                    {slide.title}
+                                </h2>
+                                <p className="text-muted-foreground">
+                                    {slide.description}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+        </div>
       </div>
       <div className="p-6 space-y-4">
         <Button onClick={() => setView('signup')} className="w-full h-14 text-lg font-bold">
