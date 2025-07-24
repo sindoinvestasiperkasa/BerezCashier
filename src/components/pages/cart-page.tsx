@@ -172,8 +172,6 @@ export default function CartPage({ setView }: CartPageProps) {
             attributeValues: [], // Add attribute values if they exist on the item
         }));
 
-        const transactionNumber = `KSR-${Date.now()}`;
-
         const result = await addTransaction({
             items: cartItemsForTransaction,
             subtotal,
