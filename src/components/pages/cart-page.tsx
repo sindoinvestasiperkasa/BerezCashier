@@ -95,17 +95,17 @@ export default function CartPage({ setView }: CartPageProps) {
             <Button variant="destructive" size="icon" onClick={handleClearCart} aria-label="Kosongkan Keranjang"><Trash2 className="h-4 w-4" /></Button>
         </header>
 
-        <div className="flex gap-2 mb-4">
-            <Button variant="outline" className="relative flex-1">
+        <div className="grid grid-cols-2 gap-2 mb-4">
+            <Button variant="outline" className="relative">
                 <PauseCircle className="mr-2 h-4 w-4" />
                 Transaksi Ditahan
                 <Badge className="absolute -top-2 -right-2 px-2">3</Badge>
             </Button>
-            <Button variant="outline" className="flex-1">
+            <Button variant="outline">
                 <History className="mr-2 h-4 w-4" />
                 Riwayat Hari Ini
             </Button>
-            <Button variant="outline" className="flex-1">
+            <Button variant="outline">
                  <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="16"
@@ -127,6 +127,10 @@ export default function CartPage({ setView }: CartPageProps) {
                     <path d="M2 12h20" />
                 </svg>
                 Tutup Shift
+            </Button>
+            <Button variant="outline">
+                <PauseCircle className="mr-2 h-4 w-4" />
+                Tahan Transaksi
             </Button>
         </div>
 
