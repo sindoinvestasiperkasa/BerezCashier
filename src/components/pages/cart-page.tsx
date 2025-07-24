@@ -61,7 +61,7 @@ export default function CartPage({ setView }: CartPageProps) {
         const defaultSalesAccount = accounts.find(a => a.name === 'Penjualan Produk') || accounts.find(a => a.category === 'Pendapatan');
         if (defaultSalesAccount) setSalesAccountId(defaultSalesAccount.id);
 
-        const defaultCogsAccount = accounts.find(a => a.name === 'Harga Pokok Penjualan') || accounts.find(a => a.category === 'Beban');
+        const defaultCogsAccount = accounts.find(a => a.name === 'Harga Pokok Penjualan (HPP)') || accounts.find(a => a.category === 'Beban');
         if (defaultCogsAccount) setCogsAccountId(defaultCogsAccount.id);
 
         const defaultInventoryAccount = accounts.find(a => a.name === 'Persediaan') || accounts.find(a => a.category === 'Aset');
@@ -428,24 +428,24 @@ export default function CartPage({ setView }: CartPageProps) {
               <DialogDescription>Pilih transaksi untuk dilanjutkan atau hapus.</DialogDescription>
           </DialogHeader>
           <div className="py-4">
-                <ScrollArea className="max-h-96">
-                    <div className="space-y-4 px-4">
-                        {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
-                            heldCarts.map(held => (
-                            <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
-                                <div>
-                                    <p className="font-semibold">{held.customerName}</p>
-                                    <p className="text-sm">Ditahan pada: {format(held.heldAt, 'HH:mm')}</p>
-                                    <p className="text-sm">{held.cart.length} item - {formatCurrency(held.cart.reduce((sum, item) => sum + item.quantity * item.price, 0))}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button size="sm" variant="default" onClick={() => handleResumeCart(held.id)}>Lanjutkan</Button>
-                                    <Button size="sm" variant="destructive" onClick={() => handleDeleteHeldCart(held.id)}><Trash2 className="h-4 w-4"/></Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea>
+            <ScrollArea className="max-h-96">
+              <div className="space-y-4 px-1">
+                  {heldCarts.length === 0 ? <p className="text-center text-muted-foreground">Tidak ada transaksi yang ditahan.</p> :
+                      heldCarts.map(held => (
+                      <div key={held.id} className="p-3 border rounded-lg flex items-center justify-between">
+                          <div>
+                              <p className="font-semibold">{held.customerName}</p>
+                              <p className="text-sm text-muted-foreground">Ditahan pada: {format(held.heldAt, 'HH:mm')}</p>
+                              <p className="text-sm text-muted-foreground">{held.cart.length} item - {formatCurrency(held.cart.reduce((sum, item) => sum + item.quantity * item.price, 0))}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                              <Button size="sm" variant="default" onClick={() => handleResumeCart(held.id)}>Lanjutkan</Button>
+                              <Button size="sm" variant="destructive" onClick={() => handleDeleteHeldCart(held.id)}><Trash2 className="h-4 w-4"/></Button>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+            </ScrollArea>
           </div>
         </DialogContent>
       </Dialog>
