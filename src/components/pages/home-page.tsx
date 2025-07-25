@@ -207,7 +207,7 @@ export default function HomePage({ setView }: HomePageProps) {
                   key={category.id}
                   onClick={() => setSelectedCategoryId(category.id)}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-lg border transition-colors flex-shrink-0",
+                    "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-lg border transition-colors flex-shrink-0 shadow-md",
                     selectedCategoryId === category.id
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-card text-foreground hover:bg-secondary"
