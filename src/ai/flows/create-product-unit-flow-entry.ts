@@ -1,12 +1,4 @@
-
-'use server';
 /**
- * @fileOverview Entry point aman untuk memanggil alur createProductUnit dari komponen React.
+ * This file is no longer needed as the logic has been simplified 
+ * and moved directly into the component.
  */
-import { createProductUnitFlow, type CreateProductUnitInput, type CreateProductUnitOutput } from './create-product-unit-flow';
-
-// Fungsi wrapper yang aman untuk dipanggil dari komponen client/server Next.js
-export async function createProductUnit(input: CreateProductUnitInput): Promise<CreateProductUnitOutput> {
-  // Panggil flow secara langsung, Genkit akan menanganinya
-  return await createProductUnitFlow({ input });
-}

@@ -41,8 +41,6 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
 import { collection, getDocs, getFirestore, query, where, addDoc } from "firebase/firestore";
-import { createProductUnit } from "@/ai/flows/create-product-unit-flow-entry";
-import type { CreateProductUnitInput } from "@/ai/flows/create-product-unit-flow";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -66,6 +64,12 @@ const newCategorySchema = z.object({
 });
 type NewCategoryFormData = z.infer<typeof newCategorySchema>;
 
+const newUnitSchema = z.object({
+  name: z.string().min(1, "Nama unit harus diisi."),
+  symbol: z.string().min(1, "Simbol harus diisi."),
+});
+type NewUnitFormData = z.infer<typeof newUnitSchema>;
+
 
 export default function InventoryPage() {
   const { products, user } = useApp();
@@ -82,14 +86,20 @@ export default function InventoryPage() {
   // Dialog states
   const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
-  const [newUnitName, setNewUnitName] = useState("");
-  const [newUnitSymbol, setNewUnitSymbol] = useState("");
-
+  
   const newCategoryForm = useForm<NewCategoryFormData>({
     resolver: zodResolver(newCategorySchema),
     defaultValues: {
       name: "",
       description: "",
+    },
+  });
+
+  const newUnitForm = useForm<NewUnitFormData>({
+    resolver: zodResolver(newUnitSchema),
+    defaultValues: {
+      name: "",
+      symbol: "",
     },
   });
 
@@ -324,25 +334,23 @@ export default function InventoryPage() {
   };
 
 
-  const handleSaveNewUnit = async () => {
-    if (!newUnitName || !newUnitSymbol) {
-        toast({ title: "Nama dan simbol unit tidak boleh kosong", variant: "destructive" });
-        return;
+  const handleSaveNewUnit = async (data: NewUnitFormData) => {
+    const idUMKM = user?.role === 'UMKM' ? user.uid : user?.idUMKM;
+    if (!idUMKM) {
+      toast({ title: "Error", description: "Tidak dapat menemukan ID UMKM.", variant: "destructive" });
+      return;
     }
+    
     setIsProcessing(true);
     try {
-        const input: CreateProductUnitInput = { name: newUnitName, symbol: newUnitSymbol };
-        const result = await createProductUnit(input);
-        if (result.success && result.unitSymbol) {
-            toast({ title: "Unit Baru Ditambahkan!" });
-            setNewUnitName("");
-            setNewUnitSymbol("");
-            setIsAddUnitDialogOpen(false);
-            await fetchCategoriesAndUnits(); // Refresh list
-            setItemUnit(result.unitSymbol); // Select the new unit
-        } else {
-            throw new Error(result.message || "Gagal menyimpan unit.");
-        }
+        const docRef = await addDoc(collection(db, "productUnits"), { ...data, idUMKM });
+        toast({ title: "Unit Baru Ditambahkan!", description: `Unit ${data.name} berhasil dibuat.` });
+        
+        await fetchCategoriesAndUnits(); // Refresh list
+        setItemUnit(docRef.id); // Select the new unit
+        
+        setIsAddUnitDialogOpen(false);
+        newUnitForm.reset();
     } catch(error: any) {
         toast({ title: "Gagal Menyimpan", description: error.message, variant: "destructive" });
     } finally {
@@ -412,7 +420,11 @@ export default function InventoryPage() {
                      <Combobox
                         options={productUnitOptions}
                         value={itemUnit}
-                        onChange={setItemUnit}
+                        onChange={(value) => {
+                            // The value from combobox is the unit's symbol
+                            const selectedUnit = productUnits.find(u => u.symbol === value);
+                            setItemUnit(selectedUnit?.id); // Store the ID
+                        }}
                         placeholder="Pilih unit..."
                         searchPlaceholder="Cari unit..."
                         emptyText="Unit tidak ditemukan."
@@ -769,23 +781,43 @@ export default function InventoryPage() {
           <DialogTitle>Tambah Unit Baru</DialogTitle>
           <DialogDescription>Buat satuan unit baru untuk produk Anda.</DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
-            <div className="space-y-1">
-                <Label htmlFor="new-unit-name">Nama Unit</Label>
-                <Input id="new-unit-name" value={newUnitName} onChange={e => setNewUnitName(e.target.value)} placeholder="Contoh: Kilogram"/>
-            </div>
-            <div className="space-y-1">
-                <Label htmlFor="new-unit-symbol">Simbol</Label>
-                <Input id="new-unit-symbol" value={newUnitSymbol} onChange={e => setNewUnitSymbol(e.target.value)} placeholder="Contoh: kg"/>
-            </div>
-        </div>
-        <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddUnitDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSaveNewUnit} disabled={isProcessing}>
-                 {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                Simpan Unit
-            </Button>
-        </DialogFooter>
+        <Form {...newUnitForm}>
+          <form onSubmit={newUnitForm.handleSubmit(handleSaveNewUnit)} className="space-y-4 py-4">
+            <FormField
+              control={newUnitForm.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nama Unit</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Contoh: Kilogram" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={newUnitForm.control}
+              name="symbol"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Simbol</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Contoh: kg" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsAddUnitDialogOpen(false)}>Batal</Button>
+                <Button type="submit" disabled={isProcessing}>
+                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                    Simpan Unit
+                </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
     </>
