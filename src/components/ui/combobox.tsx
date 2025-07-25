@@ -69,7 +69,7 @@ export function Combobox({
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
+          <CommandList className="max-h-[300px]">
             <CommandEmpty>
                 <div>
                     <p className="py-2 text-center text-sm">{emptyText}</p>
