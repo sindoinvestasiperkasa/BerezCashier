@@ -9,5 +9,5 @@ export type { CreateProductCategoryInput, CreateProductCategoryOutput };
 // Fungsi wrapper yang aman untuk dipanggil dari komponen client/server Next.js
 export async function createProductCategory(input: CreateProductCategoryInput): Promise<CreateProductCategoryOutput> {
   // Panggil flow secara langsung, Genkit akan menanganinya
-  return await createProductCategoryFlow({ input });
+  return await createProductCategoryFlow(input);
 }
