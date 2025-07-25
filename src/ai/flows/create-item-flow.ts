@@ -37,6 +37,9 @@ export const CreateItemOutputSchema = z.object({
 });
 export type CreateItemOutput = z.infer<typeof CreateItemOutputSchema>;
 
+const FlowInputSchema = CreateItemInputSchema.extend({
+    idUMKM: z.string(),
+});
 
 // Definisi Flow
 export const createItemFlow = ai.defineFlow(
@@ -52,16 +55,17 @@ export const createItemFlow = ai.defineFlow(
         if (!idUMKM) {
             throw new Error("UMKM ID not found for the user.");
         }
-        // Pass input and idUMKM separately to the handler
-        return { input, idUMKM };
+        // Gabungkan input asli dengan idUMKM yang didapat dari auth
+        return { ...input, idUMKM };
     }
   },
-  async ({ input, idUMKM }) => {
+  async (payload) => {
     const db = adminDb();
     const { 
         name, description, itemCategory, productType, categoryId, 
         price, hpp, initialStock, lowStockThreshold, unit, imageUrl,
-    } = input;
+        idUMKM,
+    } = payload;
 
     const isProduct = itemCategory === 'retail_good' || itemCategory === 'manufactured_good' || itemCategory === 'service';
 
@@ -74,11 +78,11 @@ export const createItemFlow = ai.defineFlow(
             productType: productType,
             itemCategory: itemCategory,
             categoryId: categoryId || null,
+            unit: unit || 'pcs',
             price: price || 0,
             hpp: hpp, // Can be undefined for services or manufactured goods
             stock: productType === 'Jasa' ? null : (initialStock || 0),
             lowStockThreshold: lowStockThreshold || null,
-            unit: unit || 'pcs',
             createdAt: new Date(),
             updatedAt: new Date(),
             imageUrls: [imageUrl || 'https://placehold.co/300x300.png']
@@ -91,10 +95,10 @@ export const createItemFlow = ai.defineFlow(
             name,
             description: description || null,
             itemCategory: 'raw_material',
-            categoryId: categoryId || null, // Added categoryId for raw materials
+            categoryId: categoryId || null,
+            unit: unit || 'pcs',
             stock: initialStock || 0,
             lowStockThreshold: lowStockThreshold || null,
-            unit: unit || 'pcs',
             createdAt: new Date(),
             updatedAt: new Date(),
             imageUrl: imageUrl || 'https://placehold.co/300x300.png',
