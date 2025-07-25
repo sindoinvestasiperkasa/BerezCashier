@@ -39,6 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { cn } from "@/lib/utils";
 import { Textarea } from "../ui/textarea";
+import { ScrollArea } from "../ui/scroll-area";
 
 
 // Placeholder, should come from DB later
@@ -186,12 +187,12 @@ export default function InventoryPage() {
             itemCategory: itemCategory,
             productType: itemCategory === 'service' ? 'Jasa' : 'Barang',
             categoryId: itemCategoryId,
-            price: itemCategory !== 'raw_material' ? Number(itemPrice) || 0 : undefined,
+            price: itemCategory !== 'raw_material' ? Number(itemPrice) || undefined : undefined,
             hpp: itemCategory === 'retail_good' ? Number(itemHpp) || undefined : undefined,
             initialStock: ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory) ? Number(itemInitialStock) || 0 : undefined,
             lowStockThreshold: ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory) ? Number(itemLowStockThreshold) || undefined : undefined,
             unit: itemUnit || undefined,
-            // imageUrl will be handled later
+            imageUrl: 'https://placehold.co/300x300.png',
         });
 
         if (result.success) {
@@ -319,44 +320,45 @@ export default function InventoryPage() {
                 Daftarkan item baru ke sistem. Pilih tipe yang sesuai untuk menampilkan form yang relevan.
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4 space-y-6">
-              <div>
-                <Label className="mb-2 block font-medium">1. Tipe Item</Label>
-                <RadioGroup value={itemCategory} onValueChange={(val: any) => setItemCategory(val)} className="grid grid-cols-2 gap-4">
-                   <div>
-                      <RadioGroupItem value="retail_good" id="type-retail" className="peer sr-only" />
-                      <Label htmlFor="type-retail" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        Produk Retail
-                        <span className="text-xs text-muted-foreground mt-1 text-center">Barang yang dibeli untuk dijual kembali.</span>
-                      </Label>
+            <ScrollArea className="max-h-[70vh] p-1">
+                <div className="py-4 space-y-6 pr-6">
+                <div>
+                    <Label className="mb-2 block font-medium">1. Tipe Item</Label>
+                    <RadioGroup value={itemCategory} onValueChange={(val: any) => setItemCategory(val)} className="grid grid-cols-2 gap-4">
+                    <div>
+                        <RadioGroupItem value="retail_good" id="type-retail" className="peer sr-only" />
+                        <Label htmlFor="type-retail" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                            Produk Retail
+                            <span className="text-xs text-muted-foreground mt-1 text-center">Barang yang dibeli untuk dijual kembali.</span>
+                        </Label>
+                        </div>
+                        <div>
+                        <RadioGroupItem value="manufactured_good" id="type-manufactured" className="peer sr-only" />
+                        <Label htmlFor="type-manufactured" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                            Produk Produksi
+                            <span className="text-xs text-muted-foreground mt-1 text-center">Barang hasil produksi dari bahan baku.</span>
+                        </Label>
+                        </div>
+                        <div>
+                        <RadioGroupItem value="service" id="type-service" className="peer sr-only" />
+                        <Label htmlFor="type-service" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                            Jasa / Layanan
+                            <span className="text-xs text-muted-foreground mt-1 text-center">Layanan yang tidak memiliki stok fisik.</span>
+                        </Label>
+                        </div>
+                    <div>
+                        <RadioGroupItem value="raw_material" id="type-raw-material" className="peer sr-only" />
+                        <Label htmlFor="type-raw-material" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                        Bahan Baku
+                        <span className="text-xs text-muted-foreground mt-1 text-center">Untuk digunakan dalam proses produksi.</span>
+                        </Label>
                     </div>
-                     <div>
-                      <RadioGroupItem value="manufactured_good" id="type-manufactured" className="peer sr-only" />
-                      <Label htmlFor="type-manufactured" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        Produk Produksi
-                        <span className="text-xs text-muted-foreground mt-1 text-center">Barang hasil produksi dari bahan baku.</span>
-                      </Label>
-                    </div>
-                     <div>
-                      <RadioGroupItem value="service" id="type-service" className="peer sr-only" />
-                      <Label htmlFor="type-service" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        Jasa / Layanan
-                        <span className="text-xs text-muted-foreground mt-1 text-center">Layanan yang tidak memiliki stok fisik.</span>
-                      </Label>
-                    </div>
-                  <div>
-                    <RadioGroupItem value="raw_material" id="type-raw-material" className="peer sr-only" />
-                    <Label htmlFor="type-raw-material" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                      Bahan Baku
-                      <span className="text-xs text-muted-foreground mt-1 text-center">Untuk digunakan dalam proses produksi.</span>
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
+                    </RadioGroup>
+                </div>
 
-              {renderItemDetailsForm()}
-
-            </div>
+                {renderItemDetailsForm()}
+                </div>
+            </ScrollArea>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>Batal</Button>
               <Button onClick={handleSaveItem} disabled={isProcessing}>
@@ -570,3 +572,5 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    
