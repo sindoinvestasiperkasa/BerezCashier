@@ -148,7 +148,7 @@ export default function TransactionsPage() {
           <h1 className="text-2xl font-bold">Riwayat Transaksi Kasir</h1>
         </div>
         <div className="mt-4 flex flex-row gap-4">
-            <Card className="flex-1">
+            <Card className="flex-1 shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -157,7 +157,7 @@ export default function TransactionsPage() {
                 <div className="text-xl font-bold">{formatCurrency(summary.totalSales)}</div>
               </CardContent>
             </Card>
-            <Card className="flex-1">
+            <Card className="flex-1 shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Jumlah Transaksi</CardTitle>
                 <Hash className="h-4 w-4 text-muted-foreground" />
@@ -173,7 +173,7 @@ export default function TransactionsPage() {
                 <Button
                   id="date"
                   variant={"outline"}
-                  className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
+                  className={cn("w-full justify-start text-left font-normal shadow-sm", !dateRange && "text-muted-foreground")}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {dateRange?.from ? (
@@ -220,7 +220,7 @@ export default function TransactionsPage() {
                 : 'Ringkasan item tidak tersedia.';
 
               return (
-              <Card key={trx.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedTransaction(trx)}>
+              <Card key={trx.id} className="cursor-pointer shadow-md hover:shadow-lg transition-shadow" onClick={() => setSelectedTransaction(trx)}>
                 <CardHeader className="p-4">
                   <div className="flex justify-between items-start">
                     <div>
@@ -264,7 +264,7 @@ export default function TransactionsPage() {
           {filteredTransactions.length > displayedCount && (
             <div className="space-y-4 mt-4">
               {[...Array(3)].map((_, i) => (
-                <Card key={i}>
+                <Card key={i} className="shadow-md">
                   <CardHeader className="p-4">
                     <Skeleton className="h-5 w-1/3" />
                     <Skeleton className="h-4 w-1/2 mt-1" />
