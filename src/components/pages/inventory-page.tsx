@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -34,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { recordPurchase } from "@/ai/flows/record-purchase-flow";
 import { Combobox } from "@/components/ui/combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 
 export default function InventoryPage() {
@@ -42,6 +44,7 @@ export default function InventoryPage() {
   const [searchFinishedGoods, setSearchFinishedGoods] = useState("");
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [isRawMaterialPurchaseDialogOpen, setIsRawMaterialPurchaseDialogOpen] = useState(false);
+  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // State for the purchase form
@@ -50,6 +53,9 @@ export default function InventoryPage() {
   const [purchaseHpp, setPurchaseHpp] = useState<number | string>("");
   const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>();
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>();
+
+  // State for Add Item form
+  const [addItemType, setAddItemType] = useState<"product" | "raw_material">("product");
 
   // Placeholder data
   const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
@@ -137,9 +143,101 @@ export default function InventoryPage() {
           <Warehouse className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-bold">Manajemen Inventaris</h1>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Tambah Item
-        </Button>
+        <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Tambah Item
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Tambah Item Baru</DialogTitle>
+              <DialogDescription>
+                Pilih tipe item yang ingin Anda buat, lalu isi detailnya.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-6">
+              <div>
+                <Label className="mb-2 block">Tipe Item</Label>
+                <RadioGroup value={addItemType} onValueChange={(val: "product" | "raw_material") => setAddItemType(val)} className="grid grid-cols-2 gap-4">
+                  <div>
+                    <RadioGroupItem value="product" id="type-product" className="peer sr-only" />
+                    <Label htmlFor="type-product" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                      Produk Jadi/Retail
+                    </Label>
+                  </div>
+                  <div>
+                    <RadioGroupItem value="raw_material" id="type-raw-material" className="peer sr-only" />
+                    <Label htmlFor="type-raw-material" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                      Bahan Baku
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {addItemType === 'product' && (
+                <div className="space-y-4 p-4 border rounded-md">
+                   <h3 className="font-medium text-center">Detail Produk Jadi/Retail</h3>
+                   <div>
+                      <Label htmlFor="product-name">Nama Produk</Label>
+                      <Input id="product-name" placeholder="Contoh: Kemeja Polos, Ayam Geprek" />
+                  </div>
+                  <div>
+                    <Label className="mb-2 block">Tipe Produk</Label>
+                    <Select defaultValue="Barang">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih tipe produk" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Barang">Barang (punya stok fisik)</SelectItem>
+                        <SelectItem value="Jasa">Jasa (tidak punya stok)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                     <div>
+                        <Label htmlFor="product-price">Harga Jual</Label>
+                        <Input id="product-price" type="number" placeholder="Rp 0" />
+                    </div>
+                    <div>
+                        <Label htmlFor="product-hpp">Harga Beli (HPP)</Label>
+                        <Input id="product-hpp" type="number" placeholder="Rp 0" />
+                    </div>
+                  </div>
+                   <div>
+                      <Label htmlFor="product-stock">Stok Awal</Label>
+                      <Input id="product-stock" type="number" placeholder="0" />
+                  </div>
+                </div>
+              )}
+              
+              {addItemType === 'raw_material' && (
+                <div className="space-y-4 p-4 border rounded-md">
+                  <h3 className="font-medium text-center">Detail Bahan Baku</h3>
+                  <div>
+                      <Label htmlFor="raw-name">Nama Bahan</Label>
+                      <Input id="raw-name" placeholder="Contoh: Tepung Terigu, Daging Ayam" />
+                  </div>
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                        <Label htmlFor="raw-stock">Stok Awal</Label>
+                        <Input id="raw-stock" type="number" placeholder="0" />
+                    </div>
+                    <div>
+                        <Label htmlFor="raw-unit">Satuan</Label>
+                        <Input id="raw-unit" placeholder="kg, liter, pcs" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>Batal</Button>
+              <Button>Simpan Item</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </header>
 
       <Tabs defaultValue="finished_goods" className="w-full">
@@ -344,3 +442,5 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    
