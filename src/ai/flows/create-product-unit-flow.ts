@@ -14,14 +14,14 @@ import { runFlow } from '@genkit-ai/next';
 
 const CreateProductUnitInputSchema = z.object({
   name: z.string().describe("Nama lengkap unit (e.g., Kilogram)."),
-  abbreviation: z.string().describe("Singkatan unit (e.g., kg)."),
+  symbol: z.string().describe("Simbol atau singkatan unit (e.g., kg)."),
 });
 export type CreateProductUnitInput = z.infer<typeof CreateProductUnitInputSchema>;
 
 const CreateProductUnitOutputSchema = z.object({
   success: z.boolean(),
   unitId: z.string().optional(),
-  unitAbbreviation: z.string().optional(),
+  unitSymbol: z.string().optional(),
   message: z.string().optional(),
 });
 export type CreateProductUnitOutput = z.infer<typeof CreateProductUnitOutputSchema>;
@@ -49,7 +49,7 @@ const createProductUnitFlow = ai.defineFlow(
   },
   async (input) => {
     const db = adminDb();
-    const { name, abbreviation, ...rest } = input;
+    const { name, symbol, ...rest } = input;
     const idUMKM = (rest as any).idUMKM;
 
     const newUnitRef = db.collection('productUnits').doc();
@@ -57,10 +57,10 @@ const createProductUnitFlow = ai.defineFlow(
     await newUnitRef.set({
         idUMKM,
         name,
-        abbreviation,
+        symbol,
         createdAt: new Date(),
     });
 
-    return { success: true, unitId: newUnitRef.id, unitAbbreviation: abbreviation };
+    return { success: true, unitId: newUnitRef.id, unitSymbol: symbol };
   }
 );

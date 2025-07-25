@@ -53,7 +53,7 @@ interface IProductCategory {
 interface IProductUnit {
     id: string;
     name: string;
-    abbreviation: string;
+    symbol: string;
 }
 
 export default function InventoryPage() {
@@ -74,7 +74,7 @@ export default function InventoryPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDesc, setNewCategoryDesc] = useState("");
   const [newUnitName, setNewUnitName] = useState("");
-  const [newUnitAbbr, setNewUnitAbbr] = useState("");
+  const [newUnitSymbol, setNewUnitSymbol] = useState("");
 
 
   // State for the purchase form
@@ -164,8 +164,8 @@ export default function InventoryPage() {
 
   const productUnitOptions: ComboboxOption[] = useMemo(() => {
     return productUnits.map(unit => ({
-        value: unit.abbreviation,
-        label: `${unit.name} (${unit.abbreviation})`,
+        value: unit.symbol,
+        label: `${unit.name} (${unit.symbol})`,
     }))
   }, [productUnits]);
 
@@ -306,20 +306,20 @@ export default function InventoryPage() {
   }
 
   const handleSaveNewUnit = async () => {
-    if (!newUnitName || !newUnitAbbr) {
-        toast({ title: "Nama dan singkatan unit tidak boleh kosong", variant: "destructive" });
+    if (!newUnitName || !newUnitSymbol) {
+        toast({ title: "Nama dan simbol unit tidak boleh kosong", variant: "destructive" });
         return;
     }
     setIsProcessing(true);
     try {
-        const result = await createProductUnit({ name: newUnitName, abbreviation: newUnitAbbr });
-        if (result.success && result.unitAbbreviation) {
+        const result = await createProductUnit({ name: newUnitName, symbol: newUnitSymbol });
+        if (result.success && result.unitSymbol) {
             toast({ title: "Unit Baru Ditambahkan!" });
             setNewUnitName("");
-            setNewUnitAbbr("");
+            setNewUnitSymbol("");
             setIsAddUnitDialogOpen(false);
             await fetchCategoriesAndUnits(); // Refresh list
-            setItemUnit(result.unitAbbreviation); // Select the new unit
+            setItemUnit(result.unitSymbol); // Select the new unit
         } else {
             throw new Error(result.message || "Gagal menyimpan unit.");
         }
@@ -373,7 +373,7 @@ export default function InventoryPage() {
                   <Input id="item-price" type="number" placeholder="Rp 0" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
                 </div>
               )}
-              {showHpp && (
+              {itemCategory === 'retail_good' && (
                 <div className="space-y-1">
                   <Label htmlFor="item-hpp">Harga Beli (HPP)</Label>
                   <Input id="item-hpp" type="number" placeholder="Rp 0" value={itemHpp} onChange={(e) => setItemHpp(e.target.value)} />
@@ -735,8 +735,8 @@ export default function InventoryPage() {
                 <Input id="new-unit-name" value={newUnitName} onChange={e => setNewUnitName(e.target.value)} placeholder="Contoh: Kilogram"/>
             </div>
             <div className="space-y-1">
-                <Label htmlFor="new-unit-abbr">Singkatan</Label>
-                <Input id="new-unit-abbr" value={newUnitAbbr} onChange={e => setNewUnitAbbr(e.target.value)} placeholder="Contoh: kg"/>
+                <Label htmlFor="new-unit-symbol">Simbol</Label>
+                <Input id="new-unit-symbol" value={newUnitSymbol} onChange={e => setNewUnitSymbol(e.target.value)} placeholder="Contoh: kg"/>
             </div>
         </div>
         <DialogFooter>
