@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Warehouse, Plus, Search } from "lucide-react";
+import { Warehouse, Plus, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,10 +20,33 @@ import {
 } from "@/components/ui/card";
 import { useApp } from "@/hooks/use-app";
 import Image from "next/image";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { recordPurchase } from "@/ai/flows/record-purchase-flow";
+
 
 export default function InventoryPage() {
   const { products } = useApp();
+  const { toast } = useToast();
   const [searchFinishedGoods, setSearchFinishedGoods] = useState("");
+  const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // State for the purchase form
+  const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
+  const [purchaseQuantity, setPurchaseQuantity] = useState<number | string>("");
+  const [purchaseHpp, setPurchaseHpp] = useState<number | string>("");
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -40,6 +63,52 @@ export default function InventoryPage() {
         p.name.toLowerCase().includes(searchFinishedGoods.toLowerCase())
       );
   }, [products, searchFinishedGoods]);
+
+  const resetPurchaseForm = () => {
+    setSelectedProductId(undefined);
+    setPurchaseQuantity("");
+    setPurchaseHpp("");
+  }
+
+  const handleRecordPurchase = async () => {
+     if (!selectedProductId || !purchaseQuantity || !purchaseHpp) {
+      toast({
+        title: "Form Tidak Lengkap",
+        description: "Silakan pilih produk, isi jumlah, dan harga beli.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const result = await recordPurchase({
+        productId: selectedProductId,
+        quantity: Number(purchaseQuantity),
+        hpp: Number(purchaseHpp),
+      });
+
+      if(result.success) {
+        toast({
+          title: "Pembelian Dicatat!",
+          description: `Stok produk telah diperbarui menjadi ${result.updatedStock}.`,
+        });
+        setIsPurchaseDialogOpen(false);
+        resetPurchaseForm();
+      } else {
+         throw new Error("Gagal memperbarui stok dari flow.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Terjadi Kesalahan",
+        description: "Gagal mencatat pembelian. Silakan coba lagi.",
+        variant: "destructive",
+      });
+    } finally {
+        setIsProcessing(false);
+    }
+  }
 
 
   return (
@@ -106,8 +175,67 @@ export default function InventoryPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-                <Button variant="outline">Catat Pembelian Retail</Button>
-                <Button>Lakukan Produksi</Button>
+              <Dialog open={isPurchaseDialogOpen} onOpenChange={(open) => {
+                if (!open) resetPurchaseForm();
+                setIsPurchaseDialogOpen(open);
+              }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">Catat Pembelian Retail</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                      <DialogHeader>
+                          <DialogTitle>Catat Pembelian Stok Retail</DialogTitle>
+                          <DialogDescription>
+                              Formulir ini untuk menambah stok produk yang dibeli dan langsung dijual kembali.
+                          </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4 space-y-4">
+                           <div>
+                              <Label htmlFor="product-select">Produk</Label>
+                              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                                  <SelectTrigger id="product-select">
+                                      <SelectValue placeholder="Pilih produk yang dibeli..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      {finishedGoods.map(product => (
+                                          <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                  <Label htmlFor="quantity">Jumlah</Label>
+                                  <Input 
+                                    id="quantity" 
+                                    type="number" 
+                                    placeholder="0" 
+                                    value={purchaseQuantity}
+                                    onChange={(e) => setPurchaseQuantity(e.target.value)}
+                                  />
+                              </div>
+                              <div>
+                                  <Label htmlFor="hpp">Harga Beli (HPP) / item</Label>
+                                  <Input 
+                                    id="hpp" 
+                                    type="number" 
+                                    placeholder="0"
+                                    value={purchaseHpp}
+                                    onChange={(e) => setPurchaseHpp(e.target.value)}
+                                  />
+                              </div>
+                          </div>
+                      </div>
+                      <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsPurchaseDialogOpen(false)}>Batal</Button>
+                          <Button onClick={handleRecordPurchase} disabled={isProcessing}>
+                            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Simpan & Tambah Stok
+                          </Button>
+                      </DialogFooter>
+                  </DialogContent>
+              </Dialog>
+              <Button>Lakukan Produksi</Button>
             </CardFooter>
           </Card>
         </TabsContent>
