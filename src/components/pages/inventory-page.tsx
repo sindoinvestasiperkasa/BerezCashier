@@ -222,10 +222,10 @@ export default function InventoryPage() {
     const showCategory = itemCategory !== 'raw_material';
     const showPrice = itemCategory !== 'raw_material';
     const showHpp = itemCategory === 'retail_good';
-    const showStockAndUnit = ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory);
+    const showStockFields = ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory);
     
     return (
-       <div className="space-y-4 p-4 border rounded-md">
+       <div className="space-y-4 p-4 border rounded-md bg-background">
           <h3 className="font-medium text-center text-lg">2. Detail Item</h3>
           <div className="space-y-4">
             <div className="space-y-1">
@@ -268,7 +268,7 @@ export default function InventoryPage() {
               )}
             </div>
 
-             {showStockAndUnit && <div className="grid grid-cols-2 gap-4">
+             {showStockFields && <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="item-stock">Stok Awal</Label>
                   <Input id="item-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} />
@@ -572,5 +572,3 @@ export default function InventoryPage() {
     </div>
   );
 }
-
-    
