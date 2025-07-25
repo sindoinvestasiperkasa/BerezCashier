@@ -48,7 +48,6 @@ export function Combobox({
         getToggleButtonProps,
         getMenuProps,
         getInputProps,
-        getComboboxProps,
         highlightedIndex,
         getItemProps,
         selectedItem,
@@ -64,7 +63,9 @@ export function Combobox({
             );
         },
         onSelectedItemChange: (changes: UseComboboxStateChange<ComboboxOption>) => {
-            onChange(changes.selectedItem?.value || "");
+            if (changes.selectedItem) {
+                onChange(changes.selectedItem.value);
+            }
             setIsOpen(false);
         },
         onIsOpenChange: ({ isOpen }) => {
@@ -79,7 +80,7 @@ export function Combobox({
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <div {...getComboboxProps()}>
+            <div>
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
