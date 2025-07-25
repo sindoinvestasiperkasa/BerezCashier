@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Flow untuk membuat item baru, baik produk jadi maupun bahan baku.
@@ -18,6 +19,7 @@ const CreateItemInputSchema = z.object({
   itemType: z.enum(['product', 'raw_material']).describe("Tipe item yang akan dibuat."),
   name: z.string().describe("Nama item."),
   productType: z.enum(['Barang', 'Jasa']).optional().describe("Tipe produk (jika itemType adalah 'product')."),
+  itemCategory: z.enum(['retail_good', 'manufactured_good', 'service', 'raw_material']).optional().describe("Kategori spesifik dari item."),
   price: z.number().optional().describe("Harga jual (jika itemType adalah 'product')."),
   hpp: z.number().optional().describe("Harga Pokok Penjualan (jika itemType adalah 'product')."),
   initialStock: z.number().optional().describe("Stok awal item."),
@@ -62,7 +64,7 @@ export const createItemFlow = ai.defineFlow(
   },
   async (input) => {
     const db = adminDb();
-    const { itemType, name, productType, price, hpp, initialStock, unit, ...rest } = input;
+    const { itemType, name, productType, itemCategory, price, hpp, initialStock, unit, ...rest } = input;
     const idUMKM = (rest as any).idUMKM;
 
     if (itemType === 'product') {
@@ -70,9 +72,10 @@ export const createItemFlow = ai.defineFlow(
         await newProductRef.set({
             idUMKM,
             name,
-            productType: productType || 'Barang',
+            productType: productType || 'Barang', // Fallback for safety
+            itemCategory: itemCategory,
             price: price || 0,
-            hpp: hpp || 0,
+            hpp: hpp, // Can be undefined
             stock: productType === 'Jasa' ? null : (initialStock || 0),
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -85,6 +88,7 @@ export const createItemFlow = ai.defineFlow(
         await newRawMaterialRef.set({
             idUMKM,
             name,
+            itemCategory: 'raw_material',
             stock: initialStock || 0,
             unit: unit || 'pcs',
             createdAt: new Date(),
