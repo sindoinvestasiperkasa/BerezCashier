@@ -40,8 +40,8 @@ export const createProductUnitFlow = ai.defineFlow(
   },
   async (input) => {
     const db = adminDb();
-    const { name, symbol, ...rest } = input;
-    const idUMKM = (rest as any).idUMKM;
+    const { name, symbol } = input;
+    const idUMKM = (input as any).idUMKM;
 
     const newUnitRef = db.collection('productUnits').doc();
     

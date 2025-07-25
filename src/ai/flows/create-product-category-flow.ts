@@ -39,8 +39,8 @@ export const createProductCategoryFlow = ai.defineFlow(
   },
   async (input) => {
     const db = adminDb();
-    const { name, description, ...rest } = input;
-    const idUMKM = (rest as any).idUMKM;
+    const { name, description } = input;
+    const idUMKM = (input as any).idUMKM;
 
     const newCategoryRef = db.collection('productCategories').doc();
     

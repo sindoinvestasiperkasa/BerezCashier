@@ -61,10 +61,9 @@ export const createItemFlow = ai.defineFlow(
     const db = adminDb();
     const { 
         name, description, itemCategory, productType, categoryId, 
-        price, hpp, initialStock, lowStockThreshold, unit, imageUrl,
-        ...rest 
+        price, hpp, initialStock, lowStockThreshold, unit, imageUrl
     } = input;
-    const idUMKM = (rest as any).idUMKM;
+    const idUMKM = (input as any).idUMKM;
 
     const isProduct = itemCategory === 'retail_good' || itemCategory === 'manufactured_good' || itemCategory === 'service';
 
