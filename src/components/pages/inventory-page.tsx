@@ -30,9 +30,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { recordPurchase } from "@/ai/flows/record-purchase-flow";
+import { Combobox } from "@/components/ui/combobox";
 
 
 export default function InventoryPage() {
@@ -63,6 +63,13 @@ export default function InventoryPage() {
         p.name.toLowerCase().includes(searchFinishedGoods.toLowerCase())
       );
   }, [products, searchFinishedGoods]);
+
+  const productOptions = useMemo(() => {
+    return finishedGoods.map(product => ({
+        value: product.id,
+        label: product.name,
+    }))
+  }, [finishedGoods]);
 
   const resetPurchaseForm = () => {
     setSelectedProductId(undefined);
@@ -192,16 +199,14 @@ export default function InventoryPage() {
                       <div className="py-4 space-y-4">
                            <div>
                               <Label htmlFor="product-select">Produk</Label>
-                              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                                  <SelectTrigger id="product-select">
-                                      <SelectValue placeholder="Pilih produk yang dibeli..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      {finishedGoods.map(product => (
-                                          <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                              </Select>
+                               <Combobox
+                                options={productOptions}
+                                value={selectedProductId}
+                                onChange={setSelectedProductId}
+                                placeholder="Pilih produk yang dibeli..."
+                                searchPlaceholder="Cari produk..."
+                                emptyText="Produk tidak ditemukan."
+                               />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                               <div>
