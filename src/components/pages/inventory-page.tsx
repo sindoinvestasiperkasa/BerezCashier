@@ -40,7 +40,10 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { cn } from "@/lib/utils";
 import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
-import { collection, getDocs, getFirestore, query, where, addDoc } from "firebase/firestore";
+import { collection, getDocs, getFirestore, query, where, addDoc, doc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from '@/lib/firebase';
+import imageCompression from 'browser-image-compression';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -82,6 +85,7 @@ export default function InventoryPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [productCategories, setProductCategories] = useState<IProductCategory[]>([]);
   const [productUnits, setProductUnits] = useState<IProductUnit[]>([]);
+  const [imageFiles, setImageFiles] = useState<FileList | null>(null);
 
   // Dialog states
   const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
@@ -256,6 +260,7 @@ export default function InventoryPage() {
     setItemLowStockThreshold("");
     setItemUnit(undefined);
     setItemCategory("retail_good");
+    setImageFiles(null);
   }
 
   const handleSaveItem = async () => {
@@ -267,9 +272,29 @@ export default function InventoryPage() {
         toast({ title: "Pengguna tidak ditemukan", variant: "destructive" });
         return;
     }
+    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
     
     setIsProcessing(true);
     try {
+        let uploadedImageUrl = 'https://placehold.co/300x300.png';
+
+        if (imageFiles && imageFiles.length > 0) {
+            const file = imageFiles[0];
+            let fileToUpload = file;
+            if (file.size > 512 * 1024) { // Compress if > 0.5MB
+                try {
+                    fileToUpload = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280, useWebWorker: true });
+                } catch (compressionError) {
+                    console.warn('Kompresi gambar gagal, mengunggah file asli.', compressionError);
+                }
+            }
+            const docId = doc(collection(db, 'products')).id;
+            const filePath = `products/${idUMKM}/${docId}/${Date.now()}_${fileToUpload.name}`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, fileToUpload);
+            uploadedImageUrl = await getDownloadURL(storageRef);
+        }
+
         const result = await createItem({
             name: itemName,
             description: itemDescription,
@@ -281,7 +306,7 @@ export default function InventoryPage() {
             initialStock: ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory) ? Number(itemInitialStock) || 0 : undefined,
             lowStockThreshold: ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory) ? Number(itemLowStockThreshold) || undefined : undefined,
             unit: itemUnit || undefined,
-            imageUrl: 'https://placehold.co/300x300.png',
+            imageUrl: uploadedImageUrl,
         });
 
         if (result.success) {
@@ -342,7 +367,7 @@ export default function InventoryPage() {
     
     setIsProcessing(true);
     try {
-        await addDoc(collection(db, "productUnits"), { ...data, idUMKM });
+        const docRef = await addDoc(collection(db, "productUnits"), { ...data, idUMKM });
         toast({ title: "Unit Baru Ditambahkan!", description: `Unit ${data.name} berhasil dibuat.` });
         
         await fetchCategoriesAndUnits();
@@ -435,10 +460,11 @@ export default function InventoryPage() {
             
             <div className="space-y-1">
                 <Label>Foto Produk</Label>
-                <Button variant="outline" className="w-full flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    <span>Unggah Foto</span>
-                </Button>
+                 <Input 
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setImageFiles(e.target.files)}
+                />
             </div>
 
           </div>
