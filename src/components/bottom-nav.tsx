@@ -1,7 +1,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { Home, Heart, ShoppingCart, Receipt, User } from "lucide-react";
+import { Home, Warehouse, ShoppingCart, Receipt, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tab } from "./app-shell";
 import { useApp } from "@/hooks/use-app";
@@ -13,14 +13,14 @@ interface BottomNavProps {
 
 const navItems = [
   { id: "home", label: "Home", icon: Home },
-  { id: "wishlist", label: "Wishlist", icon: Heart },
+  { id: "inventory", label: "Inventaris", icon: Warehouse },
   { id: "cart", label: "Cart", icon: ShoppingCart },
   { id: "transactions", label: "Transactions", icon: Receipt },
   { id: "account", label: "Account", icon: User },
 ] as const;
 
 export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
-  const { cart, wishlist } = useApp();
+  const { cart } = useApp();
 
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-4xl">
@@ -65,12 +65,6 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
               >
                 <item.icon className="w-6 h-6 transition-transform group-hover:scale-110" />
                 <span className="text-xs font-medium">{item.label}</span>
-                
-                {item.id === 'wishlist' && wishlist.length > 0 && (
-                  <div className="absolute top-1 right-1/2 translate-x-4 w-5 h-5 bg-primary-foreground text-primary rounded-full flex items-center justify-center text-xs font-bold">
-                    {wishlist.length}
-                  </div>
-                )}
               </button>
             );
           })}

@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, User, MapPin, Heart, Settings, LogOut } from "lucide-react";
+import { ChevronRight, User, MapPin, Settings, LogOut } from "lucide-react";
 import type { View } from "../app-shell";
 import { useApp } from "@/hooks/use-app";
 import {
@@ -28,7 +28,6 @@ export default function AccountPage({ setView }: AccountPageProps) {
   const menuItems = [
     { icon: User, text: "Edit Profil", action: () => setView('edit-profile') },
     { icon: MapPin, text: "Alamat Saya", action: () => setView('my-address') },
-    { icon: Heart, text: "Wishlist", action: () => setView('wishlist') },
     { icon: Settings, text: "Pengaturan", action: () => setView('settings') },
   ];
 
