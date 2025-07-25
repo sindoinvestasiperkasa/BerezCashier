@@ -37,6 +37,7 @@ import { createItem } from "@/ai/flows/create-item-flow";
 import { Combobox } from "@/components/ui/combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { cn } from "@/lib/utils";
 
 
 export default function InventoryPage() {
@@ -167,11 +168,11 @@ export default function InventoryPage() {
         const result = await createItem({
             itemType: addItemType,
             name: itemName,
-            productType: itemProductType,
-            price: Number(itemPrice) || 0,
-            hpp: Number(itemHpp) || 0,
-            initialStock: Number(itemInitialStock) || 0,
-            unit: itemUnit,
+            productType: addItemType === 'product' ? itemProductType : undefined,
+            price: itemProductType !== 'Jasa' ? Number(itemPrice) || 0 : undefined,
+            hpp: itemProductType === 'Barang' ? Number(itemHpp) || 0 : undefined,
+            initialStock: itemProductType === 'Barang' || addItemType === 'raw_material' ? Number(itemInitialStock) || 0 : undefined,
+            unit: addItemType === 'raw_material' ? itemUnit : undefined,
         });
 
         if (result.success) {
@@ -218,83 +219,89 @@ export default function InventoryPage() {
             <DialogHeader>
               <DialogTitle>Tambah Item Baru</DialogTitle>
               <DialogDescription>
-                Gunakan form ini untuk mendaftarkan produk, jasa, atau bahan baku baru ke dalam sistem untuk pertama kalinya.
+                Gunakan form ini untuk mendaftarkan item ke sistem untuk pertama kalinya. 
+                Item bisa berupa produk/jasa yang dijual (retail) atau bahan baku untuk produksi.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-6">
               <div>
-                <Label className="mb-2 block">Tipe Item</Label>
+                <Label className="mb-2 block font-medium">1. Tipe Item</Label>
                 <RadioGroup value={addItemType} onValueChange={(val: "product" | "raw_material") => setAddItemType(val)} className="grid grid-cols-2 gap-4">
                   <div>
                     <RadioGroupItem value="product" id="type-product" className="peer sr-only" />
                     <Label htmlFor="type-product" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                      Produk Jadi/Jasa
+                      Produk/Jasa
+                      <span className="text-xs text-muted-foreground mt-1 text-center">Untuk dijual langsung ke pelanggan.</span>
                     </Label>
                   </div>
                   <div>
                     <RadioGroupItem value="raw_material" id="type-raw-material" className="peer sr-only" />
                     <Label htmlFor="type-raw-material" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
                       Bahan Baku
+                      <span className="text-xs text-muted-foreground mt-1 text-center">Untuk digunakan dalam proses produksi.</span>
                     </Label>
                   </div>
                 </RadioGroup>
               </div>
 
-              {addItemType === 'product' && (
-                <div className="space-y-4 p-4 border rounded-md">
-                   <h3 className="font-medium text-center">Detail Produk Jadi/Jasa</h3>
-                   <div>
-                      <Label htmlFor="product-name">Nama Produk/Jasa</Label>
-                      <Input id="product-name" placeholder="Contoh: Kemeja Polos, Potong Rambut" value={itemName} onChange={(e) => setItemName(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label className="mb-2 block">Tipe Produk</Label>
-                    <Select value={itemProductType} onValueChange={(val: 'Barang' | 'Jasa') => setItemProductType(val)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih tipe produk" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Barang">Barang (punya stok fisik)</SelectItem>
-                        <SelectItem value="Jasa">Jasa (tidak punya stok)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <Label htmlFor="product-price">Harga Jual</Label>
-                        <Input id="product-price" type="number" placeholder="Rp 0" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
+              <div className="space-y-4 p-4 border rounded-md">
+                 <h3 className="font-medium text-center text-lg">2. Detail Item</h3>
+                 
+                 {addItemType === 'product' && (
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <Label>Tipe Produk</Label>
+                        <Select value={itemProductType} onValueChange={(val: 'Barang' | 'Jasa') => setItemProductType(val)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih tipe produk" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Barang">Barang (punya stok fisik, misal: makanan, baju)</SelectItem>
+                            <SelectItem value="Jasa">Jasa (tidak punya stok, misal: potong rambut)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                          <Label htmlFor="product-name">Nama Produk/Jasa</Label>
+                          <Input id="product-name" placeholder="Contoh: Kemeja Polos, Potong Rambut" value={itemName} onChange={(e) => setItemName(e.target.value)} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label htmlFor="product-price">Harga Jual</Label>
+                            <Input id="product-price" type="number" placeholder="Rp 0" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
+                        </div>
+                         <div className={cn("space-y-1", itemProductType === 'Jasa' && 'hidden')}>
+                            <Label htmlFor="product-hpp">Harga Beli (HPP)</Label>
+                            <Input id="product-hpp" type="number" placeholder="Rp 0" value={itemHpp} onChange={(e) => setItemHpp(e.target.value)} />
+                            <p className="text-xs text-muted-foreground pt-1">Untuk produk retail. HPP produk hasil produksi akan dihitung dari resep.</p>
+                        </div>
+                      </div>
+                       <div className={cn("space-y-1", itemProductType === 'Jasa' && 'hidden')}>
+                          <Label htmlFor="product-stock">Stok Awal</Label>
+                          <Input id="product-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} />
+                      </div>
                     </div>
-                    <div>
-                        <Label htmlFor="product-hpp">Harga Beli (HPP)</Label>
-                        <Input id="product-hpp" type="number" placeholder="Rp 0" value={itemHpp} onChange={(e) => setItemHpp(e.target.value)} />
+                 )}
+
+                 {addItemType === 'raw_material' && (
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                          <Label htmlFor="raw-name">Nama Bahan</Label>
+                          <Input id="raw-name" placeholder="Contoh: Tepung Terigu, Daging Ayam" value={itemName} onChange={(e) => setItemName(e.target.value)} />
+                      </div>
+                       <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-1">
+                            <Label htmlFor="raw-stock">Stok Awal</Label>
+                            <Input id="raw-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="raw-unit">Satuan</Label>
+                            <Input id="raw-unit" placeholder="kg, liter, pcs" value={itemUnit} onChange={(e) => setItemUnit(e.target.value)} />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                   <div>
-                      <Label htmlFor="product-stock">Stok Awal</Label>
-                      <Input id="product-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} disabled={itemProductType === 'Jasa'} />
-                  </div>
-                </div>
-              )}
-              
-              {addItemType === 'raw_material' && (
-                <div className="space-y-4 p-4 border rounded-md">
-                  <h3 className="font-medium text-center">Detail Bahan Baku</h3>
-                  <div>
-                      <Label htmlFor="raw-name">Nama Bahan</Label>
-                      <Input id="raw-name" placeholder="Contoh: Tepung Terigu, Daging Ayam" value={itemName} onChange={(e) => setItemName(e.target.value)} />
-                  </div>
-                   <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <Label htmlFor="raw-stock">Stok Awal</Label>
-                        <Input id="raw-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} />
-                    </div>
-                    <div>
-                        <Label htmlFor="raw-unit">Satuan</Label>
-                        <Input id="raw-unit" placeholder="kg, liter, pcs" value={itemUnit} onChange={(e) => setItemUnit(e.target.value)} />
-                    </div>
-                  </div>
-                </div>
-              )}
+                 )}
+              </div>
 
             </div>
             <DialogFooter>
@@ -510,6 +517,8 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    
 
     
 
