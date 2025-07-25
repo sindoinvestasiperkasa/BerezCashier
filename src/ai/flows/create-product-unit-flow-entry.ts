@@ -3,7 +3,7 @@
 /**
  * @fileOverview Entry point aman untuk memanggil alur createProductUnit dari komponen React.
  */
-import { runFlow } from '@genkit-ai/next';
+import { runFlow } from 'genkit';
 import { createProductUnitFlow } from './create-product-unit-flow';
 import type { CreateProductUnitInput, CreateProductUnitOutput } from './create-product-unit-flow';
 

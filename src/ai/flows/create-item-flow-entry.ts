@@ -3,7 +3,7 @@
 /**
  * @fileOverview Entry point aman untuk memanggil alur createItem dari komponen React.
  */
-import { runFlow } from '@genkit-ai/next';
+import { runFlow } from 'genkit';
 import { createItemFlow, type CreateItemInput, type CreateItemOutput } from './create-item-flow';
 
 // Re-export tipe agar bisa diimpor dari satu tempat

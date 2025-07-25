@@ -2,7 +2,7 @@
 /**
  * @fileOverview Entry point aman untuk memanggil alur createTransaction dari komponen React.
  */
-import { runFlow } from '@genkit-ai/next';
+import { runFlow } from 'genkit';
 import { z } from 'zod';
 import { createTransactionFlow } from './create-transaction-flow';
 
