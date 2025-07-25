@@ -12,7 +12,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb } from '@/services/firebase-admin';
 import { getAuth } from "firebase-admin/auth";
-import { runFlow } from '@genkit-ai/next';
+import { runFlow } from 'genkit';
 
 // Skema untuk input flow
 const CreateItemInputSchema = z.object({

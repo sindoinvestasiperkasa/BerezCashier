@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Flow untuk membuat kategori produk baru.
@@ -10,7 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb } from '@/services/firebase-admin';
-import { runFlow } from '@genkit-ai/next';
+import { runFlow } from 'genkit';
 
 const CreateProductCategoryInputSchema = z.object({
   name: z.string().describe("Nama kategori produk."),
