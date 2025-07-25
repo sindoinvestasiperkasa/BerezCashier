@@ -34,14 +34,13 @@ export const createProductCategoryFlow = ai.defineFlow(
         if (!idUMKM) {
             throw new Error("UMKM ID not found for the user.");
         }
-        // Add idUMKM to the input object to be used in the handler
-        return { ...input, idUMKM };
+        // Pass input and idUMKM separately to the handler
+        return { input, idUMKM };
     }
   },
-  async (input) => {
+  async ({ input, idUMKM }) => {
     const db = adminDb();
-    // Destructure all properties, including idUMKM, from the modified input
-    const { name, description, idUMKM } = input as CreateProductCategoryInput & { idUMKM: string };
+    const { name, description } = input;
 
     const newCategoryRef = db.collection('productCategories').doc();
     

@@ -51,17 +51,16 @@ export const createItemFlow = ai.defineFlow(
         if (!idUMKM) {
             throw new Error("UMKM ID not found for the user.");
         }
-        // Add idUMKM to the input object to be used in the handler
-        return { ...input, idUMKM };
+        // Pass input and idUMKM separately to the handler
+        return { input, idUMKM };
     }
   },
-  async (input) => {
+  async ({ input, idUMKM }) => {
     const db = adminDb();
     const { 
         name, description, itemCategory, productType, categoryId, 
         price, hpp, initialStock, lowStockThreshold, unit, imageUrl,
-        idUMKM
-    } = input as CreateItemInput & { idUMKM: string };
+    } = input;
 
     const isProduct = itemCategory === 'retail_good' || itemCategory === 'manufactured_good' || itemCategory === 'service';
 
