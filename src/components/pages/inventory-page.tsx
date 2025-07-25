@@ -33,7 +33,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { recordPurchase } from "@/ai/flows/record-purchase-flow";
-import { createItem } from "@/ai/flows/create-item-flow";
+import { createItem } from "@/ai/flows/create-item-flow-entry";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";

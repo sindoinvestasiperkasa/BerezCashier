@@ -3,19 +3,17 @@
 /**
  * @fileOverview Flow untuk membuat item baru, baik produk jadi maupun bahan baku.
  * 
- * - createItem - Fungsi utama untuk membuat item baru di Firestore.
- * - CreateItemInput - Tipe input untuk fungsi createItem.
- * - CreateItemOutput - Tipe output untuk fungsi createItem.
+ * - createItemFlow - Definisi flow Genkit untuk membuat item baru di Firestore.
+ * - CreateItemInput - Tipe input untuk fungsi createItemFlow.
+ * - CreateItemOutput - Tipe output untuk fungsi createItemFlow.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb } from '@/services/firebase-admin';
-import { getAuth } from "firebase-admin/auth";
-import { runFlow } from '@genkit-ai/next';
 
 // Skema untuk input flow
-const CreateItemInputSchema = z.object({
+export const CreateItemInputSchema = z.object({
   name: z.string().describe("Nama item."),
   description: z.string().optional().describe("Deskripsi item."),
   itemCategory: z.enum(['retail_good', 'manufactured_good', 'service', 'raw_material']).describe("Kategori spesifik dari item."),
@@ -33,18 +31,13 @@ export type CreateItemInput = z.infer<typeof CreateItemInputSchema>;
 
 
 // Skema untuk output flow
-const CreateItemOutputSchema = z.object({
+export const CreateItemOutputSchema = z.object({
   success: z.boolean(),
   itemId: z.string().optional(),
   message: z.string().optional(),
 });
 export type CreateItemOutput = z.infer<typeof CreateItemOutputSchema>;
 
-// Fungsi wrapper yang aman dipanggil dari komponen client
-export async function createItem(input: CreateItemInput): Promise<CreateItemOutput> {
-  // Pass the auth token to the flow securely
-  return await runFlow(createItemFlow, input);
-}
 
 // Definisi Flow
 export const createItemFlow = ai.defineFlow(

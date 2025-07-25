@@ -9,3 +9,5 @@ import './flows/create-product-category-flow';
 import './flows/create-product-unit-flow';
 import './flows/create-product-category-flow-entry';
 import './flows/create-product-unit-flow-entry';
+import './flows/create-item-flow-entry';
+
