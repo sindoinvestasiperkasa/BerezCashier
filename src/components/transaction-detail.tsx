@@ -50,13 +50,14 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
   const paymentConfig = paymentStatusConfig[transaction.paymentStatus];
   const PaymentIcon = paymentConfig?.icon || CreditCard;
   
-  const subtotal = Array.isArray(transaction.items) 
+  const subtotal = transaction.subtotal || (Array.isArray(transaction.items) 
     ? transaction.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-    : 0;
+    : 0);
   
   const discount = transaction.discountAmount || 0;
   const tax = transaction.taxAmount || 0;
   const shipping = 0; // Shipping is not part of cashier transaction
+  const total = transaction.total || 0;
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -134,7 +135,7 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                   <Separator/>
                   <div className="flex justify-between font-bold text-lg">
                       <span>Total</span>
-                      <span>{formatCurrency(transaction.total)}</span>
+                      <span>{formatCurrency(total)}</span>
                   </div>
               </CardContent>
             </Card>

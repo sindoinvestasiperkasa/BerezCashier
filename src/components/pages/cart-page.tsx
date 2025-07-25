@@ -44,6 +44,7 @@ interface ReceiptData {
     changeAmount: number;
     transactionNumber: string;
     transactionDate: Date;
+    customerName: string;
 }
 
 interface CartPageProps {
@@ -122,12 +123,12 @@ export default function CartPage({ setView }: CartPageProps) {
 
   const TAX_RATE = 0.11;
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountAmount = (subtotal * discountPercent) / 100;
-  const taxableAmount = subtotal - discountAmount;
-  const taxAmount = isPkp ? taxableAmount * TAX_RATE : 0;
-  const total = taxableAmount + taxAmount;
-  const change = amountReceived > total ? amountReceived - total : 0;
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
+  const discountAmount = useMemo(() => (subtotal * discountPercent) / 100, [subtotal, discountPercent]);
+  const taxableAmount = useMemo(() => subtotal - discountAmount, [subtotal, discountAmount]);
+  const taxAmount = useMemo(() => isPkp ? taxableAmount * TAX_RATE : 0, [isPkp, taxableAmount]);
+  const total = useMemo(() => taxableAmount + taxAmount, [taxableAmount, taxAmount]);
+  const change = useMemo(() => amountReceived > total ? amountReceived - total : 0, [amountReceived, total]);
 
   const formatCurrency = (amount: number | undefined) => {
     if (typeof amount !== 'number' || isNaN(amount)) {
@@ -238,6 +239,7 @@ export default function CartPage({ setView }: CartPageProps) {
                 changeAmount: change,
                 transactionNumber: result.transactionId,
                 transactionDate: new Date(),
+                customerName: customerName,
             });
             setIsSuccessOpen(true);
         } else {
@@ -350,6 +352,8 @@ export default function CartPage({ setView }: CartPageProps) {
     doc.text(`No: ${lastTransactionForReceipt.transactionNumber.substring(0,10)}`, margin, y);
     y += 3;
     doc.text(`Tgl: ${format(lastTransactionForReceipt.transactionDate, 'dd/MM/yy HH:mm')}`, margin, y);
+    y += 3;
+    doc.text(`Pelanggan: ${lastTransactionForReceipt.customerName}`, margin, y);
     y += 4;
   
     doc.text('--------------------------', pageWidth / 2, y, { align: 'center' });
@@ -407,11 +411,10 @@ export default function CartPage({ setView }: CartPageProps) {
 
   const handleReprintReceipt = (tx: Transaction) => {
     const itemsForReceipt = tx.items || [];
-    const subtotal = tx.total / (tx.taxAmount ? 1.11 : 1) + (tx.discountAmount || 0);
-
+    
     const receiptData: ReceiptData = {
       items: itemsForReceipt.map(i => ({ productName: i.productName, quantity: i.quantity, unitPrice: i.unitPrice })),
-      subtotal,
+      subtotal: tx.subtotal || 0,
       discountAmount: tx.discountAmount || 0,
       taxAmount: tx.taxAmount || 0,
       total: tx.total || 0,
@@ -419,7 +422,8 @@ export default function CartPage({ setView }: CartPageProps) {
       cashReceived: tx.paidAmount || tx.total || 0,
       changeAmount: Math.max(0, (tx.paidAmount || 0) - (tx.total || 0)),
       transactionNumber: tx.transactionNumber || tx.id,
-      date: tx.date,
+      transactionDate: tx.date,
+      customerName: tx.customerName || "Pelanggan Umum",
     };
   
     setLastTransactionForReceipt(receiptData);

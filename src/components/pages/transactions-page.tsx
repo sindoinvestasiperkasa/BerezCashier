@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
@@ -123,7 +124,7 @@ export default function TransactionsPage() {
   }, [filteredTransactions, displayedCount]);
   
   const summary = useMemo(() => {
-    const totalSales = filteredTransactions.reduce((acc, trx) => acc + trx.total, 0);
+    const totalSales = filteredTransactions.reduce((acc, trx) => acc + (trx.total || 0), 0);
     const transactionCount = filteredTransactions.length;
     return { totalSales, transactionCount };
   }, [filteredTransactions]);
@@ -283,7 +284,7 @@ export default function TransactionsPage() {
                   <div className="flex justify-between items-center mt-3">
                     <p className="text-sm text-muted-foreground">Total Belanja</p>
                     <p className="font-bold text-base text-primary">
-                      {formatCurrency(trx.total)}
+                      {formatCurrency(trx.total || 0)}
                     </p>
                   </div>
 
