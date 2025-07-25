@@ -154,7 +154,7 @@ export default function TransactionsPage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(summary.totalSales)}</div>
+                <div className="text-xl font-bold">{formatCurrency(summary.totalSales)}</div>
               </CardContent>
             </Card>
             <Card className="flex-1">
@@ -163,7 +163,7 @@ export default function TransactionsPage() {
                 <Hash className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summary.transactionCount}</div>
+                <div className="text-xl font-bold">{summary.transactionCount}</div>
               </CardContent>
             </Card>
         </div>
