@@ -34,7 +34,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { recordPurchase } from "@/ai/flows/record-purchase-flow";
 import { createItem } from "@/ai/flows/create-item-flow-entry";
-import { Combobox, ComboboxOption } from "@/components/ui/combobox";
+import { Autocomplete, type AutocompleteOption } from "@/components/ui/autocomplete";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { cn } from "@/lib/utils";
@@ -186,14 +186,14 @@ export default function InventoryPage() {
     }))
   }, [finishedGoods]);
 
-  const productCategoryOptions: ComboboxOption[] = useMemo(() => {
+  const productCategoryOptions: AutocompleteOption[] = useMemo(() => {
     return productCategories.map(cat => ({
         value: cat.id,
         label: cat.name,
     }))
   }, [productCategories]);
 
-  const productUnitOptions: ComboboxOption[] = useMemo(() => {
+  const productUnitOptions: AutocompleteOption[] = useMemo(() => {
     return productUnits.map(unit => ({
         value: unit.symbol,
         label: `${unit.name} (${unit.symbol})`,
@@ -405,7 +405,7 @@ export default function InventoryPage() {
             {showCategory && (
                 <div className="space-y-1">
                     <Label htmlFor="item-category">Kategori Produk</Label>
-                    <Combobox
+                    <Autocomplete
                         options={productCategoryOptions}
                         value={itemCategoryId}
                         onChange={setItemCategoryId}
@@ -441,7 +441,7 @@ export default function InventoryPage() {
                 </div>
                 <div className="space-y-1">
                     <Label htmlFor="item-unit">Unit</Label>
-                     <Combobox
+                     <Autocomplete
                         options={productUnitOptions}
                         value={itemUnit}
                         onChange={setItemUnit}
@@ -616,7 +616,7 @@ export default function InventoryPage() {
                       <div className="py-4 space-y-4">
                            <div>
                               <Label htmlFor="product-select">Produk</Label>
-                               <Combobox
+                               <Autocomplete
                                 options={productOptionsForPurchase}
                                 value={selectedProductId}
                                 onChange={setSelectedProductId}
