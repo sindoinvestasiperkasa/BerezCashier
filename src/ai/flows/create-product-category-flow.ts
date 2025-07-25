@@ -1,5 +1,3 @@
-
-'use server';
 /**
  * @fileOverview Flow untuk membuat kategori produk baru.
  * 
