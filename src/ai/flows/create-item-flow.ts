@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Flow untuk membuat item baru, baik produk jadi maupun bahan baku.
  * 
@@ -90,6 +91,7 @@ export const createItemFlow = ai.defineFlow(
             name,
             description: description || null,
             itemCategory: 'raw_material',
+            categoryId: categoryId || null, // Added categoryId for raw materials
             stock: initialStock || 0,
             lowStockThreshold: lowStockThreshold || null,
             unit: unit || 'pcs',

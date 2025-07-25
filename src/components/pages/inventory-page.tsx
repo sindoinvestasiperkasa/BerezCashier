@@ -362,7 +362,6 @@ export default function InventoryPage() {
   }
 
   const renderItemDetailsForm = () => {
-    const showCategory = itemCategory !== 'raw_material';
     const showPrice = itemCategory !== 'raw_material';
     const showHpp = itemCategory === 'retail_good';
     const showStockFields = ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory);
@@ -381,24 +380,22 @@ export default function InventoryPage() {
               <Textarea id="item-description" placeholder="Jelaskan tentang item ini..." value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} />
             </div>
 
-            {showCategory && (
-                <div className="space-y-1">
-                    <Label htmlFor="item-category">Kategori Produk</Label>
-                    <div className="flex gap-2">
-                        <Select value={itemCategoryId} onValueChange={setItemCategoryId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Pilih kategori..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {productCategories.map(cat => (
-                                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryDialogOpen(true)}><Plus className="h-4 w-4"/></Button>
-                    </div>
+            <div className="space-y-1">
+                <Label htmlFor="item-category">Kategori Produk</Label>
+                <div className="flex gap-2">
+                    <Select value={itemCategoryId} onValueChange={setItemCategoryId}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Pilih kategori..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {productCategories.map(cat => (
+                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryDialogOpen(true)}><Plus className="h-4 w-4"/></Button>
                 </div>
-            )}
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               {showPrice && (
@@ -407,7 +404,7 @@ export default function InventoryPage() {
                   <Input id="item-price" type="number" placeholder="Rp 0" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
                 </div>
               )}
-              {itemCategory === 'retail_good' && (
+              {showHpp && (
                 <div className="space-y-1">
                   <Label htmlFor="item-hpp">Harga Beli (HPP)</Label>
                   <Input id="item-hpp" type="number" placeholder="Rp 0" value={itemHpp} onChange={(e) => setItemHpp(e.target.value)} />
@@ -416,28 +413,30 @@ export default function InventoryPage() {
               )}
             </div>
 
+            <div className="space-y-1">
+                <Label htmlFor="item-unit">Unit</Label>
+                 <div className="flex gap-2">
+                     <Select value={itemUnit} onValueChange={setItemUnit}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Pilih unit..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {productUnits.map(unit => (
+                                <SelectItem key={unit.id} value={unit.symbol}>{unit.name} ({unit.symbol})</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="icon" onClick={() => setIsAddUnitDialogOpen(true)}><Plus className="h-4 w-4"/></Button>
+                </div>
+            </div>
+
              {showStockFields && <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="item-stock">Stok Awal</Label>
                   <Input id="item-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} />
                 </div>
+                
                 <div className="space-y-1">
-                    <Label htmlFor="item-unit">Unit</Label>
-                     <div className="flex gap-2">
-                         <Select value={itemUnit} onValueChange={setItemUnit}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Pilih unit..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {productUnits.map(unit => (
-                                    <SelectItem key={unit.id} value={unit.symbol}>{unit.name} ({unit.symbol})</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" size="icon" onClick={() => setIsAddUnitDialogOpen(true)}><Plus className="h-4 w-4"/></Button>
-                    </div>
-                </div>
-                <div className="space-y-1 col-span-2">
                     <Label htmlFor="item-low-stock">Ambang Batas Stok Rendah</Label>
                     <Input id="item-low-stock" type="number" placeholder="Contoh: 5" value={itemLowStockThreshold} onChange={(e) => setItemLowStockThreshold(e.target.value)} />
                 </div>
