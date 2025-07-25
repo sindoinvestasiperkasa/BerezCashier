@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -233,7 +234,7 @@ export default function HomePage({ setView }: HomePageProps) {
         {isLoading && products.length === 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => (
-              <Card key={i}>
+              <Card key={i} className="shadow-md">
                 <Skeleton className="w-full aspect-square" />
                 <CardContent className="p-3 space-y-2">
                   <Skeleton className="h-4 w-3/4" />

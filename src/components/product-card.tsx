@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -58,7 +59,7 @@ export default function ProductCard({ product, onProductClick }: ProductCardProp
   return (
     <Card 
       className={cn(
-        "group overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300",
+        "group overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300",
         onProductClick && "cursor-pointer"
       )}
       onClick={() => onProductClick?.(product)}
