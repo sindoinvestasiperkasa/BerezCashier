@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, PlusCircle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command"
 import {
   Popover,
@@ -31,6 +32,8 @@ interface ComboboxProps {
     placeholder?: string;
     searchPlaceholder?: string;
     emptyText?: string;
+    onAddNew?: () => void;
+    addNewLabel?: string;
 }
 
 export function Combobox({ 
@@ -39,7 +42,9 @@ export function Combobox({
     onChange,
     placeholder = "Pilih opsi...",
     searchPlaceholder = "Cari opsi...",
-    emptyText = "Tidak ada opsi ditemukan."
+    emptyText = "Tidak ada opsi ditemukan.",
+    onAddNew,
+    addNewLabel = "Tambah baru"
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -64,14 +69,28 @@ export function Combobox({
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandEmpty>
+                <div>
+                    <p className="py-2 text-center text-sm">{emptyText}</p>
+                    {onAddNew && (
+                         <Button variant="ghost" className="w-full" onClick={() => {
+                            setOpen(false);
+                            onAddNew();
+                        }}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            {addNewLabel}
+                        </Button>
+                    )}
+                </div>
+            </CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue)
+                  value={option.label} // Search should be based on label
+                  onSelect={(currentLabel) => {
+                    const selectedValue = options.find(opt => opt.label.toLowerCase() === currentLabel.toLowerCase())?.value;
+                    onChange(selectedValue === value ? "" : selectedValue || "")
                     setOpen(false)
                   }}
                 >
@@ -85,6 +104,23 @@ export function Combobox({
                 </CommandItem>
               ))}
             </CommandGroup>
+             {onAddNew && (
+                <>
+                    <CommandSeparator />
+                    <CommandGroup>
+                        <CommandItem
+                            onSelect={() => {
+                                setOpen(false);
+                                onAddNew();
+                            }}
+                            className="cursor-pointer"
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4 text-primary" />
+                            <span className="text-primary">{addNewLabel}</span>
+                        </CommandItem>
+                    </CommandGroup>
+                </>
+             )}
           </CommandList>
         </Command>
       </PopoverContent>

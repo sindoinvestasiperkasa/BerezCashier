@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Warehouse, Plus, Search, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,31 +34,32 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { recordPurchase } from "@/ai/flows/record-purchase-flow";
 import { createItem } from "@/ai/flows/create-item-flow";
-import { Combobox } from "@/components/ui/combobox";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { cn } from "@/lib/utils";
 import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
+import { collection, getDocs, getFirestore, query, where } from "firebase/firestore";
 
 
-// Placeholder, should come from DB later
-const productCategories = [
-    { value: 'cat1', label: 'Makanan' },
-    { value: 'cat2', label: 'Minuman' },
-    { value: 'cat3', label: 'Pakaian' },
-    { value: 'cat4', label: 'Elektronik' },
-];
-
+interface IProductCategory {
+    id: string;
+    name: string;
+    description?: string;
+}
 
 export default function InventoryPage() {
   const { products, user } = useApp();
   const { toast } = useToast();
+  const db = getFirestore();
   const [searchFinishedGoods, setSearchFinishedGoods] = useState("");
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [isRawMaterialPurchaseDialogOpen, setIsRawMaterialPurchaseDialogOpen] = useState(false);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [productCategories, setProductCategories] = useState<IProductCategory[]>([]);
+  const [productUnits, setProductUnits] = useState<ComboboxOption[]>([]); // Assuming similar structure for now
 
   // State for the purchase form
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
@@ -76,12 +77,45 @@ export default function InventoryPage() {
   const [itemHpp, setItemHpp] = useState<number | string>("");
   const [itemInitialStock, setItemInitialStock] = useState<number | string>("");
   const [itemLowStockThreshold, setItemLowStockThreshold] = useState<number | string>("");
-  const [itemUnit, setItemUnit] = useState("");
+  const [itemUnit, setItemUnit] = useState<string | undefined>();
 
 
   // Placeholder data
   const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
   const warehouses = [{ id: 'wh-jkt-a', name: 'Gudang A (JKT)' }, { id: 'wh-bdg-a', name: 'Gudang A (BDG)' }];
+
+  useEffect(() => {
+    const fetchCategoriesAndUnits = async () => {
+        if (!user) return;
+        const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+        if (!idUMKM) return;
+
+        // Fetch Product Categories
+        const categoriesQuery = query(collection(db, "productCategories"), where("idUMKM", "==", idUMKM));
+        const categoriesSnapshot = await getDocs(categoriesQuery);
+        const categoriesData = categoriesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name,
+            description: doc.data().description,
+        }));
+        setProductCategories(categoriesData);
+        
+        // TODO: Fetch Product Units from a 'productUnits' collection in the future
+        // For now, using a static list as placeholder
+        setProductUnits([
+            { value: 'pcs', label: 'Pcs' },
+            { value: 'kg', label: 'Kg' },
+            { value: 'gram', label: 'Gram' },
+            { value: 'liter', label: 'Liter' },
+            { value: 'box', label: 'Box' },
+            { value: 'lusin', label: 'Lusin' },
+        ]);
+    };
+
+    if (isAddItemDialogOpen) {
+        fetchCategoriesAndUnits();
+    }
+  }, [isAddItemDialogOpen, user, db]);
 
 
   const formatCurrency = (amount: number) => {
@@ -100,12 +134,19 @@ export default function InventoryPage() {
       );
   }, [products, searchFinishedGoods]);
 
-  const productOptions = useMemo(() => {
+  const productOptionsForPurchase = useMemo(() => {
     return finishedGoods.map(product => ({
         value: product.id,
         label: product.name,
     }))
   }, [finishedGoods]);
+
+  const productCategoryOptions = useMemo(() => {
+    return productCategories.map(cat => ({
+        value: cat.id,
+        label: cat.name,
+    }))
+  }, [productCategories]);
 
   const resetPurchaseForm = () => {
     setSelectedProductId(undefined);
@@ -165,7 +206,7 @@ export default function InventoryPage() {
     setItemHpp("");
     setItemInitialStock("");
     setItemLowStockThreshold("");
-    setItemUnit("");
+    setItemUnit(undefined);
     setItemCategory("retail_good");
   }
 
@@ -241,14 +282,16 @@ export default function InventoryPage() {
             {showCategory && (
                 <div className="space-y-1">
                     <Label htmlFor="item-category">Kategori Produk</Label>
-                    <Select value={itemCategoryId} onValueChange={setItemCategoryId}>
-                        <SelectTrigger><SelectValue placeholder="Pilih kategori..." /></SelectTrigger>
-                        <SelectContent>
-                            {productCategories.map(cat => (
-                                <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Combobox
+                        options={productCategoryOptions}
+                        value={itemCategoryId}
+                        onChange={setItemCategoryId}
+                        placeholder="Pilih kategori..."
+                        searchPlaceholder="Cari kategori..."
+                        emptyText="Kategori tidak ditemukan."
+                        onAddNew={() => toast({title: "Fitur 'Tambah Kategori' akan datang!"})}
+                        addNewLabel="Tambah Kategori Baru"
+                    />
                 </div>
             )}
 
@@ -275,7 +318,16 @@ export default function InventoryPage() {
                 </div>
                 <div className="space-y-1">
                     <Label htmlFor="item-unit">Unit</Label>
-                    <Input id="item-unit" placeholder="pcs, kg, box" value={itemUnit} onChange={(e) => setItemUnit(e.target.value)} />
+                     <Combobox
+                        options={productUnits}
+                        value={itemUnit}
+                        onChange={setItemUnit}
+                        placeholder="Pilih unit..."
+                        searchPlaceholder="Cari unit..."
+                        emptyText="Unit tidak ditemukan."
+                        onAddNew={() => toast({title: "Fitur 'Tambah Unit' akan datang!"})}
+                        addNewLabel="Tambah Unit Baru"
+                    />
                 </div>
                 <div className="space-y-1 col-span-2">
                     <Label htmlFor="item-low-stock">Ambang Batas Stok Rendah</Label>
@@ -440,7 +492,7 @@ export default function InventoryPage() {
                            <div>
                               <Label htmlFor="product-select">Produk</Label>
                                <Combobox
-                                options={productOptions}
+                                options={productOptionsForPurchase}
                                 value={selectedProductId}
                                 onChange={setSelectedProductId}
                                 placeholder="Pilih produk yang dibeli..."
