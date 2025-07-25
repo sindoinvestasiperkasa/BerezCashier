@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Warehouse, Plus, Search, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,12 +41,19 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
 import { collection, getDocs, getFirestore, query, where } from "firebase/firestore";
+import { createProductCategory } from "@/ai/flows/create-product-category-flow";
+import { createProductUnit } from "@/ai/flows/create-product-unit-flow";
 
 
 interface IProductCategory {
     id: string;
     name: string;
     description?: string;
+}
+interface IProductUnit {
+    id: string;
+    name: string;
+    abbreviation: string;
 }
 
 export default function InventoryPage() {
@@ -59,7 +66,16 @@ export default function InventoryPage() {
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [productCategories, setProductCategories] = useState<IProductCategory[]>([]);
-  const [productUnits, setProductUnits] = useState<ComboboxOption[]>([]); // Assuming similar structure for now
+  const [productUnits, setProductUnits] = useState<IProductUnit[]>([]);
+
+  // Dialog states
+  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
+  const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDesc, setNewCategoryDesc] = useState("");
+  const [newUnitName, setNewUnitName] = useState("");
+  const [newUnitAbbr, setNewUnitAbbr] = useState("");
+
 
   // State for the purchase form
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
@@ -84,38 +100,36 @@ export default function InventoryPage() {
   const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
   const warehouses = [{ id: 'wh-jkt-a', name: 'Gudang A (JKT)' }, { id: 'wh-bdg-a', name: 'Gudang A (BDG)' }];
 
+  const fetchCategoriesAndUnits = useCallback(async () => {
+    if (!user) return;
+    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+    if (!idUMKM) return;
+
+    // Fetch Product Categories
+    const categoriesQuery = query(collection(db, "productCategories"), where("idUMKM", "==", idUMKM));
+    const categoriesSnapshot = await getDocs(categoriesQuery);
+    const categoriesData = categoriesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    } as IProductCategory));
+    setProductCategories(categoriesData);
+    
+    // Fetch Product Units
+    const unitsQuery = query(collection(db, "productUnits"), where("idUMKM", "==", idUMKM));
+    const unitsSnapshot = await getDocs(unitsQuery);
+    const unitsData = unitsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    } as IProductUnit));
+    setProductUnits(unitsData);
+  }, [user, db]);
+
+
   useEffect(() => {
-    const fetchCategoriesAndUnits = async () => {
-        if (!user) return;
-        const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
-        if (!idUMKM) return;
-
-        // Fetch Product Categories
-        const categoriesQuery = query(collection(db, "productCategories"), where("idUMKM", "==", idUMKM));
-        const categoriesSnapshot = await getDocs(categoriesQuery);
-        const categoriesData = categoriesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            description: doc.data().description,
-        }));
-        setProductCategories(categoriesData);
-        
-        // TODO: Fetch Product Units from a 'productUnits' collection in the future
-        // For now, using a static list as placeholder
-        setProductUnits([
-            { value: 'pcs', label: 'Pcs' },
-            { value: 'kg', label: 'Kg' },
-            { value: 'gram', label: 'Gram' },
-            { value: 'liter', label: 'Liter' },
-            { value: 'box', label: 'Box' },
-            { value: 'lusin', label: 'Lusin' },
-        ]);
-    };
-
-    if (isAddItemDialogOpen) {
+    if (isAddItemDialogOpen && user) {
         fetchCategoriesAndUnits();
     }
-  }, [isAddItemDialogOpen, user, db]);
+  }, [isAddItemDialogOpen, user, fetchCategoriesAndUnits]);
 
 
   const formatCurrency = (amount: number) => {
@@ -141,12 +155,19 @@ export default function InventoryPage() {
     }))
   }, [finishedGoods]);
 
-  const productCategoryOptions = useMemo(() => {
+  const productCategoryOptions: ComboboxOption[] = useMemo(() => {
     return productCategories.map(cat => ({
         value: cat.id,
         label: cat.name,
     }))
   }, [productCategories]);
+
+  const productUnitOptions: ComboboxOption[] = useMemo(() => {
+    return productUnits.map(unit => ({
+        value: unit.abbreviation,
+        label: `${unit.name} (${unit.abbreviation})`,
+    }))
+  }, [productUnits]);
 
   const resetPurchaseForm = () => {
     setSelectedProductId(undefined);
@@ -259,6 +280,56 @@ export default function InventoryPage() {
     }
   }
 
+  const handleSaveNewCategory = async () => {
+    if (!newCategoryName) {
+        toast({ title: "Nama kategori tidak boleh kosong", variant: "destructive" });
+        return;
+    }
+    setIsProcessing(true);
+    try {
+        const result = await createProductCategory({ name: newCategoryName, description: newCategoryDesc });
+        if (result.success && result.categoryId) {
+            toast({ title: "Kategori Baru Ditambahkan!" });
+            setNewCategoryName("");
+            setNewCategoryDesc("");
+            setIsAddCategoryDialogOpen(false);
+            await fetchCategoriesAndUnits(); // Refresh list
+            setItemCategoryId(result.categoryId); // Select the new category
+        } else {
+            throw new Error(result.message || "Gagal menyimpan kategori.");
+        }
+    } catch(error: any) {
+        toast({ title: "Gagal Menyimpan", description: error.message, variant: "destructive" });
+    } finally {
+        setIsProcessing(false);
+    }
+  }
+
+  const handleSaveNewUnit = async () => {
+    if (!newUnitName || !newUnitAbbr) {
+        toast({ title: "Nama dan singkatan unit tidak boleh kosong", variant: "destructive" });
+        return;
+    }
+    setIsProcessing(true);
+    try {
+        const result = await createProductUnit({ name: newUnitName, abbreviation: newUnitAbbr });
+        if (result.success && result.unitAbbreviation) {
+            toast({ title: "Unit Baru Ditambahkan!" });
+            setNewUnitName("");
+            setNewUnitAbbr("");
+            setIsAddUnitDialogOpen(false);
+            await fetchCategoriesAndUnits(); // Refresh list
+            setItemUnit(result.unitAbbreviation); // Select the new unit
+        } else {
+            throw new Error(result.message || "Gagal menyimpan unit.");
+        }
+    } catch(error: any) {
+        toast({ title: "Gagal Menyimpan", description: error.message, variant: "destructive" });
+    } finally {
+        setIsProcessing(false);
+    }
+  }
+
   const renderItemDetailsForm = () => {
     const showCategory = itemCategory !== 'raw_material';
     const showPrice = itemCategory !== 'raw_material';
@@ -289,7 +360,7 @@ export default function InventoryPage() {
                         placeholder="Pilih kategori..."
                         searchPlaceholder="Cari kategori..."
                         emptyText="Kategori tidak ditemukan."
-                        onAddNew={() => toast({title: "Fitur 'Tambah Kategori' akan datang!"})}
+                        onAddNew={() => setIsAddCategoryDialogOpen(true)}
                         addNewLabel="Tambah Kategori Baru"
                     />
                 </div>
@@ -319,13 +390,13 @@ export default function InventoryPage() {
                 <div className="space-y-1">
                     <Label htmlFor="item-unit">Unit</Label>
                      <Combobox
-                        options={productUnits}
+                        options={productUnitOptions}
                         value={itemUnit}
                         onChange={setItemUnit}
                         placeholder="Pilih unit..."
                         searchPlaceholder="Cari unit..."
                         emptyText="Unit tidak ditemukan."
-                        onAddNew={() => toast({title: "Fitur 'Tambah Unit' akan datang!"})}
+                        onAddNew={() => setIsAddUnitDialogOpen(true)}
                         addNewLabel="Tambah Unit Baru"
                     />
                 </div>
@@ -350,6 +421,7 @@ export default function InventoryPage() {
 
 
   return (
+    <>
     <div className="p-4 md:p-6">
       <header className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
@@ -622,5 +694,60 @@ export default function InventoryPage() {
         </TabsContent>
       </Tabs>
     </div>
+
+    {/* Add Category Dialog */}
+    <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Tambah Kategori Baru</DialogTitle>
+          <DialogDescription>Buat kategori produk baru untuk UMKM Anda.</DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+            <div className="space-y-1">
+                <Label htmlFor="new-cat-name">Nama Kategori</Label>
+                <Input id="new-cat-name" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Contoh: Makanan Berat"/>
+            </div>
+            <div className="space-y-1">
+                <Label htmlFor="new-cat-desc">Deskripsi (Opsional)</Label>
+                <Textarea id="new-cat-desc" value={newCategoryDesc} onChange={e => setNewCategoryDesc(e.target.value)} placeholder="Jelaskan kategori ini"/>
+            </div>
+        </div>
+        <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddCategoryDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSaveNewCategory} disabled={isProcessing}>
+                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                Simpan Kategori
+            </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    
+    {/* Add Unit Dialog */}
+    <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Tambah Unit Baru</DialogTitle>
+          <DialogDescription>Buat satuan unit baru untuk produk Anda.</DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+            <div className="space-y-1">
+                <Label htmlFor="new-unit-name">Nama Unit</Label>
+                <Input id="new-unit-name" value={newUnitName} onChange={e => setNewUnitName(e.target.value)} placeholder="Contoh: Kilogram"/>
+            </div>
+            <div className="space-y-1">
+                <Label htmlFor="new-unit-abbr">Singkatan</Label>
+                <Input id="new-unit-abbr" value={newUnitAbbr} onChange={e => setNewUnitAbbr(e.target.value)} placeholder="Contoh: kg"/>
+            </div>
+        </div>
+        <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddUnitDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSaveNewUnit} disabled={isProcessing}>
+                 {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                Simpan Unit
+            </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
