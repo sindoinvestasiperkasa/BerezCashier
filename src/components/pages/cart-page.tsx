@@ -50,6 +50,10 @@ interface CartPageProps {
   setView: (view: View) => void;
 }
 
+// Placeholder data - will be replaced with dynamic data from Firestore later
+const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
+const warehouses = [{ id: 'wh-jkt-a', name: 'Gudang A (JKT)' }, { id: 'wh-bdg-a', name: 'Gudang A (BDG)' }];
+
 
 export default function CartPage({ setView }: CartPageProps) {
   const { 
@@ -88,10 +92,6 @@ export default function CartPage({ setView }: CartPageProps) {
   const [cogsAccountId, setCogsAccountId] = useState<string | undefined>();
   const [inventoryAccountId, setInventoryAccountId] = useState<string | undefined>();
   const [taxAccountId, setTaxAccountId] = useState<string | undefined>();
-
-  // Placeholder data
-  const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
-  const warehouses = [{ id: 'wh-jkt-a', name: 'Gudang A (JKT)' }, { id: 'wh-bdg-a', name: 'Gudang A (BDG)' }];
 
   useEffect(() => {
     if (accounts.length > 0) {
