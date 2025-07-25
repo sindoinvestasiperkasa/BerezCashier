@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { Warehouse, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +18,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useApp } from "@/hooks/use-app";
+import Image from "next/image";
 
 export default function InventoryPage() {
+  const { products } = useApp();
+  const [searchFinishedGoods, setSearchFinishedGoods] = useState("");
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const finishedGoods = useMemo(() => {
+    return products
+      .filter(p => p.productType === 'Barang')
+      .filter(p => 
+        p.name.toLowerCase().includes(searchFinishedGoods.toLowerCase())
+      );
+  }, [products, searchFinishedGoods]);
+
+
   return (
     <div className="p-4 md:p-6">
       <header className="flex justify-between items-center mb-6">
@@ -41,20 +64,50 @@ export default function InventoryPage() {
             <CardHeader>
               <CardTitle>Stok Produk Siap Jual</CardTitle>
               <CardDescription>
-                Daftar produk yang telah diproduksi dan siap untuk dijual di kasir.
+                Daftar produk yang telah diproduksi (atau dibeli) dan siap untuk dijual di kasir.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input placeholder="Cari produk jadi..." className="pl-10" />
+                <Input 
+                  placeholder="Cari produk jadi..." 
+                  className="pl-10" 
+                  value={searchFinishedGoods}
+                  onChange={(e) => setSearchFinishedGoods(e.target.value)}
+                />
               </div>
-              <div className="text-center py-10 text-muted-foreground">
-                <p>Fitur manajemen stok produk jadi akan segera hadir.</p>
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
+                {finishedGoods.length > 0 ? (
+                  finishedGoods.map(product => (
+                    <div key={product.id} className="flex items-center gap-4 p-2 border rounded-lg">
+                      <Image 
+                        src={product.imageUrl}
+                        alt={product.name}
+                        width={48}
+                        height={48}
+                        className="rounded-md object-cover w-12 h-12 bg-muted"
+                      />
+                      <div className="flex-grow">
+                        <p className="font-semibold">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">{formatCurrency(product.price)}</p>
+                      </div>
+                      <div>
+                        <p className="font-bold text-lg">{product.stock ?? 0}</p>
+                        <p className="text-xs text-muted-foreground text-right">Stok</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                   <div className="text-center py-10 text-muted-foreground">
+                    <p>Tidak ada produk jadi yang ditemukan.</p>
+                  </div>
+                )}
               </div>
             </CardContent>
-            <CardFooter>
-                <Button variant="outline">Lakukan Produksi</Button>
+            <CardFooter className="flex justify-between">
+                <Button variant="outline">Catat Pembelian Retail</Button>
+                <Button>Lakukan Produksi</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -76,7 +129,7 @@ export default function InventoryPage() {
               </div>
             </CardContent>
             <CardFooter>
-                <Button variant="outline">Catat Pembelian</Button>
+                <Button variant="outline">Catat Pembelian Bahan</Button>
             </CardFooter>
           </Card>
         </TabsContent>
