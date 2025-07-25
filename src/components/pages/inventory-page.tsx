@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Warehouse, Plus, Search, Loader2 } from "lucide-react";
+import { Warehouse, Plus, Search, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,6 +38,16 @@ import { Combobox } from "@/components/ui/combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { cn } from "@/lib/utils";
+import { Textarea } from "../ui/textarea";
+
+
+// Placeholder, should come from DB later
+const productCategories = [
+    { value: 'cat1', label: 'Makanan' },
+    { value: 'cat2', label: 'Minuman' },
+    { value: 'cat3', label: 'Pakaian' },
+    { value: 'cat4', label: 'Elektronik' },
+];
 
 
 export default function InventoryPage() {
@@ -57,12 +67,14 @@ export default function InventoryPage() {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>();
 
   // State for Add Item form
-  const [addItemType, setAddItemType] = useState<"product" | "raw_material">("product");
   const [itemCategory, setItemCategory] = useState<"retail_good" | "manufactured_good" | "service" | "raw_material">("retail_good");
   const [itemName, setItemName] = useState("");
+  const [itemDescription, setItemDescription] = useState("");
+  const [itemCategoryId, setItemCategoryId] = useState<string | undefined>();
   const [itemPrice, setItemPrice] = useState<number | string>("");
   const [itemHpp, setItemHpp] = useState<number | string>("");
   const [itemInitialStock, setItemInitialStock] = useState<number | string>("");
+  const [itemLowStockThreshold, setItemLowStockThreshold] = useState<number | string>("");
   const [itemUnit, setItemUnit] = useState("");
 
 
@@ -146,9 +158,12 @@ export default function InventoryPage() {
 
   const resetAddItemForm = () => {
     setItemName("");
+    setItemDescription("");
+    setItemCategoryId(undefined);
     setItemPrice("");
     setItemHpp("");
     setItemInitialStock("");
+    setItemLowStockThreshold("");
     setItemUnit("");
     setItemCategory("retail_good");
   }
@@ -166,14 +181,17 @@ export default function InventoryPage() {
     setIsProcessing(true);
     try {
         const result = await createItem({
-            itemType: itemCategory === 'raw_material' ? 'raw_material' : 'product',
             name: itemName,
-            // TODO: In the future, productType should probably be replaced by itemCategory
+            description: itemDescription,
+            itemCategory: itemCategory,
             productType: itemCategory === 'service' ? 'Jasa' : 'Barang',
-            price: Number(itemPrice) || 0,
-            hpp: itemCategory === 'retail_good' ? Number(itemHpp) || 0 : undefined,
-            initialStock: (itemCategory === 'retail_good' || itemCategory === 'manufactured_good' || itemCategory === 'raw_material') ? Number(itemInitialStock) || 0 : undefined,
-            unit: itemCategory === 'raw_material' ? itemUnit : undefined,
+            categoryId: itemCategoryId,
+            price: itemCategory !== 'raw_material' ? Number(itemPrice) || 0 : undefined,
+            hpp: itemCategory === 'retail_good' ? Number(itemHpp) || undefined : undefined,
+            initialStock: ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory) ? Number(itemInitialStock) || 0 : undefined,
+            lowStockThreshold: ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory) ? Number(itemLowStockThreshold) || undefined : undefined,
+            unit: itemUnit || undefined,
+            // imageUrl will be handled later
         });
 
         if (result.success) {
@@ -200,11 +218,11 @@ export default function InventoryPage() {
   }
 
   const renderItemDetailsForm = () => {
+    const showCategory = itemCategory !== 'raw_material';
     const showPrice = itemCategory !== 'raw_material';
     const showHpp = itemCategory === 'retail_good';
-    const showStock = itemCategory === 'retail_good' || itemCategory === 'manufactured_good' || itemCategory === 'raw_material';
-    const showUnit = itemCategory === 'raw_material';
-
+    const showStockAndUnit = ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory);
+    
     return (
        <div className="space-y-4 p-4 border rounded-md">
           <h3 className="font-medium text-center text-lg">2. Detail Item</h3>
@@ -213,6 +231,25 @@ export default function InventoryPage() {
               <Label htmlFor="item-name">Nama Item</Label>
               <Input id="item-name" placeholder="Contoh: Kemeja Polos, Tepung Terigu" value={itemName} onChange={(e) => setItemName(e.target.value)} />
             </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="item-description">Deskripsi</Label>
+              <Textarea id="item-description" placeholder="Jelaskan tentang item ini..." value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} />
+            </div>
+
+            {showCategory && (
+                <div className="space-y-1">
+                    <Label htmlFor="item-category">Kategori Produk</Label>
+                    <Select value={itemCategoryId} onValueChange={setItemCategoryId}>
+                        <SelectTrigger><SelectValue placeholder="Pilih kategori..." /></SelectTrigger>
+                        <SelectContent>
+                            {productCategories.map(cat => (
+                                <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               {showPrice && (
@@ -225,23 +262,32 @@ export default function InventoryPage() {
                 <div className="space-y-1">
                   <Label htmlFor="item-hpp">Harga Beli (HPP)</Label>
                   <Input id="item-hpp" type="number" placeholder="Rp 0" value={itemHpp} onChange={(e) => setItemHpp(e.target.value)} />
+                   <p className="text-xs text-muted-foreground">Untuk produk retail (beli-jual).</p>
                 </div>
               )}
             </div>
 
-             <div className="grid grid-cols-2 gap-4">
-              {showStock && (
+             {showStockAndUnit && <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="item-stock">Stok Awal</Label>
                   <Input id="item-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} />
                 </div>
-              )}
-              {showUnit && (
-                 <div className="space-y-1">
-                    <Label htmlFor="item-unit">Satuan</Label>
-                    <Input id="item-unit" placeholder="kg, liter, pcs" value={itemUnit} onChange={(e) => setItemUnit(e.target.value)} />
+                <div className="space-y-1">
+                    <Label htmlFor="item-unit">Unit</Label>
+                    <Input id="item-unit" placeholder="pcs, kg, box" value={itemUnit} onChange={(e) => setItemUnit(e.target.value)} />
                 </div>
-              )}
+                <div className="space-y-1 col-span-2">
+                    <Label htmlFor="item-low-stock">Ambang Batas Stok Rendah</Label>
+                    <Input id="item-low-stock" type="number" placeholder="Contoh: 5" value={itemLowStockThreshold} onChange={(e) => setItemLowStockThreshold(e.target.value)} />
+                </div>
+            </div>}
+            
+            <div className="space-y-1">
+                <Label>Foto Produk</Label>
+                <Button variant="outline" className="w-full flex items-center gap-2">
+                    <Upload className="w-4 h-4" />
+                    <span>Unggah Foto</span>
+                </Button>
             </div>
 
           </div>
@@ -332,7 +378,7 @@ export default function InventoryPage() {
             <CardHeader>
               <CardTitle>Stok Produk Siap Jual</CardTitle>
               <CardDescription>
-                Daftar produk yang telah diproduksi (atau dibeli) dan siap untuk dijual di kasir.
+                Daftar produk yang telah diproduksi atau dibeli dan siap untuk dijual di kasir.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -385,7 +431,7 @@ export default function InventoryPage() {
                       <DialogHeader>
                           <DialogTitle>Catat Pembelian Stok Retail</DialogTitle>
                           <DialogDescription>
-                              Gunakan form ini untuk menambah stok (restock) produk yang Anda beli untuk dijual kembali. Produk harus sudah terdaftar di sistem.
+                            Gunakan form ini untuk menambah stok (restock) produk yang Anda beli untuk dijual kembali. Produk harus sudah terdaftar di sistem.
                           </DialogDescription>
                       </DialogHeader>
                       <div className="py-4 space-y-4">
