@@ -200,13 +200,13 @@ export default function TransactionsPage() {
               </CardContent>
             </Card>
         </div>
-        <div className="mt-4 grid grid-cols-5 gap-2">
+        <div className="mt-4 grid grid-cols-3 gap-2">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 id="date"
                 variant={"outline"}
-                className={cn("w-full justify-start text-left font-normal shadow-sm col-span-3", !dateRange && "text-muted-foreground")}
+                className={cn("w-full justify-start text-left font-normal shadow-sm col-span-2", !dateRange && "text-muted-foreground")}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {dateRange?.from ? (
@@ -234,7 +234,7 @@ export default function TransactionsPage() {
             </PopoverContent>
           </Popover>
           <Select onValueChange={handlePresetChange} defaultValue="this_month">
-              <SelectTrigger className="shadow-sm col-span-2">
+              <SelectTrigger className="shadow-sm col-span-1">
                   <SelectValue placeholder="Pilih rentang..." />
               </SelectTrigger>
               <SelectContent>
