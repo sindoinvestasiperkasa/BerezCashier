@@ -41,8 +41,8 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
 import { collection, getDocs, getFirestore, query, where } from "firebase/firestore";
-import { createProductCategory } from "@/ai/flows/create-product-category-flow";
-import { createProductUnit } from "@/ai/flows/create-product-unit-flow";
+import { createProductCategory } from "@/ai/flows/create-product-category-flow-entry";
+import { createProductUnit } from "@/ai/flows/create-product-unit-flow-entry";
 
 
 interface IProductCategory {

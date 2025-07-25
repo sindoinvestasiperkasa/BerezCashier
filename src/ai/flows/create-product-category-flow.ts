@@ -3,35 +3,27 @@
 /**
  * @fileOverview Flow untuk membuat kategori produk baru.
  * 
- * - createProductCategory - Fungsi untuk membuat kategori produk.
- * - CreateProductCategoryInput - Tipe input.
- * - CreateProductCategoryOutput - Tipe output.
+ * - createProductCategoryFlow - Definisi flow Genkit untuk membuat kategori.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb } from '@/services/firebase-admin';
-import { runFlow } from 'genkit';
 
-const CreateProductCategoryInputSchema = z.object({
+export const CreateProductCategoryInputSchema = z.object({
   name: z.string().describe("Nama kategori produk."),
   description: z.string().optional().describe("Deskripsi kategori produk."),
 });
 export type CreateProductCategoryInput = z.infer<typeof CreateProductCategoryInputSchema>;
 
-const CreateProductCategoryOutputSchema = z.object({
+export const CreateProductCategoryOutputSchema = z.object({
   success: z.boolean(),
   categoryId: z.string().optional(),
   message: z.string().optional(),
 });
 export type CreateProductCategoryOutput = z.infer<typeof CreateProductCategoryOutputSchema>;
 
-
-export async function createProductCategory(input: CreateProductCategoryInput): Promise<CreateProductCategoryOutput> {
-  return await runFlow(createProductCategoryFlow, input);
-}
-
-const createProductCategoryFlow = ai.defineFlow(
+export const createProductCategoryFlow = ai.defineFlow(
   {
     name: 'createProductCategoryFlow',
     inputSchema: CreateProductCategoryInputSchema,

@@ -3,23 +3,20 @@
 /**
  * @fileOverview Flow untuk membuat satuan unit produk baru.
  * 
- * - createProductUnit - Fungsi untuk membuat unit produk.
- * - CreateProductUnitInput - Tipe input.
- * - CreateProductUnitOutput - Tipe output.
+ * - createProductUnitFlow - Definisi flow Genkit untuk membuat unit.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb } from '@/services/firebase-admin';
-import { runFlow } from 'genkit';
 
-const CreateProductUnitInputSchema = z.object({
+export const CreateProductUnitInputSchema = z.object({
   name: z.string().describe("Nama lengkap unit (e.g., Kilogram)."),
   symbol: z.string().describe("Simbol atau singkatan unit (e.g., kg)."),
 });
 export type CreateProductUnitInput = z.infer<typeof CreateProductUnitInputSchema>;
 
-const CreateProductUnitOutputSchema = z.object({
+export const CreateProductUnitOutputSchema = z.object({
   success: z.boolean(),
   unitId: z.string().optional(),
   unitSymbol: z.string().optional(),
@@ -27,12 +24,7 @@ const CreateProductUnitOutputSchema = z.object({
 });
 export type CreateProductUnitOutput = z.infer<typeof CreateProductUnitOutputSchema>;
 
-
-export async function createProductUnit(input: CreateProductUnitInput): Promise<CreateProductUnitOutput> {
-  return await runFlow(createProductUnitFlow, input);
-}
-
-const createProductUnitFlow = ai.defineFlow(
+export const createProductUnitFlow = ai.defineFlow(
   {
     name: 'createProductUnitFlow',
     inputSchema: CreateProductUnitInputSchema,
