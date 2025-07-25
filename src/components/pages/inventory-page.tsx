@@ -33,13 +33,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { recordPurchase } from "@/ai/flows/record-purchase-flow";
+import { createItem } from "@/ai/flows/create-item-flow";
 import { Combobox } from "@/components/ui/combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 
 export default function InventoryPage() {
-  const { products } = useApp();
+  const { products, user } = useApp();
   const { toast } = useToast();
   const [searchFinishedGoods, setSearchFinishedGoods] = useState("");
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
@@ -56,6 +57,13 @@ export default function InventoryPage() {
 
   // State for Add Item form
   const [addItemType, setAddItemType] = useState<"product" | "raw_material">("product");
+  const [itemName, setItemName] = useState("");
+  const [itemProductType, setItemProductType] = useState<'Barang' | 'Jasa'>("Barang");
+  const [itemPrice, setItemPrice] = useState<number | string>("");
+  const [itemHpp, setItemHpp] = useState<number | string>("");
+  const [itemInitialStock, setItemInitialStock] = useState<number | string>("");
+  const [itemUnit, setItemUnit] = useState("");
+
 
   // Placeholder data
   const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
@@ -135,6 +143,60 @@ export default function InventoryPage() {
     }
   }
 
+  const resetAddItemForm = () => {
+    setItemName("");
+    setItemProductType("Barang");
+    setItemPrice("");
+    setItemHpp("");
+    setItemInitialStock("");
+    setItemUnit("");
+  }
+
+  const handleSaveItem = async () => {
+    if (!itemName) {
+        toast({ title: "Nama item tidak boleh kosong", variant: "destructive" });
+        return;
+    }
+    if (!user) {
+        toast({ title: "Pengguna tidak ditemukan", variant: "destructive" });
+        return;
+    }
+    
+    setIsProcessing(true);
+    try {
+        const result = await createItem({
+            itemType: addItemType,
+            name: itemName,
+            productType: itemProductType,
+            price: Number(itemPrice) || 0,
+            hpp: Number(itemHpp) || 0,
+            initialStock: Number(itemInitialStock) || 0,
+            unit: itemUnit,
+        });
+
+        if (result.success) {
+            toast({
+                title: "Item Berhasil Dibuat!",
+                description: `${itemName} telah ditambahkan ke database.`,
+            });
+            setIsAddItemDialogOpen(false);
+            resetAddItemForm();
+        } else {
+            throw new Error(result.message || "Gagal membuat item.");
+        }
+
+    } catch (error: any) {
+        console.error(error);
+        toast({
+            title: "Terjadi Kesalahan",
+            description: error.message || "Gagal menyimpan item baru. Silakan coba lagi.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsProcessing(false);
+    }
+  }
+
 
   return (
     <div className="p-4 md:p-6">
@@ -143,7 +205,10 @@ export default function InventoryPage() {
           <Warehouse className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-bold">Manajemen Inventaris</h1>
         </div>
-        <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+        <Dialog open={isAddItemDialogOpen} onOpenChange={(open) => {
+          if(!open) resetAddItemForm();
+          setIsAddItemDialogOpen(open);
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" /> Tambah Item
@@ -163,7 +228,7 @@ export default function InventoryPage() {
                   <div>
                     <RadioGroupItem value="product" id="type-product" className="peer sr-only" />
                     <Label htmlFor="type-product" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                      Produk Jadi/Retail
+                      Produk Jadi/Jasa
                     </Label>
                   </div>
                   <div>
@@ -177,14 +242,14 @@ export default function InventoryPage() {
 
               {addItemType === 'product' && (
                 <div className="space-y-4 p-4 border rounded-md">
-                   <h3 className="font-medium text-center">Detail Produk Jadi/Retail</h3>
+                   <h3 className="font-medium text-center">Detail Produk Jadi/Jasa</h3>
                    <div>
-                      <Label htmlFor="product-name">Nama Produk</Label>
-                      <Input id="product-name" placeholder="Contoh: Kemeja Polos, Ayam Geprek" />
+                      <Label htmlFor="product-name">Nama Produk/Jasa</Label>
+                      <Input id="product-name" placeholder="Contoh: Kemeja Polos, Potong Rambut" value={itemName} onChange={(e) => setItemName(e.target.value)} />
                   </div>
                   <div>
                     <Label className="mb-2 block">Tipe Produk</Label>
-                    <Select defaultValue="Barang">
+                    <Select value={itemProductType} onValueChange={(val: 'Barang' | 'Jasa') => setItemProductType(val)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih tipe produk" />
                       </SelectTrigger>
@@ -197,16 +262,16 @@ export default function InventoryPage() {
                   <div className="grid grid-cols-2 gap-4">
                      <div>
                         <Label htmlFor="product-price">Harga Jual</Label>
-                        <Input id="product-price" type="number" placeholder="Rp 0" />
+                        <Input id="product-price" type="number" placeholder="Rp 0" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
                     </div>
                     <div>
                         <Label htmlFor="product-hpp">Harga Beli (HPP)</Label>
-                        <Input id="product-hpp" type="number" placeholder="Rp 0" />
+                        <Input id="product-hpp" type="number" placeholder="Rp 0" value={itemHpp} onChange={(e) => setItemHpp(e.target.value)} />
                     </div>
                   </div>
                    <div>
                       <Label htmlFor="product-stock">Stok Awal</Label>
-                      <Input id="product-stock" type="number" placeholder="0" />
+                      <Input id="product-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} disabled={itemProductType === 'Jasa'} />
                   </div>
                 </div>
               )}
@@ -216,16 +281,16 @@ export default function InventoryPage() {
                   <h3 className="font-medium text-center">Detail Bahan Baku</h3>
                   <div>
                       <Label htmlFor="raw-name">Nama Bahan</Label>
-                      <Input id="raw-name" placeholder="Contoh: Tepung Terigu, Daging Ayam" />
+                      <Input id="raw-name" placeholder="Contoh: Tepung Terigu, Daging Ayam" value={itemName} onChange={(e) => setItemName(e.target.value)} />
                   </div>
                    <div className="grid grid-cols-2 gap-4">
                      <div>
                         <Label htmlFor="raw-stock">Stok Awal</Label>
-                        <Input id="raw-stock" type="number" placeholder="0" />
+                        <Input id="raw-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} />
                     </div>
                     <div>
                         <Label htmlFor="raw-unit">Satuan</Label>
-                        <Input id="raw-unit" placeholder="kg, liter, pcs" />
+                        <Input id="raw-unit" placeholder="kg, liter, pcs" value={itemUnit} onChange={(e) => setItemUnit(e.target.value)} />
                     </div>
                   </div>
                 </div>
@@ -234,7 +299,10 @@ export default function InventoryPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>Batal</Button>
-              <Button>Simpan Item</Button>
+              <Button onClick={handleSaveItem} disabled={isProcessing}>
+                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Simpan Item
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
