@@ -218,7 +218,7 @@ export default function InventoryPage() {
             <DialogHeader>
               <DialogTitle>Tambah Item Baru</DialogTitle>
               <DialogDescription>
-                Pilih tipe item yang ingin Anda buat, lalu isi detailnya.
+                Gunakan form ini untuk mendaftarkan produk, jasa, atau bahan baku baru ke dalam sistem untuk pertama kalinya.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-6">
@@ -371,7 +371,7 @@ export default function InventoryPage() {
                       <DialogHeader>
                           <DialogTitle>Catat Pembelian Stok Retail</DialogTitle>
                           <DialogDescription>
-                              Formulir ini untuk menambah stok produk yang dibeli dan langsung dijual kembali.
+                              Gunakan form ini untuk menambah stok (restock) produk yang Anda beli untuk dijual kembali. Produk harus sudah terdaftar di sistem.
                           </DialogDescription>
                       </DialogHeader>
                       <div className="py-4 space-y-4">
@@ -451,7 +451,7 @@ export default function InventoryPage() {
             <CardHeader>
               <CardTitle>Stok Bahan Baku</CardTitle>
               <CardDescription>
-                Daftar bahan baku yang digunakan untuk proses produksi.
+                Daftar bahan baku yang Anda miliki untuk digunakan dalam proses produksi.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -472,7 +472,7 @@ export default function InventoryPage() {
                   <DialogHeader>
                     <DialogTitle>Catat Pembelian Bahan Baku</DialogTitle>
                     <DialogDescription>
-                      Formulir ini untuk menambah stok bahan baku yang dibeli dari supplier.
+                      Gunakan form ini untuk menambah stok bahan baku yang sudah terdaftar di sistem.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="py-4 space-y-4">
@@ -510,5 +510,7 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    
 
     
