@@ -40,11 +40,13 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { cn } from "@/lib/utils";
 import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
-import { collection, getDocs, getFirestore, query, where } from "firebase/firestore";
-import { createProductCategory } from "@/ai/flows/create-product-category-flow-entry";
+import { collection, getDocs, getFirestore, query, where, addDoc } from "firebase/firestore";
 import { createProductUnit } from "@/ai/flows/create-product-unit-flow-entry";
-import type { CreateProductCategoryInput } from "@/ai/flows/create-product-category-flow";
 import type { CreateProductUnitInput } from "@/ai/flows/create-product-unit-flow";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 
 interface IProductCategory {
@@ -57,6 +59,13 @@ interface IProductUnit {
     name: string;
     symbol: string;
 }
+
+const newCategorySchema = z.object({
+  name: z.string().min(1, "Nama kategori harus diisi."),
+  description: z.string().optional(),
+});
+type NewCategoryFormData = z.infer<typeof newCategorySchema>;
+
 
 export default function InventoryPage() {
   const { products, user } = useApp();
@@ -73,10 +82,16 @@ export default function InventoryPage() {
   // Dialog states
   const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryDesc, setNewCategoryDesc] = useState("");
   const [newUnitName, setNewUnitName] = useState("");
   const [newUnitSymbol, setNewUnitSymbol] = useState("");
+
+  const newCategoryForm = useForm<NewCategoryFormData>({
+    resolver: zodResolver(newCategorySchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
 
 
   // State for the purchase form
@@ -282,32 +297,32 @@ export default function InventoryPage() {
     }
   }
 
-  const handleSaveNewCategory = async () => {
-    if (!newCategoryName) {
-        toast({ title: "Nama kategori tidak boleh kosong", variant: "destructive" });
-        return;
+  const handleSaveNewCategory = async (data: NewCategoryFormData) => {
+    const idUMKM = user?.role === 'UMKM' ? user.uid : user?.idUMKM;
+    if (!idUMKM) {
+      toast({ title: "Error", description: "Tidak dapat menemukan ID UMKM.", variant: "destructive" });
+      return;
     }
+
     setIsProcessing(true);
     try {
-        const input: CreateProductCategoryInput = { name: newCategoryName, description: newCategoryDesc };
-        const result = await createProductCategory(input);
-        if (result.success && result.categoryId) {
-            toast({ title: "Kategori Baru Ditambahkan!" });
-            setNewCategoryName("");
-            setNewCategoryDesc("");
-            setIsAddCategoryDialogOpen(false);
-            await fetchCategoriesAndUnits(); // Refresh list
-            setItemCategoryId(result.categoryId); // Select the new category
-        } else {
-            throw new Error(result.message || "Gagal menyimpan kategori.");
-        }
-    } catch(error: any) {
-        console.error("Client-side error saving category:", error);
-        toast({ title: "Gagal Menyimpan", description: error.message, variant: "destructive" });
+      const docRef = await addDoc(collection(db, "productCategories"), { ...data, idUMKM });
+      toast({ title: "Kategori Ditambahkan", description: `Kategori "${data.name}" berhasil dibuat.` });
+      
+      // Refresh categories and select the new one
+      await fetchCategoriesAndUnits();
+      setItemCategoryId(docRef.id);
+      
+      setIsAddCategoryDialogOpen(false);
+      newCategoryForm.reset();
+    } catch (error) {
+      console.error("Error adding category:", error);
+      toast({ title: "Gagal", description: "Tidak dapat menambahkan kategori baru.", variant: "destructive" });
     } finally {
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
-  }
+  };
+
 
   const handleSaveNewUnit = async () => {
     if (!newUnitName || !newUnitSymbol) {
@@ -707,23 +722,43 @@ export default function InventoryPage() {
           <DialogTitle>Tambah Kategori Baru</DialogTitle>
           <DialogDescription>Buat kategori produk baru untuk UMKM Anda.</DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
-            <div className="space-y-1">
-                <Label htmlFor="new-cat-name">Nama Kategori</Label>
-                <Input id="new-cat-name" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Contoh: Makanan Berat"/>
-            </div>
-            <div className="space-y-1">
-                <Label htmlFor="new-cat-desc">Deskripsi (Opsional)</Label>
-                <Textarea id="new-cat-desc" value={newCategoryDesc} onChange={e => setNewCategoryDesc(e.target.value)} placeholder="Jelaskan kategori ini"/>
-            </div>
-        </div>
-        <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddCategoryDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSaveNewCategory} disabled={isProcessing}>
-                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                Simpan Kategori
-            </Button>
-        </DialogFooter>
+        <Form {...newCategoryForm}>
+          <form onSubmit={newCategoryForm.handleSubmit(handleSaveNewCategory)} className="space-y-4 py-4">
+            <FormField
+              control={newCategoryForm.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nama Kategori</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Contoh: Makanan Berat" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={newCategoryForm.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Deskripsi (Opsional)</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Jelaskan kategori ini" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsAddCategoryDialogOpen(false)}>Batal</Button>
+              <Button type="submit" disabled={isProcessing}>
+                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Simpan Kategori
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
     

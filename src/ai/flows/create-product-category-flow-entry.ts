@@ -1,12 +1,4 @@
-
-'use server';
 /**
- * @fileOverview Entry point aman untuk memanggil alur createProductCategory dari komponen React.
+ * This file is no longer needed as the logic has been simplified 
+ * and moved directly into the component.
  */
-import { createProductCategoryFlow, type CreateProductCategoryInput, type CreateProductCategoryOutput } from './create-product-category-flow';
-
-// Fungsi wrapper yang aman untuk dipanggil dari komponen client/server Next.js
-export async function createProductCategory(input: CreateProductCategoryInput): Promise<CreateProductCategoryOutput> {
-  // Panggil flow secara langsung, Genkit akan menanganinya
-  return await createProductCategoryFlow({ input });
-}

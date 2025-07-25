@@ -5,9 +5,6 @@
 import './flows/create-transaction-flow';
 import './flows/record-purchase-flow';
 import './flows/create-item-flow';
-import './flows/create-product-category-flow';
 import './flows/create-product-unit-flow';
-import './flows/create-product-category-flow-entry';
 import './flows/create-product-unit-flow-entry';
 import './flows/create-item-flow-entry';
-
