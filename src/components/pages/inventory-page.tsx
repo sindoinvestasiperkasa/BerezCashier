@@ -319,7 +319,6 @@ export default function InventoryPage() {
       const docRef = await addDoc(collection(db, "productCategories"), { ...data, idUMKM });
       toast({ title: "Kategori Ditambahkan", description: `Kategori "${data.name}" berhasil dibuat.` });
       
-      // Refresh categories and select the new one
       await fetchCategoriesAndUnits();
       setItemCategoryId(docRef.id);
       
@@ -343,11 +342,11 @@ export default function InventoryPage() {
     
     setIsProcessing(true);
     try {
-        const docRef = await addDoc(collection(db, "productUnits"), { ...data, idUMKM });
+        await addDoc(collection(db, "productUnits"), { ...data, idUMKM });
         toast({ title: "Unit Baru Ditambahkan!", description: `Unit ${data.name} berhasil dibuat.` });
         
-        await fetchCategoriesAndUnits(); // Refresh list
-        setItemUnit(docRef.id); // Select the new unit
+        await fetchCategoriesAndUnits();
+        setItemUnit(data.symbol);
         
         setIsAddUnitDialogOpen(false);
         newUnitForm.reset();
@@ -420,11 +419,7 @@ export default function InventoryPage() {
                      <Combobox
                         options={productUnitOptions}
                         value={itemUnit}
-                        onChange={(value) => {
-                            // The value from combobox is the unit's symbol
-                            const selectedUnit = productUnits.find(u => u.symbol === value);
-                            setItemUnit(selectedUnit?.id); // Store the ID
-                        }}
+                        onChange={setItemUnit}
                         placeholder="Pilih unit..."
                         searchPlaceholder="Cari unit..."
                         emptyText="Unit tidak ditemukan."
