@@ -8,5 +8,5 @@ import { createItemFlow, type CreateItemInput, type CreateItemOutput } from './c
 // Fungsi wrapper yang aman untuk dipanggil dari komponen client/server Next.js
 export async function createItem(input: CreateItemInput): Promise<CreateItemOutput> {
   // Panggil flow secara langsung, Genkit akan menanganinya
-  return await createItemFlow({ input });
+  return await createItemFlow(input);
 }
