@@ -1,4 +1,5 @@
 
+'use server';
 /**
  * @fileOverview Flow untuk membuat satuan unit produk baru.
  * 
