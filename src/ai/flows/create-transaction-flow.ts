@@ -40,6 +40,8 @@ const CreateTransactionInputSchema = z.object({
   customerId: z.string(),
   customerName: z.string(),
   idUMKM: z.string(),
+  branchId: z.string().optional(),
+  warehouseId: z.string().optional(),
   isPkp: z.boolean().optional().default(false),
   // Account IDs
   paymentAccountId: z.string(),
@@ -108,6 +110,8 @@ const createTransactionFlow = ai.defineFlow(
     // 2. Siapkan data transaksi untuk disimpan
     const transactionData = {
       idUMKM: input.idUMKM,
+      branchId: input.branchId || null,
+      warehouseId: input.warehouseId || null,
       date: transactionTimestamp,
       description: `Penjualan Kasir - Transaksi #${transactionRef.id.substring(0, 5)}`,
       type: 'Sale',

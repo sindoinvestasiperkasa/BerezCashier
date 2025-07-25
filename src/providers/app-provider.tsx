@@ -37,6 +37,8 @@ export interface Transaction {
   taxAmount?: number;
   discountAmount?: number;
   transactionNumber?: string;
+  branchId?: string;
+  warehouseId?: string;
   lines?: { accountId: string; debit: number; credit: number; description: string }[];
   [key: string]: any;
 }
@@ -50,6 +52,8 @@ export type NewTransactionClientData = {
     paymentMethod: string;
     customerId: string;
     customerName: string;
+    branchId?: string;
+    warehouseId?: string;
     salesAccountId: string;
     cogsAccountId: string;
     inventoryAccountId: string;
@@ -71,7 +75,7 @@ export type Account = {
   id: string;
   name: string;
   category: 'Aset' | 'Liabilitas' | 'Ekuitas' | 'Pendapatan' | 'Beban';
-  [key: string]: any;
+  [key:string]: any;
 };
 
 export type Notification = {

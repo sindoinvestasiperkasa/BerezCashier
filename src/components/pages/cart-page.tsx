@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent, Building, Warehouse } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -64,6 +64,8 @@ export default function CartPage({ setView }: CartPageProps) {
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [amountReceived, setAmountReceived] = useState(0);
   const [selectedCustomerId, setSelectedCustomerId] = useState("_general_");
+  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>();
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>();
   
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -193,6 +195,8 @@ export default function CartPage({ setView }: CartPageProps) {
             paymentMethod,
             customerId: selectedCustomerId,
             customerName: customerName,
+            branchId: selectedBranchId,
+            warehouseId: selectedWarehouseId,
             isPkp,
             paymentAccountId: paymentAccountId!,
             salesAccountId: salesAccountId!,
@@ -443,6 +447,11 @@ export default function CartPage({ setView }: CartPageProps) {
     addShiftReportNotification(shiftSummary);
   }
 
+  // Placeholder data
+  const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
+  const warehouses = [{ id: 'wh-jkt-a', name: 'Gudang A (JKT)' }, { id: 'wh-bdg-a', name: 'Gudang A (BDG)' }];
+
+
   return (
     <>
     <div className="p-4 md:p-6 flex flex-col h-full bg-secondary/30">
@@ -473,22 +482,48 @@ export default function CartPage({ setView }: CartPageProps) {
 
 
         <div className="flex-grow overflow-y-auto space-y-4 pb-64">
-            <Card>
-                <CardContent className="p-4">
-                    <Label>Pelanggan</Label>
-                    <div className="flex gap-2 mt-1">
-                        <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Pilih pelanggan" />
-                            </SelectTrigger>
+             <Card>
+                <CardContent className="p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Cabang</Label>
+                        <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                            <SelectTrigger><SelectValue placeholder="Pilih cabang..." /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="_general_">Pelanggan Umum</SelectItem>
-                                {customers.map(customer => (
-                                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                                {branches.map(branch => (
+                                    <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button variant="outline" size="icon" onClick={() => setIsCustomerDialogOpen(true)}><UserPlus className="h-5 w-5"/></Button>
+                      </div>
+                      <div>
+                        <Label>Gudang</Label>
+                         <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
+                            <SelectTrigger><SelectValue placeholder="Pilih gudang..." /></SelectTrigger>
+                            <SelectContent>
+                                {warehouses.map(wh => (
+                                    <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Pelanggan</Label>
+                      <div className="flex gap-2 mt-1">
+                          <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Pilih pelanggan" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="_general_">Pelanggan Umum</SelectItem>
+                                  {customers.map(customer => (
+                                      <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                          <Button variant="outline" size="icon" onClick={() => setIsCustomerDialogOpen(true)}><UserPlus className="h-5 w-5"/></Button>
+                      </div>
                     </div>
                 </CardContent>
             </Card>
