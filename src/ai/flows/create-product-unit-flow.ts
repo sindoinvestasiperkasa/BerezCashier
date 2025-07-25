@@ -35,12 +35,13 @@ export const createProductUnitFlow = ai.defineFlow(
         if (!idUMKM) {
             throw new Error("UMKM ID not found for the user.");
         }
-        return { input, idUMKM };
+        // Add idUMKM to the input object to be used in the handler
+        return { ...input, idUMKM };
     }
   },
-  async ({input, idUMKM}) => {
+  async (input) => {
     const db = adminDb();
-    const { name, symbol } = input;
+    const { name, symbol, idUMKM } = input as CreateProductUnitInput & { idUMKM: string };
 
     const newUnitRef = db.collection('productUnits').doc();
     
