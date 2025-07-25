@@ -10,13 +10,14 @@ import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/providers/app-provider";
 import TransactionDetail from "../transaction-detail";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, startOfMonth, startOfYear, subMonths, endOfMonth } from "date-fns";
 import { id } from "date-fns/locale";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import type { DateRange } from "react-day-picker";
 import { Skeleton } from "../ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Selesai': 'default',
@@ -53,15 +54,47 @@ export default function TransactionsPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   
   const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfMonth,
+    from: startOfMonth(today),
     to: today,
   });
 
   const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handlePresetChange = (value: string) => {
+    const now = new Date();
+    switch (value) {
+      case "all":
+        setDateRange(undefined);
+        break;
+      case "today":
+        setDateRange({ from: startOfDay(now), to: endOfDay(now) });
+        break;
+      case "this_week":
+        setDateRange({ from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfDay(now) });
+        break;
+      case "this_month":
+        setDateRange({ from: startOfMonth(now), to: endOfDay(now) });
+        break;
+      case "last_2_months": {
+        const twoMonthsAgo = subMonths(now, 2);
+        setDateRange({ from: startOfMonth(twoMonthsAgo), to: endOfMonth(twoMonthsAgo) });
+        break;
+      }
+      case "last_3_months": {
+        const threeMonthsAgo = subMonths(now, 3);
+        setDateRange({ from: startOfMonth(threeMonthsAgo), to: endOfMonth(threeMonthsAgo) });
+        break;
+      }
+      case "this_year":
+        setDateRange({ from: startOfYear(now), to: endOfDay(now) });
+        break;
+      default:
+        break;
+    }
+  };
+
 
   const filteredTransactions = useMemo(() => {
     const cashierTransactions = transactions
@@ -167,39 +200,53 @@ export default function TransactionsPage() {
               </CardContent>
             </Card>
         </div>
-        <div className="mt-4">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={"outline"}
-                  className={cn("w-full justify-start text-left font-normal shadow-sm", !dateRange && "text-muted-foreground")}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
-                      </>
-                    ) : (
-                      format(dateRange.from, "LLL dd, y")
-                    )
+        <div className="mt-4 grid grid-cols-5 gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant={"outline"}
+                className={cn("w-full justify-start text-left font-normal shadow-sm col-span-3", !dateRange && "text-muted-foreground")}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
+                    </>
                   ) : (
-                    <span>Pilih tanggal</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+                    format(dateRange.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pilih tanggal</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+          <Select onValueChange={handlePresetChange} defaultValue="this_month">
+              <SelectTrigger className="shadow-sm col-span-2">
+                  <SelectValue placeholder="Pilih rentang..." />
+              </SelectTrigger>
+              <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="today">Hari Ini</SelectItem>
+                  <SelectItem value="this_week">Minggu Ini</SelectItem>
+                  <SelectItem value="this_month">Bulan Ini</SelectItem>
+                  <SelectItem value="last_2_months">2 Bulan Lalu</SelectItem>
+                  <SelectItem value="last_3_months">3 Bulan Lalu</SelectItem>
+                  <SelectItem value="this_year">Tahun Ini</SelectItem>
+              </SelectContent>
+          </Select>
         </div>
       </header>
       
