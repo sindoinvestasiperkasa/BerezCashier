@@ -7,7 +7,7 @@ import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
-import { createTransaction, CreateTransactionInput, CreateTransactionOutput } from '@/ai/flows/create-transaction-flow';
+import { createTransaction, CreateTransactionInput, CreateTransactionOutput } from '@/ai/flows/create-transaction-flow-entry';
 
 
 export interface CartItem extends Product {

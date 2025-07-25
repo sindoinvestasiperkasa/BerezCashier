@@ -3,9 +3,7 @@
 /**
  * @fileOverview Alur untuk membuat transaksi, membuat entri jurnal, dan memperbarui stok.
  *
- * - createTransaction - Fungsi utama yang menangani proses transaksi.
- * - CreateTransactionInput - Tipe input untuk fungsi createTransaction.
- * - CreateTransactionOutput - Tipe output untuk fungsi createTransaction.
+ * - createTransactionFlow - Definisi flow Genkit untuk proses transaksi.
  */
 
 import { ai } from '@/ai/genkit';
@@ -29,7 +27,6 @@ const CartItemSchema = z.object({
   attributeValues: z.array(AttributeValueSchema).optional(),
 });
 
-export type CreateTransactionInput = z.infer<typeof CreateTransactionInputSchema>;
 const CreateTransactionInputSchema = z.object({
   items: z.array(CartItemSchema),
   subtotal: z.number(),
@@ -53,18 +50,12 @@ const CreateTransactionInputSchema = z.object({
 });
 
 
-export type CreateTransactionOutput = z.infer<typeof CreateTransactionOutputSchema>;
 const CreateTransactionOutputSchema = z.object({
   success: z.boolean(),
   transactionId: z.string(),
 });
 
-// Fungsi wrapper yang akan dipanggil dari aplikasi Next.js
-export async function createTransaction(input: CreateTransactionInput): Promise<CreateTransactionOutput> {
-  return createTransactionFlow(input);
-}
-
-const createTransactionFlow = ai.defineFlow(
+export const createTransactionFlow = ai.defineFlow(
   {
     name: 'createTransactionFlow',
     inputSchema: CreateTransactionInputSchema,
