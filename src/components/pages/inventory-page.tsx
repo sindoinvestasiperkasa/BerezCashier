@@ -302,6 +302,7 @@ export default function InventoryPage() {
             throw new Error(result.message || "Gagal menyimpan kategori.");
         }
     } catch(error: any) {
+        console.error("Client-side error saving category:", error);
         toast({ title: "Gagal Menyimpan", description: error.message, variant: "destructive" });
     } finally {
         setIsProcessing(false);

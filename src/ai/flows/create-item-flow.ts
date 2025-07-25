@@ -1,5 +1,4 @@
 
-'use server';
 /**
  * @fileOverview Flow untuk membuat item baru, baik produk jadi maupun bahan baku.
  * 
