@@ -43,6 +43,8 @@ import { ScrollArea } from "../ui/scroll-area";
 import { collection, getDocs, getFirestore, query, where } from "firebase/firestore";
 import { createProductCategory } from "@/ai/flows/create-product-category-flow-entry";
 import { createProductUnit } from "@/ai/flows/create-product-unit-flow-entry";
+import type { CreateProductCategoryInput } from "@/ai/flows/create-product-category-flow";
+import type { CreateProductUnitInput } from "@/ai/flows/create-product-unit-flow";
 
 
 interface IProductCategory {
@@ -287,7 +289,8 @@ export default function InventoryPage() {
     }
     setIsProcessing(true);
     try {
-        const result = await createProductCategory({ name: newCategoryName, description: newCategoryDesc });
+        const input: CreateProductCategoryInput = { name: newCategoryName, description: newCategoryDesc };
+        const result = await createProductCategory(input);
         if (result.success && result.categoryId) {
             toast({ title: "Kategori Baru Ditambahkan!" });
             setNewCategoryName("");
@@ -312,7 +315,8 @@ export default function InventoryPage() {
     }
     setIsProcessing(true);
     try {
-        const result = await createProductUnit({ name: newUnitName, symbol: newUnitSymbol });
+        const input: CreateProductUnitInput = { name: newUnitName, symbol: newUnitSymbol };
+        const result = await createProductUnit(input);
         if (result.success && result.unitSymbol) {
             toast({ title: "Unit Baru Ditambahkan!" });
             setNewUnitName("");
@@ -751,3 +755,5 @@ export default function InventoryPage() {
     </>
   );
 }
+
+    
