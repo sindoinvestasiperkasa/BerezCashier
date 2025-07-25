@@ -19,6 +19,8 @@ const RecordPurchaseInputSchema = z.object({
   productId: z.string().describe("ID dari produk yang dibeli."),
   quantity: z.number().int().positive().describe("Jumlah produk yang ditambahkan."),
   hpp: z.number().positive().describe("Harga Pokok Penjualan (harga beli) per item."),
+  branchId: z.string().optional().describe("ID cabang tempat pembelian dicatat."),
+  warehouseId: z.string().optional().describe("ID gudang tempat stok disimpan."),
 });
 
 
@@ -63,6 +65,7 @@ const recordPurchaseFlow = ai.defineFlow(
     });
 
     // TODO: Nantinya, buat entri jurnal untuk mencatat pembelian ini.
+    // Ini akan menggunakan branchId dan warehouseId yang sudah kita teruskan.
     // Debit: Persediaan Barang Dagang
     // Kredit: Kas/Bank atau Utang Usaha
 

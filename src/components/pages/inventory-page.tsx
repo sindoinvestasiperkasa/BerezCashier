@@ -33,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { recordPurchase } from "@/ai/flows/record-purchase-flow";
 import { Combobox } from "@/components/ui/combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 export default function InventoryPage() {
@@ -47,6 +48,12 @@ export default function InventoryPage() {
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
   const [purchaseQuantity, setPurchaseQuantity] = useState<number | string>("");
   const [purchaseHpp, setPurchaseHpp] = useState<number | string>("");
+  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>();
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>();
+
+  // Placeholder data
+  const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
+  const warehouses = [{ id: 'wh-jkt-a', name: 'Gudang A (JKT)' }, { id: 'wh-bdg-a', name: 'Gudang A (BDG)' }];
 
 
   const formatCurrency = (amount: number) => {
@@ -76,6 +83,8 @@ export default function InventoryPage() {
     setSelectedProductId(undefined);
     setPurchaseQuantity("");
     setPurchaseHpp("");
+    setSelectedBranchId(undefined);
+    setSelectedWarehouseId(undefined);
   }
 
   const handleRecordPurchase = async () => {
@@ -94,6 +103,8 @@ export default function InventoryPage() {
         productId: selectedProductId,
         quantity: Number(purchaseQuantity),
         hpp: Number(purchaseHpp),
+        branchId: selectedBranchId,
+        warehouseId: selectedWarehouseId
       });
 
       if(result.success) {
@@ -230,6 +241,30 @@ export default function InventoryPage() {
                                     onChange={(e) => setPurchaseHpp(e.target.value)}
                                   />
                               </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label>Cabang</Label>
+                                <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                                    <SelectTrigger><SelectValue placeholder="Pilih cabang..." /></SelectTrigger>
+                                    <SelectContent>
+                                        {branches.map(branch => (
+                                            <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label>Gudang</Label>
+                                <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
+                                    <SelectTrigger><SelectValue placeholder="Pilih gudang..." /></SelectTrigger>
+                                    <SelectContent>
+                                        {warehouses.map(wh => (
+                                            <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                           </div>
                       </div>
                       <DialogFooter>
