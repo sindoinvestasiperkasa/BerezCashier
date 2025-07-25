@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Flow untuk membuat item baru, baik produk jadi maupun bahan baku.
  * 
@@ -44,26 +43,23 @@ export const createItemFlow = ai.defineFlow(
     name: 'createItemFlow',
     inputSchema: CreateItemInputSchema,
     outputSchema: CreateItemOutputSchema,
-    authPolicy: async (auth, input) => {
+    middleware: async (input, auth) => {
         if (!auth) {
             throw new Error("Authorization required.");
         }
-        // Asosiasikan item dengan idUMKM pengguna
         const idUMKM = auth.role === 'UMKM' ? auth.uid : auth.idUMKM;
         if (!idUMKM) {
             throw new Error("UMKM ID not found for the user.");
         }
-        // Mutate input to include idUMKM
-        (input as any).idUMKM = idUMKM;
+        return { input, idUMKM };
     }
   },
-  async (input) => {
+  async ({input, idUMKM}) => {
     const db = adminDb();
     const { 
         name, description, itemCategory, productType, categoryId, 
         price, hpp, initialStock, lowStockThreshold, unit, imageUrl
     } = input;
-    const idUMKM = (input as any).idUMKM;
 
     const isProduct = itemCategory === 'retail_good' || itemCategory === 'manufactured_good' || itemCategory === 'service';
 

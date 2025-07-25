@@ -26,7 +26,7 @@ export const createProductCategoryFlow = ai.defineFlow(
     name: 'createProductCategoryFlow',
     inputSchema: CreateProductCategoryInputSchema,
     outputSchema: CreateProductCategoryOutputSchema,
-    authPolicy: async (auth, input) => {
+    middleware: async (input, auth) => {
         if (!auth) {
             throw new Error("Authorization required.");
         }
@@ -34,13 +34,12 @@ export const createProductCategoryFlow = ai.defineFlow(
         if (!idUMKM) {
             throw new Error("UMKM ID not found for the user.");
         }
-        (input as any).idUMKM = idUMKM;
+        return { input, idUMKM };
     }
   },
-  async (input) => {
+  async ({input, idUMKM}) => {
     const db = adminDb();
     const { name, description } = input;
-    const idUMKM = (input as any).idUMKM;
 
     const newCategoryRef = db.collection('productCategories').doc();
     
