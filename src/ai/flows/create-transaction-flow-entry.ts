@@ -2,7 +2,6 @@
 /**
  * @fileOverview Entry point aman untuk memanggil alur createTransaction dari komponen React.
  */
-import { runFlow } from 'genkit';
 import { z } from 'zod';
 import { createTransactionFlow } from './create-transaction-flow';
 
@@ -13,5 +12,6 @@ export type CreateTransactionOutput = z.infer<typeof createTransactionFlow.outpu
 
 // Fungsi wrapper yang aman untuk dipanggil dari komponen client/server Next.js
 export async function createTransaction(input: CreateTransactionInput): Promise<CreateTransactionOutput> {
-  return await runFlow(createTransactionFlow, input);
+  // Panggil flow secara langsung, bukan melalui runFlow, untuk menghindari masalah webpack
+  return await createTransactionFlow(input);
 }
