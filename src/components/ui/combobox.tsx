@@ -84,6 +84,21 @@ export function Combobox({
                     )}
                 </div>
             </CommandEmpty>
+            {onAddNew && (
+                <CommandGroup>
+                    <CommandItem
+                        onSelect={() => {
+                            setOpen(false);
+                            onAddNew();
+                        }}
+                        className="cursor-pointer"
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4 text-primary" />
+                        <span className="text-primary">{addNewLabel}</span>
+                    </CommandItem>
+                    <CommandSeparator />
+                </CommandGroup>
+             )}
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
@@ -105,23 +120,6 @@ export function Combobox({
                 </CommandItem>
               ))}
             </CommandGroup>
-             {onAddNew && (
-                <>
-                    <CommandSeparator />
-                    <CommandGroup>
-                        <CommandItem
-                            onSelect={() => {
-                                setOpen(false);
-                                onAddNew();
-                            }}
-                            className="cursor-pointer"
-                        >
-                            <PlusCircle className="mr-2 h-4 w-4 text-primary" />
-                            <span className="text-primary">{addNewLabel}</span>
-                        </CommandItem>
-                    </CommandGroup>
-                </>
-             )}
           </CommandList>
         </Command>
       </PopoverContent>
