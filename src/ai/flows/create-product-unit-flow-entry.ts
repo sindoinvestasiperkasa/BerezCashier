@@ -3,11 +3,10 @@
 /**
  * @fileOverview Entry point aman untuk memanggil alur createProductUnit dari komponen React.
  */
-import { runFlow } from 'genkit';
-import { createProductUnitFlow } from './create-product-unit-flow';
-import type { CreateProductUnitInput, CreateProductUnitOutput } from './create-product-unit-flow';
+import { createProductUnitFlow, type CreateProductUnitInput, type CreateProductUnitOutput } from './create-product-unit-flow';
 
 // Fungsi wrapper yang aman untuk dipanggil dari komponen client/server Next.js
 export async function createProductUnit(input: CreateProductUnitInput): Promise<CreateProductUnitOutput> {
-  return await runFlow(createProductUnitFlow, input);
+  // Panggil flow secara langsung, Genkit akan menanganinya
+  return await createProductUnitFlow(input);
 }
