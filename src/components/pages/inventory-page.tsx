@@ -40,6 +40,7 @@ export default function InventoryPage() {
   const { toast } = useToast();
   const [searchFinishedGoods, setSearchFinishedGoods] = useState("");
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
+  const [isRawMaterialPurchaseDialogOpen, setIsRawMaterialPurchaseDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // State for the purchase form
@@ -262,7 +263,45 @@ export default function InventoryPage() {
               </div>
             </CardContent>
             <CardFooter>
-                <Button variant="outline">Catat Pembelian Bahan</Button>
+              <Dialog open={isRawMaterialPurchaseDialogOpen} onOpenChange={setIsRawMaterialPurchaseDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Catat Pembelian Bahan</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Catat Pembelian Bahan Baku</DialogTitle>
+                    <DialogDescription>
+                      Formulir ini untuk menambah stok bahan baku yang dibeli dari supplier.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4 space-y-4">
+                    <div>
+                      <Label htmlFor="raw-material-name">Nama Bahan</Label>
+                      <Input id="raw-material-name" placeholder="Contoh: Daging Ayam, Beras, Minyak Goreng" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="col-span-2">
+                        <Label htmlFor="raw-material-quantity">Jumlah</Label>
+                        <Input id="raw-material-quantity" type="number" placeholder="0" />
+                      </div>
+                      <div>
+                        <Label htmlFor="raw-material-unit">Satuan</Label>
+                        <Input id="raw-material-unit" placeholder="kg, liter, pcs" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="raw-material-price">Total Harga Beli</Label>
+                      <Input id="raw-material-price" type="number" placeholder="Rp 0" />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsRawMaterialPurchaseDialogOpen(false)}>Batal</Button>
+                    <Button>
+                      Simpan Pembelian
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardFooter>
           </Card>
         </TabsContent>
