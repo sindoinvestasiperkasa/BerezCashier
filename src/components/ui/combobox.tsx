@@ -6,7 +6,8 @@ import { Check, ChevronsUpDown, PlusCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export interface ComboboxOption {
     value: string;
@@ -47,6 +48,7 @@ export function Combobox({
         getToggleButtonProps,
         getMenuProps,
         getInputProps,
+        getComboboxProps,
         highlightedIndex,
         getItemProps,
         selectedItem,
@@ -66,6 +68,9 @@ export function Combobox({
             setIsOpen(false);
         },
         onIsOpenChange: ({ isOpen }) => {
+            if (!isOpen) {
+                setInputItems(options);
+            }
             setIsOpen(!!isOpen);
         },
     });
@@ -74,62 +79,67 @@ export function Combobox({
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={isOpen}
-                    className="w-full justify-between"
-                    {...getToggleButtonProps()}
-                    disabled={disabled}
-                >
-                    {selectedOption ? selectedOption.label : placeholder}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
+            <div {...getComboboxProps()}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={isOpen}
+                        className="w-full justify-between"
+                        {...getToggleButtonProps()}
+                        disabled={disabled}
+                    >
+                        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+            </div>
             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                    <CommandInput
+                <div className="flex items-center border-b px-3">
+                    <Input
                         placeholder={searchPlaceholder}
                         {...getInputProps()}
-                        className="h-9"
+                        className="h-11 w-full rounded-md border-0 bg-transparent py-3 text-sm outline-none shadow-none focus-visible:ring-0"
                     />
-                     <CommandList>
-                        <CommandEmpty>
-                            <div className="py-2 text-center text-sm">{emptyText}</div>
-                             {onAddNew && (
-                                <CommandItem
-                                    onSelect={() => {
-                                        setIsOpen(false);
-                                        onAddNew();
-                                    }}
-                                    className="cursor-pointer text-primary justify-center"
-                                >
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    {addNewLabel}
-                                </CommandItem>
-                            )}
-                        </CommandEmpty>
-                        <CommandGroup {...getMenuProps()}>
-                            {inputItems.map((item, index) => (
-                                <CommandItem
-                                    key={item.value}
+                </div>
+                <ScrollArea className="max-h-60">
+                    <ul {...getMenuProps()} className="py-1">
+                        {inputItems.length > 0 ? (
+                            inputItems.map((item, index) => (
+                                <li
+                                    key={`${item.value}-${index}`}
+                                    className={cn(
+                                        "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+                                        highlightedIndex === index && "bg-accent text-accent-foreground",
+                                    )}
                                     {...getItemProps({ item, index })}
-                                    data-highlighted={highlightedIndex === index}
-                                    className="data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground cursor-pointer"
                                 >
-                                     <Check
+                                    <Check
                                         className={cn(
                                             "mr-2 h-4 w-4",
                                             selectedItem?.value === item.value ? "opacity-100" : "opacity-0"
                                         )}
                                     />
                                     {item.label}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
+                                </li>
+                            ))
+                        ) : (
+                            <li className="py-2 text-center text-sm">{emptyText}</li>
+                        )}
+                        {onAddNew && (
+                             <li
+                                className="relative flex cursor-pointer select-none items-center justify-center rounded-sm px-2 py-1.5 text-sm font-semibold text-primary outline-none hover:bg-accent"
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    onAddNew();
+                                }}
+                            >
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                {addNewLabel}
+                            </li>
+                        )}
+                    </ul>
+                </ScrollArea>
             </PopoverContent>
         </Popover>
     );
