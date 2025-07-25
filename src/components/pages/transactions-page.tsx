@@ -147,7 +147,7 @@ export default function TransactionsPage() {
           <Receipt className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-bold">Riwayat Transaksi Kasir</h1>
         </div>
-        <div className="mt-4 flex flex-col sm:flex-row gap-4">
+        <div className="mt-4 flex flex-row gap-4">
             <Card className="flex-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
@@ -292,5 +292,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    
