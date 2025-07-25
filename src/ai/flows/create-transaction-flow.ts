@@ -79,7 +79,7 @@ const createTransactionFlow = ai.defineFlow(
     
     // 1. Buat Entri Jurnal (`lines`)
     const journalLines = [];
-    const totalCogs = input.items.reduce((sum, item) => sum + (item.cogs || 0), 0);
+    const totalCogs = input.items.reduce((sum, item) => sum + ((item.cogs || 0) * item.quantity), 0);
 
     // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
     journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
@@ -142,7 +142,8 @@ const createTransactionFlow = ai.defineFlow(
 
     // 3. Update Stok Produk
     input.items.forEach(item => {
-      if (item.productType === 'Barang') { // Hanya update stok untuk barang
+      // Hanya update stok untuk produk tipe 'Barang' yang memiliki stok
+      if (item.productType === 'Barang') {
         const productRef = db.collection('products').doc(item.productId);
         batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
       }

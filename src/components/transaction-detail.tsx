@@ -56,8 +56,7 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
   
   const discount = transaction.discountAmount || 0;
   const tax = transaction.taxAmount || 0;
-  const shipping = transaction.total - (subtotal - discount + tax);
-
+  const shipping = 0; // Shipping is not part of cashier transaction
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>

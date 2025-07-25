@@ -28,7 +28,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, isSameDay } from 'date-fns';
 import jsPDF from 'jspdf';
-import type { Transaction, CartItem as AppCartItem, UserData } from "@/providers/app-provider"; // Using types from provider
+import type { Transaction, CartItem as AppCartItem, UserData, Product } from "@/providers/app-provider"; // Using types from provider
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -55,7 +55,8 @@ export default function CartPage({ setView }: CartPageProps) {
   const { 
     cart, updateQuantity, removeFromCart, clearCart, addTransaction, 
     heldCarts, holdCart, resumeCart, deleteHeldCart, 
-    transactions, customers, addCustomer, accounts, user, addShiftReportNotification
+    transactions, customers, addCustomer, accounts, user, addShiftReportNotification,
+    products
   } = useApp();
   const { toast } = useToast();
 
@@ -140,6 +141,21 @@ export default function CartPage({ setView }: CartPageProps) {
     if (cart.length === 0) {
       toast({ title: "Keranjang Kosong", description: "Silakan tambahkan produk terlebih dahulu.", variant: "destructive" });
       return;
+    }
+
+    // Stock validation
+    for (const cartItem of cart) {
+      if (cartItem.productType === 'Barang') {
+        const productInDb = products.find(p => p.id === cartItem.id);
+        if (!productInDb || typeof productInDb.stock !== 'number' || productInDb.stock < cartItem.quantity) {
+          toast({
+            title: "Stok Tidak Cukup",
+            description: `Stok untuk ${cartItem.name} hanya tersisa ${productInDb?.stock || 0}.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
     }
     
     if (paymentMethod === 'Cash' && amountReceived < total) {
@@ -390,7 +406,7 @@ export default function CartPage({ setView }: CartPageProps) {
     const subtotal = tx.total / (tx.taxAmount ? 1.11 : 1) + (tx.discountAmount || 0);
 
     const receiptData: ReceiptData = {
-      items: itemsForReceipt.map(i => ({ productName: i.name, quantity: i.quantity, unitPrice: i.price })),
+      items: itemsForReceipt.map(i => ({ productName: i.productName, quantity: i.quantity, unitPrice: i.unitPrice })),
       subtotal,
       discountAmount: tx.discountAmount || 0,
       taxAmount: tx.taxAmount || 0,
