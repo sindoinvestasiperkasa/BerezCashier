@@ -1,4 +1,4 @@
 /**
- * This file is no longer needed and will be removed.
- * The logic has been replaced by the new Autocomplete component.
+ * This file is no longer needed and is being removed as per user request
+ * due to persistent implementation failures.
  */

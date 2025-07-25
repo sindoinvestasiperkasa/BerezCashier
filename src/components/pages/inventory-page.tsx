@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Warehouse, Plus, Search, Loader2, Upload } from "lucide-react";
+import { Warehouse, Plus, Search, Loader2, Upload, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,7 +34,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { recordPurchase } from "@/ai/flows/record-purchase-flow";
 import { createItem } from "@/ai/flows/create-item-flow-entry";
-import { Autocomplete, type AutocompleteOption } from "@/components/ui/autocomplete";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { cn } from "@/lib/utils";
@@ -179,26 +178,6 @@ export default function InventoryPage() {
       );
   }, [products, searchFinishedGoods]);
 
-  const productOptionsForPurchase = useMemo(() => {
-    return finishedGoods.map(product => ({
-        value: product.id,
-        label: product.name,
-    }))
-  }, [finishedGoods]);
-
-  const productCategoryOptions: AutocompleteOption[] = useMemo(() => {
-    return productCategories.map(cat => ({
-        value: cat.id,
-        label: cat.name,
-    }))
-  }, [productCategories]);
-
-  const productUnitOptions: AutocompleteOption[] = useMemo(() => {
-    return productUnits.map(unit => ({
-        value: unit.symbol,
-        label: `${unit.name} (${unit.symbol})`,
-    }))
-  }, [productUnits]);
 
   const resetPurchaseForm = () => {
     setSelectedProductId(undefined);
@@ -405,16 +384,19 @@ export default function InventoryPage() {
             {showCategory && (
                 <div className="space-y-1">
                     <Label htmlFor="item-category">Kategori Produk</Label>
-                    <Autocomplete
-                        options={productCategoryOptions}
-                        value={itemCategoryId}
-                        onChange={setItemCategoryId}
-                        placeholder="Pilih kategori..."
-                        searchPlaceholder="Cari kategori..."
-                        emptyText="Kategori tidak ditemukan."
-                        onAddNew={() => setIsAddCategoryDialogOpen(true)}
-                        addNewLabel="Tambah Kategori Baru"
-                    />
+                    <div className="flex gap-2">
+                        <Select value={itemCategoryId} onValueChange={setItemCategoryId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Pilih kategori..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {productCategories.map(cat => (
+                                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryDialogOpen(true)}><Plus className="h-4 w-4"/></Button>
+                    </div>
                 </div>
             )}
 
@@ -441,16 +423,19 @@ export default function InventoryPage() {
                 </div>
                 <div className="space-y-1">
                     <Label htmlFor="item-unit">Unit</Label>
-                     <Autocomplete
-                        options={productUnitOptions}
-                        value={itemUnit}
-                        onChange={setItemUnit}
-                        placeholder="Pilih unit..."
-                        searchPlaceholder="Cari unit..."
-                        emptyText="Unit tidak ditemukan."
-                        onAddNew={() => setIsAddUnitDialogOpen(true)}
-                        addNewLabel="Tambah Unit Baru"
-                    />
+                     <div className="flex gap-2">
+                         <Select value={itemUnit} onValueChange={setItemUnit}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Pilih unit..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {productUnits.map(unit => (
+                                    <SelectItem key={unit.id} value={unit.symbol}>{unit.name} ({unit.symbol})</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="icon" onClick={() => setIsAddUnitDialogOpen(true)}><Plus className="h-4 w-4"/></Button>
+                    </div>
                 </div>
                 <div className="space-y-1 col-span-2">
                     <Label htmlFor="item-low-stock">Ambang Batas Stok Rendah</Label>
@@ -616,14 +601,16 @@ export default function InventoryPage() {
                       <div className="py-4 space-y-4">
                            <div>
                               <Label htmlFor="product-select">Produk</Label>
-                               <Autocomplete
-                                options={productOptionsForPurchase}
-                                value={selectedProductId}
-                                onChange={setSelectedProductId}
-                                placeholder="Pilih produk yang dibeli..."
-                                searchPlaceholder="Cari produk..."
-                                emptyText="Produk tidak ditemukan."
-                               />
+                               <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Pilih produk yang dibeli..."/>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {finishedGoods.map(p => (
+                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                               </Select>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                               <div>
