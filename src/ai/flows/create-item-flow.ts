@@ -26,7 +26,7 @@ export const CreateItemInputSchema = z.object({
   unitId: z.string().optional().describe("ID dari satuan untuk item."),
   supplierId: z.string().optional().describe("ID dari pemasok item."),
   imageUrls: z.array(z.string()).optional().describe("URL gambar item."),
-  // idUMKM akan diambil dari auth token di dalam flow
+  // idUMKM akan ditambahkan oleh middleware dari konteks otentikasi
 });
 export type CreateItemInput = z.infer<typeof CreateItemInputSchema>;
 
@@ -49,11 +49,12 @@ export const createItemFlow = ai.defineFlow(
         if (!auth) {
             throw new Error("Authorization required.");
         }
+        // Ambil idUMKM dari konteks otentikasi
         const idUMKM = auth.role === 'UMKM' ? auth.uid : auth.idUMKM;
         if (!idUMKM) {
             throw new Error("UMKM ID not found for the user.");
         }
-        // Gabungkan input asli dengan idUMKM yang didapat dari auth
+        // Gabungkan input asli dengan idUMKM yang didapat dari auth ke dalam satu objek payload
         return { ...input, idUMKM };
     }
   },
@@ -62,7 +63,7 @@ export const createItemFlow = ai.defineFlow(
     const { 
         name, description, itemCategory, productType, categoryId, productCode,
         price, purchasePrice, initialStock, lowStockThreshold, unitId, supplierId, imageUrls,
-        idUMKM,
+        idUMKM, // idUMKM sekarang menjadi bagian dari payload
     } = payload;
 
     const isProduct = itemCategory === 'retail_good' || itemCategory === 'manufactured_good' || itemCategory === 'service';
