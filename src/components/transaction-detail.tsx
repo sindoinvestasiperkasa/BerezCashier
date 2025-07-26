@@ -90,7 +90,7 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                 <CardContent className="space-y-3">
                     {Array.isArray(transaction.items) && transaction.items.map((item, index) => {
                       const product = products.find(p => p.id === item.productId);
-                      const imageUrl = product?.imageUrl || 'https://placehold.co/64x64.png';
+                      const imageUrl = item.imageUrl || product?.imageUrls?.[0] || 'https://placehold.co/64x64.png';
                       const productName = item.productName || product?.name || 'Produk tidak ditemukan';
                       
                       return (

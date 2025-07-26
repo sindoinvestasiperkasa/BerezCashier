@@ -19,6 +19,8 @@ export default function ProductCard({ product, onProductClick }: ProductCardProp
   const { addToCart, addToWishlist, removeFromWishlist, isInWishlist } = useApp();
   const { toast } = useToast();
   const inWishlist = isInWishlist(product.id);
+  const imageUrl = product.imageUrls?.[0] || product.imageUrl || 'https://placehold.co/300x300.png';
+
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -67,7 +69,7 @@ export default function ProductCard({ product, onProductClick }: ProductCardProp
       <CardContent className="p-0">
         <div className="relative">
           <Image
-            src={product.imageUrl}
+            src={imageUrl}
             alt={product.name}
             width={300}
             height={300}

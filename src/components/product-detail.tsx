@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -52,6 +53,8 @@ export default function ProductDetail({ product, isOpen, onClose }: ProductDetai
     });
   };
 
+  const imageUrl = product.imageUrls?.[0] || product.imageUrl || 'https://placehold.co/480x256.png';
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
@@ -60,7 +63,7 @@ export default function ProductDetail({ product, isOpen, onClose }: ProductDetai
       >
         <div className="relative h-64 w-full">
             <Image
-                src={product.imageUrl}
+                src={imageUrl}
                 alt={product.name}
                 fill
                 objectFit="cover"
