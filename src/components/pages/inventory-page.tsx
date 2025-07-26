@@ -1,3 +1,4 @@
+
 // src/app/products/page.tsx
 'use client';
 
@@ -83,7 +84,7 @@ const attributeValueSchema = z.object({
 const productSchema = z.object({
   productCode: z.string().optional(),
   name: z.string().min(1, 'Nama produk harus diisi'),
-  productType: z.enum(['Barang', 'Jasa'], { required_error: 'Tipe produk harus dipilih' }),
+  productType: z.enum(['Produk Retail', 'Produk Produksi', 'Jasa (Layanan)', 'Bahan Baku'], { required_error: 'Tipe produk harus dipilih' }),
   price: z.coerce.number().min(0, 'Harga jual harus angka positif'),
   purchasePrice: z.coerce.number().optional(),
   description: z.string().optional(),
@@ -169,7 +170,7 @@ export default function InventoryPage() {
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      productCode: '', name: '', productType: 'Barang', price: 0, purchasePrice: 0, description: '', lowStockThreshold: 5, newImages: undefined,
+      productCode: '', name: '', productType: 'Produk Retail', price: 0, purchasePrice: 0, description: '', lowStockThreshold: 5, newImages: undefined,
       categoryId: '', unitId: '', supplierId: '', attributeValues: [],
     },
   });
@@ -266,7 +267,7 @@ export default function InventoryPage() {
             });
         } else {
             reset({
-                productCode: '', name: '', productType: 'Barang', price: 0, purchasePrice: 0, description: '', lowStockThreshold: 5, newImages: undefined,
+                productCode: '', name: '', productType: 'Produk Retail', price: 0, purchasePrice: 0, description: '', lowStockThreshold: 5, newImages: undefined,
                 categoryId: '', unitId: '', supplierId: '', attributeValues: [],
             });
         }
@@ -600,7 +601,25 @@ export default function InventoryPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
                 <FormField control={control} name="name" render={({ field }) => (<FormItem><FormLabel>Nama Produk</FormLabel><FormControl><Input placeholder="e.g., Kopi Americano" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="productCode" render={({ field }) => (<FormItem><FormLabel>Kode Produk (SKU)</FormLabel><FormControl><Input placeholder="e.g., KOPI-001 (Opsional)" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="productType" render={({ field }) => (<FormItem><FormLabel>Tipe Produk</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="Barang">Barang (Stok dikelola)</SelectItem><SelectItem value="Jasa">Jasa (Tanpa stok)</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                <FormField
+                  control={control}
+                  name="productType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipe Produk</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="Produk Retail">Produk Retail</SelectItem>
+                          <SelectItem value="Produk Produksi">Produk Produksi</SelectItem>
+                          <SelectItem value="Jasa (Layanan)">Jasa (Layanan)</SelectItem>
+                          <SelectItem value="Bahan Baku">Bahan Baku</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 {productTypeWatcher === 'Barang' && (
                   <FormField control={control} name="purchasePrice" render={({ field }) => ( <FormItem><FormLabel>Harga Beli (Rp)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage/></FormItem> )}/>
                 )}
