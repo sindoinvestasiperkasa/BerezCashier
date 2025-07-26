@@ -1,26 +1,20 @@
+// src/app/products/page.tsx
+'use client';
 
-"use client";
-
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { Warehouse, Plus, Search, Loader2, Upload, PlusCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { PlusCircle, Edit, Trash2, Search, Package, MoreHorizontal, FileSpreadsheet, FileUp, FileDown, Percent, Loader2, Eye, Save, Check, Coffee, Utensils, Bean, Leaf, CakeSlice, Milk, Beef, Fish, Sparkles, Snowflake, Apple } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { useApp } from "@/hooks/use-app";
-import Image from "next/image";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -28,37 +22,81 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { recordPurchase } from "@/ai/flows/record-purchase-flow-entry";
-import { createItem } from "@/ai/flows/create-item-flow-entry";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { cn } from "@/lib/utils";
-import { Textarea } from "../ui/textarea";
-import { ScrollArea } from "../ui/scroll-area";
-import { collection, getDocs, getFirestore, query, where, addDoc, doc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+  DialogClose,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { useForm, SubmitHandler, Controller, useFieldArray, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { db, storage } from '@/lib/firebase';
+import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, where, setDoc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import imageCompression from 'browser-image-compression';
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Skeleton } from '@/components/ui/skeleton';
+import { format, isValid } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Link from 'next/link';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { useApp } from '@/hooks/use-app';
+import type { Product, ProductCategory, ProductUnit, Supplier } from '@/providers/app-provider';
 
 
-interface IProductCategory {
-    id: string;
-    name: string;
-    description?: string;
-}
-interface IProductUnit {
-    id: string;
-    name: string;
-    symbol: string;
-}
+const attributeValueSchema = z.object({
+    attributeId: z.string(),
+    attributeName: z.string(),
+    type: z.enum(['Teks', 'Angka', 'Paragraf', 'Tanggal', 'Pilihan Tunggal', 'Checkbox']),
+    options: z.array(z.string()).optional(),
+    value: z.any().optional().nullable(),
+});
+
+const productSchema = z.object({
+  productCode: z.string().optional(),
+  name: z.string().min(1, 'Nama produk harus diisi'),
+  productType: z.enum(['Barang', 'Jasa'], { required_error: 'Tipe produk harus dipilih' }),
+  price: z.coerce.number().min(0, 'Harga jual harus angka positif'),
+  purchasePrice: z.coerce.number().optional(),
+  description: z.string().optional(),
+  lowStockThreshold: z.coerce.number().int().min(0, 'Ambang batas harus bilangan non-negatif').optional(),
+  newImages: z.any().optional(),
+  categoryId: z.string().optional(),
+  unitId: z.string().optional(),
+  supplierId: z.string().optional().nullable(),
+  attributeValues: z.array(attributeValueSchema).optional(),
+});
+
+
+type ProductFormData = z.infer<typeof productSchema>;
 
 const newCategorySchema = z.object({
   name: z.string().min(1, "Nama kategori harus diisi."),
@@ -69,764 +107,613 @@ type NewCategoryFormData = z.infer<typeof newCategorySchema>;
 const newUnitSchema = z.object({
   name: z.string().min(1, "Nama unit harus diisi."),
   symbol: z.string().min(1, "Simbol harus diisi."),
+  description: z.string().optional(),
 });
 type NewUnitFormData = z.infer<typeof newUnitSchema>;
 
 
-export default function InventoryPage() {
-  const { products, user } = useApp();
-  const { toast } = useToast();
-  const db = getFirestore();
-  const [searchFinishedGoods, setSearchFinishedGoods] = useState("");
-  const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
-  const [isRawMaterialPurchaseDialogOpen, setIsRawMaterialPurchaseDialogOpen] = useState(false);
-  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [productCategories, setProductCategories] = useState<IProductCategory[]>([]);
-  const [productUnits, setProductUnits] = useState<IProductUnit[]>([]);
-  const [imageFiles, setImageFiles] = useState<FileList | null>(null);
+const categoryIcons: { [key: string]: React.ElementType } = {
+    'kopi': Coffee,
+    'minuman': Coffee,
+    'makanan': Utensils,
+    'daging': Beef,
+    'ikan': Fish,
+    'buah': Apple,
+    'sayur': Leaf,
+    'beans': Bean,
+    'teh': Leaf,
+    'kue': CakeSlice,
+    'pastry': CakeSlice,
+    'roti': CakeSlice,
+    'susu': Milk,
+    'cleaner': Sparkles,
+    'frozen': Snowflake,
+    'apple': Apple,
+    'default': Package,
+};
 
-  // Dialog states
-  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
-  const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
+const getIconForCategory = (categoryName?: string) => {
+    if (!categoryName) return categoryIcons['default'];
+    const lowerCaseName = categoryName.toLowerCase();
+    for (const key in categoryIcons) {
+        if (lowerCaseName.includes(key)) {
+            return categoryIcons[key];
+        }
+    }
+    return categoryIcons['default'];
+};
+
+
+export default function InventoryPage() {
+  const { user } = useApp();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [units, setUnits] = useState<ProductUnit[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>('all');
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeDatePickers, setActiveDatePickers] = useState<Record<string, boolean>>({});
+
+  // States for new inline forms
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false);
+  
+  const form = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      productCode: '', name: '', productType: 'Barang', price: 0, purchasePrice: 0, description: '', lowStockThreshold: 5, newImages: undefined,
+      categoryId: '', unitId: '', supplierId: '', attributeValues: [],
+    },
+  });
   
   const newCategoryForm = useForm<NewCategoryFormData>({
     resolver: zodResolver(newCategorySchema),
-    defaultValues: {
-      name: "",
-      description: "",
-    },
+    defaultValues: { name: '', description: '' },
   });
 
   const newUnitForm = useForm<NewUnitFormData>({
     resolver: zodResolver(newUnitSchema),
-    defaultValues: {
-      name: "",
-      symbol: "",
-    },
+    defaultValues: { name: '', symbol: '', description: '' },
   });
+  
+  const { control, watch, setValue, setError, reset } = form;
+  const { isSubmitting } = form.formState;
+  const productTypeWatcher = watch("productType");
+  const categoryIdWatcher = watch("categoryId");
+  
+  const selectedCategoryAttributes = useMemo(() => {
+    return categories.find(c => c.id === categoryIdWatcher)?.attributes || [];
+  }, [categoryIdWatcher, categories]);
 
+  const umkmId = useMemo(() => user?.role === 'UMKM' ? user.uid : user?.idUMKM, [user]);
 
-  // State for the purchase form
-  const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
-  const [purchaseQuantity, setPurchaseQuantity] = useState<number | string>("");
-  const [purchaseHpp, setPurchaseHpp] = useState<number | string>("");
-  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>();
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>();
+  // Fetch products, categories, units, and suppliers from Firestore
+  useEffect(() => {
+    if (!umkmId) {
+        setIsLoading(false);
+        return;
+    };
 
-  // State for Add Item form
-  const [itemCategory, setItemCategory] = useState<"retail_good" | "manufactured_good" | "service" | "raw_material">("retail_good");
-  const [itemName, setItemName] = useState("");
-  const [itemDescription, setItemDescription] = useState("");
-  const [itemCategoryId, setItemCategoryId] = useState<string | undefined>();
-  const [itemPrice, setItemPrice] = useState<number | string>("");
-  const [itemHpp, setItemHpp] = useState<number | string>("");
-  const [itemInitialStock, setItemInitialStock] = useState<number | string>("");
-  const [itemLowStockThreshold, setItemLowStockThreshold] = useState<number | string>("");
-  const [itemUnit, setItemUnit] = useState<string | undefined>();
+    setIsLoading(true);
+    const qProducts = query(collection(db, 'products'), where('idUMKM', '==', umkmId));
+    const unsubProducts = onSnapshot(qProducts, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      setProducts(items.sort((a, b) => a.name.localeCompare(b.name)));
+      setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching products:", error);
+        setIsLoading(false);
+    });
 
+    const qCategories = query(collection(db, 'productCategories'), where('idUMKM', '==', umkmId));
+    const unsubCategories = onSnapshot(qCategories, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProductCategory));
+      setCategories(items);
+    });
 
-  // Placeholder data
-  const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
-  const warehouses = [{ id: 'wh-jkt-a', name: 'Gudang A (JKT)' }, { id: 'wh-bdg-a', name: 'Gudang A (BDG)' }];
-
-  const fetchCategoriesAndUnits = useCallback(async () => {
-    if (!user) return;
-    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
-    if (!idUMKM) return;
-
-    // Fetch Product Categories
-    const categoriesQuery = query(collection(db, "productCategories"), where("idUMKM", "==", idUMKM));
-    const categoriesSnapshot = await getDocs(categoriesQuery);
-    const categoriesData = categoriesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-    } as IProductCategory));
-    setProductCategories(categoriesData);
+    const qUnits = query(collection(db, 'productUnits'), where('idUMKM', '==', umkmId));
+    const unsubUnits = onSnapshot(qUnits, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProductUnit));
+      setUnits(items);
+    });
     
-    // Fetch Product Units
-    const unitsQuery = query(collection(db, "productUnits"), where("idUMKM", "==", idUMKM));
-    const unitsSnapshot = await getDocs(unitsQuery);
-    const unitsData = unitsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-    } as IProductUnit));
-    setProductUnits(unitsData);
-  }, [user, db]);
+    const qSuppliers = query(collection(db, 'suppliers'), where('idUMKM', '==', umkmId));
+    const unsubSuppliers = onSnapshot(qSuppliers, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Supplier));
+      setSuppliers(items);
+    });
 
+    return () => {
+      unsubProducts();
+      unsubCategories();
+      unsubUnits();
+      unsubSuppliers();
+    };
+  }, [umkmId]);
 
   useEffect(() => {
-    if (isAddItemDialogOpen && user) {
-        fetchCategoriesAndUnits();
-    }
-  }, [isAddItemDialogOpen, user, fetchCategoriesAndUnits]);
-
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const finishedGoods = useMemo(() => {
-    return products
-      .filter(p => p.productType === 'Barang')
-      .filter(p => 
-        p.name.toLowerCase().includes(searchFinishedGoods.toLowerCase())
-      );
-  }, [products, searchFinishedGoods]);
-
-
-  const resetPurchaseForm = () => {
-    setSelectedProductId(undefined);
-    setPurchaseQuantity("");
-    setPurchaseHpp("");
-    setSelectedBranchId(undefined);
-    setSelectedWarehouseId(undefined);
-  }
-
-  const handleRecordPurchase = async () => {
-     if (!selectedProductId || !purchaseQuantity || !purchaseHpp) {
-      toast({
-        title: "Form Tidak Lengkap",
-        description: "Silakan pilih produk, isi jumlah, dan harga beli.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsProcessing(true);
-    try {
-      const result = await recordPurchase({
-        productId: selectedProductId,
-        quantity: Number(purchaseQuantity),
-        hpp: Number(purchaseHpp),
-        branchId: selectedBranchId,
-        warehouseId: selectedWarehouseId
-      });
-
-      if(result.success) {
-        toast({
-          title: "Pembelian Dicatat!",
-          description: `Stok produk telah diperbarui menjadi ${result.updatedStock}.`,
-        });
-        setIsPurchaseDialogOpen(false);
-        resetPurchaseForm();
-      } else {
-         throw new Error("Gagal memperbarui stok dari flow.");
-      }
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: "Terjadi Kesalahan",
-        description: "Gagal mencatat pembelian. Silakan coba lagi.",
-        variant: "destructive",
-      });
-    } finally {
-        setIsProcessing(false);
-    }
-  }
-
-  const resetAddItemForm = () => {
-    setItemName("");
-    setItemDescription("");
-    setItemCategoryId(undefined);
-    setItemPrice("");
-    setItemHpp("");
-    setItemInitialStock("");
-    setItemLowStockThreshold("");
-    setItemUnit(undefined);
-    setItemCategory("retail_good");
-    setImageFiles(null);
-  }
-
-  const handleSaveItem = async () => {
-    if (!itemName) {
-        toast({ title: "Nama item tidak boleh kosong", variant: "destructive" });
-        return;
-    }
-    if (!user) {
-        toast({ title: "Pengguna tidak ditemukan", variant: "destructive" });
-        return;
-    }
-    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
-    
-    setIsProcessing(true);
-    try {
-        let uploadedImageUrl = 'https://placehold.co/300x300.png';
-
-        if (imageFiles && imageFiles.length > 0) {
-            const file = imageFiles[0];
-            let fileToUpload = file;
-            if (file.size > 512 * 1024) { // Compress if > 0.5MB
-                try {
-                    fileToUpload = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280, useWebWorker: true });
-                } catch (compressionError) {
-                    console.warn('Kompresi gambar gagal, mengunggah file asli.', compressionError);
-                }
-            }
-            const docId = doc(collection(db, 'products')).id;
-            const filePath = `products/${idUMKM}/${docId}/${Date.now()}_${fileToUpload.name}`;
-            const storageRef = ref(storage, filePath);
-            await uploadBytes(storageRef, fileToUpload);
-            uploadedImageUrl = await getDownloadURL(storageRef);
-        }
-
-        const result = await createItem({
-            name: itemName,
-            description: itemDescription,
-            itemCategory: itemCategory,
-            productType: itemCategory === 'service' ? 'Jasa' : 'Barang',
-            categoryId: itemCategoryId,
-            price: itemCategory !== 'raw_material' ? Number(itemPrice) || undefined : undefined,
-            hpp: itemCategory === 'retail_good' ? Number(itemHpp) || undefined : undefined,
-            initialStock: ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory) ? Number(itemInitialStock) || 0 : undefined,
-            lowStockThreshold: ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory) ? Number(itemLowStockThreshold) || undefined : undefined,
-            unit: itemUnit || undefined,
-            imageUrl: uploadedImageUrl,
-        });
-
-        if (result.success) {
-            toast({
-                title: "Item Berhasil Dibuat!",
-                description: `${itemName} telah ditambahkan ke database.`,
-            });
-            setIsAddItemDialogOpen(false);
-            resetAddItemForm();
-        } else {
-            throw new Error(result.message || "Gagal membuat item.");
-        }
-
-    } catch (error: any) {
-        console.error(error);
-        toast({
-            title: "Terjadi Kesalahan",
-            description: error.message || "Gagal menyimpan item baru. Silakan coba lagi.",
-            variant: "destructive",
-        });
-    } finally {
-        setIsProcessing(false);
-    }
-  }
-
-  const handleSaveNewCategory = async (data: NewCategoryFormData) => {
-    const idUMKM = user?.role === 'UMKM' ? user.uid : user?.idUMKM;
-    if (!idUMKM) {
-      toast({ title: "Error", description: "Tidak dapat menemukan ID UMKM.", variant: "destructive" });
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const docRef = await addDoc(collection(db, "productCategories"), { ...data, idUMKM });
-      toast({ title: "Kategori Ditambahkan", description: `Kategori "${data.name}" berhasil dibuat.` });
-      
-      await fetchCategoriesAndUnits();
-      setItemCategoryId(docRef.id);
-      
-      setIsAddCategoryDialogOpen(false);
-      newCategoryForm.reset();
-    } catch (error) {
-      console.error("Error adding category:", error);
-      toast({ title: "Gagal", description: "Tidak dapat menambahkan kategori baru.", variant: "destructive" });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-
-  const handleSaveNewUnit = async (data: NewUnitFormData) => {
-    const idUMKM = user?.role === 'UMKM' ? user.uid : user?.idUMKM;
-    if (!idUMKM) {
-      toast({ title: "Error", description: "Tidak dapat menemukan ID UMKM.", variant: "destructive" });
-      return;
-    }
-    
-    setIsProcessing(true);
-    try {
-        const docRef = await addDoc(collection(db, "productUnits"), { ...data, idUMKM });
-        toast({ title: "Unit Baru Ditambahkan!", description: `Unit ${data.name} berhasil dibuat.` });
-        
-        await fetchCategoriesAndUnits();
-        setItemUnit(data.symbol);
-        
-        setIsAddUnitDialogOpen(false);
-        newUnitForm.reset();
-    } catch(error: any) {
-        toast({ title: "Gagal Menyimpan", description: error.message, variant: "destructive" });
-    } finally {
-        setIsProcessing(false);
-    }
-  }
-
-  const renderItemDetailsForm = () => {
-    const showPrice = itemCategory !== 'raw_material';
-    const showHpp = itemCategory === 'retail_good';
-    const showStockFields = ['retail_good', 'manufactured_good', 'raw_material'].includes(itemCategory);
-    
-    return (
-       <div className="space-y-4 p-4 border rounded-md bg-background">
-          <h3 className="font-medium text-center text-lg">2. Detail Item</h3>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="item-name">Nama Item</Label>
-              <Input id="item-name" placeholder="Contoh: Kemeja Polos, Tepung Terigu" value={itemName} onChange={(e) => setItemName(e.target.value)} />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="item-description">Deskripsi</Label>
-              <Textarea id="item-description" placeholder="Jelaskan tentang item ini..." value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} />
-            </div>
-
-            <div className="space-y-1">
-                <Label>Kategori Produk</Label>
-                <div className="flex gap-2">
-                    <Select value={itemCategoryId} onValueChange={setItemCategoryId}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Pilih kategori..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {productCategories.map(cat => (
-                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryDialogOpen(true)}><Plus className="h-4 w-4"/></Button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {showPrice && (
-                <div className="space-y-1">
-                  <Label htmlFor="item-price">Harga Jual</Label>
-                  <Input id="item-price" type="number" placeholder="Rp 0" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
-                </div>
-              )}
-              {showHpp && (
-                <div className="space-y-1">
-                  <Label htmlFor="item-hpp">Harga Beli (HPP)</Label>
-                  <Input id="item-hpp" type="number" placeholder="Rp 0" value={itemHpp} onChange={(e) => setItemHpp(e.target.value)} />
-                   <p className="text-xs text-muted-foreground">Untuk produk retail (beli-jual).</p>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1">
-                <Label>Unit</Label>
-                 <div className="flex gap-2">
-                     <Select value={itemUnit} onValueChange={setItemUnit}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Pilih unit..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {productUnits.map(unit => (
-                                <SelectItem key={unit.id} value={unit.symbol}>{unit.name} ({unit.symbol})</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="icon" onClick={() => setIsAddUnitDialogOpen(true)}><Plus className="h-4 w-4"/></Button>
-                </div>
-            </div>
-
-             {showStockFields && <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="item-stock">Stok Awal</Label>
-                  <Input id="item-stock" type="number" placeholder="0" value={itemInitialStock} onChange={(e) => setItemInitialStock(e.target.value)} />
-                </div>
-                
-                <div className="space-y-1">
-                    <Label htmlFor="item-low-stock">Ambang Batas Stok Rendah</Label>
-                    <Input id="item-low-stock" type="number" placeholder="Contoh: 5" value={itemLowStockThreshold} onChange={(e) => setItemLowStockThreshold(e.target.value)} />
-                </div>
-            </div>}
+    if (isFormDialogOpen) {
+        if (editingProduct) {
+            const productCategory = categories.find(c => c.id === editingProduct.categoryId);
+            const productAttributes = productCategory?.attributes || [];
             
-            <div className="space-y-1">
-                <Label>Foto Produk</Label>
-                 <Input 
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setImageFiles(e.target.files)}
-                />
-            </div>
+            const filledAttributeValues = productAttributes.map(attrDef => {
+                const existingValue = editingProduct.attributeValues?.find(v => v.attributeId === attrDef.id);
+                return {
+                    attributeId: attrDef.id,
+                    attributeName: attrDef.name,
+                    type: attrDef.type,
+                    options: attrDef.options || [],
+                    value: existingValue?.value ?? (attrDef.type === 'Checkbox' ? [] : ''),
+                };
+            });
+            
+            reset({
+                ...editingProduct,
+                purchasePrice: editingProduct.purchasePrice || 0,
+                description: editingProduct.description || '',
+                lowStockThreshold: editingProduct.lowStockThreshold || 0,
+                attributeValues: filledAttributeValues,
+                newImages: undefined,
+            });
+        } else {
+            reset({
+                productCode: '', name: '', productType: 'Barang', price: 0, purchasePrice: 0, description: '', lowStockThreshold: 5, newImages: undefined,
+                categoryId: '', unitId: '', supplierId: '', attributeValues: [],
+            });
+        }
+    }
+  }, [editingProduct, isFormDialogOpen, reset, categories]);
+  
+  useEffect(() => {
+    if (!isFormDialogOpen) return;
 
-          </div>
-        </div>
-    );
-  }
+    const subscription = watch((value, { name, type }) => {
+        if (name === 'categoryId') {
+            const newCategory = categories.find(c => c.id === value.categoryId);
+            const newAttributes = newCategory?.attributes || [];
+            
+            const defaultAttributeValues = newAttributes.map(attr => ({
+                attributeId: attr.id,
+                attributeName: attr.name,
+                type: attr.type,
+                options: attr.options || [],
+                value: attr.type === 'Checkbox' ? [] : '',
+            }));
+            setValue('attributeValues', defaultAttributeValues);
+        }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setValue, categories, isFormDialogOpen]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    products.forEach(p => {
+      if (p.categoryId) {
+        counts[p.categoryId] = (counts[p.categoryId] || 0) + 1;
+      }
+    });
+
+    const allCategories = categories
+      .map(cat => ({
+        ...cat,
+        count: counts[cat.id] || 0,
+      }))
+      .filter(cat => cat.count > 0) // Only show categories with products
+      .sort((a,b) => a.name.localeCompare(b.name));
+
+    return [{ id: 'all', name: 'Semua Produk', count: products.length }, ...allCategories];
+  }, [products, categories]);
+
+  const filteredProducts = useMemo(() => {
+    return products.map(p => ({
+      ...p,
+      stock: p.stock || 0,
+      categoryName: categories.find(c => c.id === p.categoryId)?.name,
+      unitName: units.find(u => u.id === p.unitId)?.name,
+      supplierName: suppliers.find(s => s.id === p.supplierId)?.name,
+    })).filter((product) => {
+      const term = searchTerm.toLowerCase();
+      
+      const searchMatch = (
+        product.name.toLowerCase().includes(term) ||
+        (product.productCode || '').toLowerCase().includes(term) ||
+        (product.categoryName || '').toLowerCase().includes(term) ||
+        (product.supplierName || '').toLowerCase().includes(term) ||
+        product.price.toString().toLowerCase().includes(term) ||
+        String(product.stock).toLowerCase().includes(term)
+      );
+      
+      const categoryMatch = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
+
+      return searchMatch && categoryMatch;
+    });
+  }, [products, searchTerm, categories, units, suppliers, selectedCategoryId]);
+
+  const onSubmit: SubmitHandler<ProductFormData> = async (data) => {
+    if (!umkmId) {
+        toast({ title: 'Error', description: 'ID UMKM tidak ditemukan.', variant: 'destructive' });
+        return;
+    }
+    const submissionToast = toast({ title: 'Menyimpan...', description: 'Mohon tunggu...' });
+
+    try {
+        const { newImages, ...productData } = data;
+        let uploadedImageUrls: string[] = [];
+        
+        const docId = editingProduct?.id || doc(collection(db, 'products')).id;
+        const docRef = doc(db, 'products', docId);
+
+        if (!editingProduct && data.productCode && data.productCode.trim() !== '') {
+            const isDuplicate = products.some(p => p.id !== docId && p.productCode?.trim().toLowerCase() === data.productCode?.trim().toLowerCase());
+            if (isDuplicate) {
+                setError('productCode', { type: 'manual', message: 'Kode produk ini sudah digunakan.' });
+                submissionToast.update({ id: submissionToast.id, title: 'Gagal', description: 'Kode produk sudah ada.', variant: 'destructive' });
+                return;
+            }
+        }
+        
+        if (newImages && newImages.length > 0) {
+            submissionToast.update({ id: submissionToast.id, description: `Mengompres & mengunggah ${newImages.length} gambar...` });
+            const uploadPromises = Array.from(newImages as FileList).map(async (file) => {
+                let fileToUpload = file;
+                if (file.size > 512 * 1024) {
+                    try {
+                        fileToUpload = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280, useWebWorker: true });
+                    } catch (compressionError) {
+                        console.warn('Kompresi gambar gagal, mengunggah file asli.', compressionError);
+                    }
+                }
+                const filePath = `products/${umkmId}/${docId}/${Date.now()}_${fileToUpload.name}`;
+                const storageRef = ref(storage, filePath);
+                await uploadBytes(storageRef, fileToUpload);
+                return getDownloadURL(storageRef);
+            });
+            uploadedImageUrls = await Promise.all(uploadPromises);
+        }
+        
+        const existingImageUrls = editingProduct?.imageUrls || [];
+
+        const dataToSave: any = {
+            productCode: (productData.productCode || '').trim(),
+            name: productData.name,
+            productType: productData.productType,
+            price: productData.price || 0,
+            description: productData.description || '',
+            idUMKM: umkmId,
+            categoryId: productData.categoryId || null,
+            unitId: productData.unitId || null,
+            attributeValues: productData.attributeValues,
+            imageUrls: [...existingImageUrls, ...uploadedImageUrls],
+            updatedAt: new Date(),
+        };
+
+        if (productData.productType === 'Barang') {
+            dataToSave.purchasePrice = productData.purchasePrice || 0;
+            dataToSave.lowStockThreshold = productData.lowStockThreshold || 0;
+            dataToSave.supplierId = productData.supplierId || null;
+        } else {
+            dataToSave.purchasePrice = null;
+            dataToSave.lowStockThreshold = null;
+            dataToSave.supplierId = null;
+            dataToSave.stock = null;
+        }
+        
+        if (editingProduct) {
+            await updateDoc(docRef, dataToSave);
+            submissionToast.update({ id: submissionToast.id, title: 'Produk Diperbarui', description: `${data.name} berhasil diperbarui.` });
+        } else {
+            dataToSave.createdAt = new Date();
+            dataToSave.stock = 0; // Initial stock
+            await setDoc(docRef, dataToSave);
+            submissionToast.update({ id: submissionToast.id, title: 'Produk Ditambahkan', description: `${data.name} berhasil ditambahkan.` });
+        }
+
+        setEditingProduct(null);
+        setIsFormDialogOpen(false);
+        form.reset();
+    } catch (error: any) {
+        toast({ title: 'Error', description: error.message || 'Terjadi kesalahan saat menyimpan produk.', variant: 'destructive' });
+        console.error("Error saving product: ", error);
+        submissionToast.update({ id: submissionToast.id, title: 'Gagal', description: 'Gagal menyimpan data produk.', variant: 'destructive' });
+    }
+  };
+
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setIsFormDialogOpen(true);
+  };
+  
+  const handleOpenDeleteDialog = (product: Product) => {
+    setProductToDelete(product);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!productToDelete) return;
+    try {
+        await deleteDoc(doc(db, 'products', productToDelete.id));
+        toast({ title: 'Produk Dihapus', description: `${productToDelete.name} telah dihapus.`, variant: 'destructive' });
+    } catch (error) {
+        toast({ title: 'Error', description: `Gagal menghapus ${productToDelete.name}.`, variant: 'destructive' });
+        console.error("Error deleting product: ", error);
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setProductToDelete(null);
+    }
+  };
+  
+  const openAddDialog = () => {
+    setEditingProduct(null);
+    form.reset();
+    setIsFormDialogOpen(true);
+  };
+
+  const handleAddNewCategory = async (data: NewCategoryFormData) => {
+      if (!umkmId) return;
+      try {
+          const docRef = await addDoc(collection(db, 'productCategories'), { ...data, idUMKM: umkmId });
+          toast({ title: 'Kategori Ditambahkan', description: `Kategori "${data.name}" berhasil ditambahkan.` });
+          setValue('categoryId', docRef.id);
+          setIsCategoryDialogOpen(false);
+          newCategoryForm.reset();
+      } catch (error) {
+          toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menambahkan kategori baru.' });
+      }
+  };
+
+  const handleAddNewUnit = async (data: NewUnitFormData) => {
+      if (!umkmId) return;
+      try {
+          const docRef = await addDoc(collection(db, 'productUnits'), { ...data, idUMKM: umkmId });
+          toast({ title: 'Unit Ditambahkan', description: `Unit "${data.name}" berhasil ditambahkan.` });
+          setValue('unitId', docRef.id);
+          setIsUnitDialogOpen(false);
+          newUnitForm.reset();
+      } catch (error) {
+          toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menambahkan unit baru.' });
+      }
+  };
 
 
   return (
     <>
-    <div className="p-4 md:p-6">
-      <header className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <Warehouse className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Manajemen Inventaris</h1>
-        </div>
-        <Dialog open={isAddItemDialogOpen} onOpenChange={(open) => {
-          if(!open) resetAddItemForm();
-          setIsAddItemDialogOpen(open);
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Tambah Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Tambah Item Baru</DialogTitle>
-              <DialogDescription>
-                Daftarkan item baru ke sistem. Pilih tipe yang sesuai untuk menampilkan form yang relevan.
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh] p-1">
-                <div className="py-4 space-y-6 pr-6">
-                <div>
-                    <Label className="mb-2 block font-medium">1. Tipe Item</Label>
-                    <RadioGroup value={itemCategory} onValueChange={(val: any) => setItemCategory(val)} className="grid grid-cols-2 gap-4">
-                    <div>
-                        <RadioGroupItem value="retail_good" id="type-retail" className="peer sr-only" />
-                        <Label htmlFor="type-retail" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                            Produk Retail
-                            <span className="text-xs text-muted-foreground mt-1 text-center">Barang yang dibeli untuk dijual kembali.</span>
-                        </Label>
-                        </div>
-                        <div>
-                        <RadioGroupItem value="manufactured_good" id="type-manufactured" className="peer sr-only" />
-                        <Label htmlFor="type-manufactured" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                            Produk Produksi
-                            <span className="text-xs text-muted-foreground mt-1 text-center">Barang hasil produksi dari bahan baku.</span>
-                        </Label>
-                        </div>
-                        <div>
-                        <RadioGroupItem value="service" id="type-service" className="peer sr-only" />
-                        <Label htmlFor="type-service" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                            Jasa / Layanan
-                            <span className="text-xs text-muted-foreground mt-1 text-center">Layanan yang tidak memiliki stok fisik.</span>
-                        </Label>
-                        </div>
-                    <div>
-                        <RadioGroupItem value="raw_material" id="type-raw-material" className="peer sr-only" />
-                        <Label htmlFor="type-raw-material" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        Bahan Baku
-                        <span className="text-xs text-muted-foreground mt-1 text-center">Untuk digunakan dalam proses produksi.</span>
-                        </Label>
-                    </div>
-                    </RadioGroup>
-                </div>
-
-                {renderItemDetailsForm()}
-                </div>
-            </ScrollArea>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>Batal</Button>
-              <Button onClick={handleSaveItem} disabled={isProcessing}>
-                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Simpan Item
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </header>
-
-      <Tabs defaultValue="finished_goods" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="finished_goods">Produk Jadi</TabsTrigger>
-          <TabsTrigger value="raw_materials">Bahan Baku</TabsTrigger>
-        </TabsList>
-        <TabsContent value="finished_goods">
-          <Card>
-            <CardHeader>
-              <CardTitle>Stok Produk Siap Jual</CardTitle>
-              <CardDescription>
-                Daftar produk yang telah diproduksi atau dibeli dan siap untuk dijual di kasir.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input 
-                  placeholder="Cari produk jadi..." 
-                  className="pl-10" 
-                  value={searchFinishedGoods}
-                  onChange={(e) => setSearchFinishedGoods(e.target.value)}
+      <div className="py-2 p-4 md:p-6">
+        <Card className="shadow-lg mb-6">
+          <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                  <Package className="h-8 w-8 text-primary" />
+                  <div>
+                    <CardTitle className="text-2xl font-headline">Data Produk</CardTitle>
+                    <CardDescription>Kelola semua data produk dan jasa Anda.</CardDescription>
+                  </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button onClick={openAddDialog}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Tambah Produk
+                </Button>
+              </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-6 flex items-center gap-4">
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Cari (nama, kode, kategori)..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
-                {finishedGoods.length > 0 ? (
-                  finishedGoods.map(product => (
-                    <div key={product.id} className="flex items-center gap-4 p-2 border rounded-lg">
-                      <Image 
-                        src={product.imageUrl}
-                        alt={product.name}
-                        width={48}
-                        height={48}
-                        className="rounded-md object-cover w-12 h-12 bg-muted"
-                      />
-                      <div className="flex-grow">
-                        <p className="font-semibold">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatCurrency(product.price)}</p>
-                      </div>
-                      <div>
-                        <p className="font-bold text-lg">{product.stock ?? 0}</p>
-                        <p className="text-xs text-muted-foreground text-right">Stok</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                   <div className="text-center py-10 text-muted-foreground">
-                    <p>Tidak ada produk jadi yang ditemukan.</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Dialog open={isPurchaseDialogOpen} onOpenChange={(open) => {
-                if (!open) resetPurchaseForm();
-                setIsPurchaseDialogOpen(open);
-              }}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">Catat Pembelian Retail</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                      <DialogHeader>
-                          <DialogTitle>Catat Pembelian Stok Retail</DialogTitle>
-                          <DialogDescription>
-                            Gunakan form ini untuk menambah stok (restock) produk yang Anda beli untuk dijual kembali. Produk harus sudah terdaftar di sistem.
-                          </DialogDescription>
-                      </DialogHeader>
-                      <div className="py-4 space-y-4">
-                           <div>
-                              <Label htmlFor="product-select">Produk</Label>
-                               <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Pilih produk yang dibeli..."/>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {finishedGoods.map(p => (
-                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                               </Select>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                  <Label htmlFor="quantity">Jumlah</Label>
-                                  <Input 
-                                    id="quantity" 
-                                    type="number" 
-                                    placeholder="0" 
-                                    value={purchaseQuantity}
-                                    onChange={(e) => setPurchaseQuantity(e.target.value)}
-                                  />
-                              </div>
-                              <div>
-                                  <Label htmlFor="hpp">Harga Beli (HPP) / item</Label>
-                                  <Input 
-                                    id="hpp" 
-                                    type="number" 
-                                    placeholder="0"
-                                    value={purchaseHpp}
-                                    onChange={(e) => setPurchaseHpp(e.target.value)}
-                                  />
-                              </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>Cabang</Label>
-                                <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-                                    <SelectTrigger><SelectValue placeholder="Pilih cabang..." /></SelectTrigger>
-                                    <SelectContent>
-                                        {branches.map(branch => (
-                                            <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label>Gudang</Label>
-                                <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
-                                    <SelectTrigger><SelectValue placeholder="Pilih gudang..." /></SelectTrigger>
-                                    <SelectContent>
-                                        {warehouses.map(wh => (
-                                            <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                          </div>
-                      </div>
-                      <DialogFooter>
-                          <Button variant="outline" onClick={() => setIsPurchaseDialogOpen(false)}>Batal</Button>
-                          <Button onClick={handleRecordPurchase} disabled={isProcessing}>
-                            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Simpan & Tambah Stok
-                          </Button>
-                      </DialogFooter>
-                  </DialogContent>
-              </Dialog>
-              <Button>Lakukan Produksi</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        <TabsContent value="raw_materials">
-          <Card>
-            <CardHeader>
-              <CardTitle>Stok Bahan Baku</CardTitle>
-              <CardDescription>
-                Daftar bahan baku yang Anda miliki untuk digunakan dalam proses produksi.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input placeholder="Cari bahan baku..." className="pl-10" />
-              </div>
-               <div className="text-center py-10 text-muted-foreground">
-                <p>Fitur manajemen stok bahan baku akan segera hadir.</p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Dialog open={isRawMaterialPurchaseDialogOpen} onOpenChange={setIsRawMaterialPurchaseDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">Catat Pembelian Bahan</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Catat Pembelian Bahan Baku</DialogTitle>
-                    <DialogDescription>
-                      Gunakan form ini untuk menambah stok bahan baku yang sudah terdaftar di sistem.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4 space-y-4">
-                    <div>
-                      <Label htmlFor="raw-material-name">Nama Bahan</Label>
-                      <Input id="raw-material-name" placeholder="Contoh: Daging Ayam, Beras, Minyak Goreng" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="col-span-2">
-                        <Label htmlFor="raw-material-quantity">Jumlah</Label>
-                        <Input id="raw-material-quantity" type="number" placeholder="0" />
-                      </div>
-                      <div>
-                        <Label htmlFor="raw-material-unit">Satuan</Label>
-                        <Input id="raw-material-unit" placeholder="kg, liter, pcs" />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="raw-material-price">Total Harga Beli</Label>
-                      <Input id="raw-material-price" type="number" placeholder="Rp 0" />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsRawMaterialPurchaseDialogOpen(false)}>Batal</Button>
-                    <Button>
-                      Simpan Pembelian
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+            </div>
 
-    {/* Add Category Dialog */}
-    <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Tambah Kategori Baru</DialogTitle>
-          <DialogDescription>Buat kategori produk baru untuk UMKM Anda.</DialogDescription>
-        </DialogHeader>
-        <Form {...newCategoryForm}>
-          <form onSubmit={newCategoryForm.handleSubmit(handleSaveNewCategory)} className="space-y-4 py-4">
-            <FormField
-              control={newCategoryForm.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nama Kategori</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Contoh: Makanan Berat" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={newCategoryForm.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Deskripsi (Opsional)</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} placeholder="Jelaskan kategori ini" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAddCategoryDialogOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={isProcessing}>
-                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Simpan Kategori
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-    
-    {/* Add Unit Dialog */}
-    <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Tambah Unit Baru</DialogTitle>
-          <DialogDescription>Buat satuan unit baru untuk produk Anda.</DialogDescription>
-        </DialogHeader>
-        <Form {...newUnitForm}>
-          <form onSubmit={newUnitForm.handleSubmit(handleSaveNewUnit)} className="space-y-4 py-4">
-            <FormField
-              control={newUnitForm.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nama Unit</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Contoh: Kilogram" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={newUnitForm.control}
-              name="symbol"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Simbol</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Contoh: kg" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsAddUnitDialogOpen(false)}>Batal</Button>
-                <Button type="submit" disabled={isProcessing}>
-                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                    Simpan Unit
-                </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                {categoryCounts.map(cat => {
+                    const Icon = getIconForCategory(cat.name);
+                    return (
+                        <Card 
+                            key={cat.id} 
+                            onClick={() => setSelectedCategoryId(cat.id)}
+                            className={cn(
+                                "p-3 text-center cursor-pointer transition-all duration-200 shadow-sm hover:shadow-lg hover:-translate-y-1",
+                                selectedCategoryId === cat.id ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2" : "bg-card hover:bg-muted/50"
+                            )}
+                        >
+                            <Icon className={cn("h-6 w-6 mx-auto mb-1.5", selectedCategoryId === cat.id ? "text-primary-foreground" : "text-primary")} />
+                            <p className="font-semibold truncate text-xs">{cat.name}</p>
+                            <p className={cn("text-xs", selectedCategoryId === cat.id ? "text-primary-foreground/80" : "text-muted-foreground")}>{cat.count}</p>
+                        </Card>
+                    );
+                })}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <div className="space-y-4">
+             {isLoading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} className="h-32 w-full rounded-lg" />
+                ))
+            ) : filteredProducts.length > 0 ? (
+                filteredProducts.map(product => (
+                    <Card key={product.id} className="relative overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+                        <CardContent className="p-3 flex gap-3">
+                            <Image
+                                src={product.imageUrls?.[0] || 'https://placehold.co/100x100.png'}
+                                alt={product.name}
+                                width={80}
+                                height={80}
+                                className="rounded-md object-cover aspect-square bg-muted"
+                                data-ai-hint="product image"
+                            />
+                            <div className="flex-1 space-y-1">
+                                <h3 className="font-semibold text-base leading-tight">{product.name}</h3>
+                                <p className="text-xs text-muted-foreground">{product.categoryName || '-'}</p>
+                                <p className="font-bold text-sm">Rp {product.price.toLocaleString('id-ID')}</p>
+                                {product.productType === 'Barang' && (
+                                    <p className="text-xs">Stok: <span className="font-medium">{product.stock} {product.unitName}</span></p>
+                                )}
+                            </div>
+                            <div className="absolute top-1 right-1">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleEdit(product)}>Edit</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleOpenDeleteDialog(product)} className="text-destructive">Hapus</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))
+            ) : (
+                <div className="text-center py-10">
+                   <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                   <p className="font-semibold">Tidak ada produk ditemukan.</p>
+                   <p className="text-muted-foreground mt-2">Coba ubah filter pencarian atau kategori.</p>
+                </div>
+            )}
+        </div>
+      </div>
+      
+      <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-headline">{editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                <FormField control={control} name="name" render={({ field }) => (<FormItem><FormLabel>Nama Produk</FormLabel><FormControl><Input placeholder="e.g., Kopi Americano" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="productCode" render={({ field }) => (<FormItem><FormLabel>Kode Produk (SKU)</FormLabel><FormControl><Input placeholder="e.g., KOPI-001 (Opsional)" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="productType" render={({ field }) => (<FormItem><FormLabel>Tipe Produk</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="Barang">Barang (Stok dikelola)</SelectItem><SelectItem value="Jasa">Jasa (Tanpa stok)</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                {productTypeWatcher === 'Barang' && (
+                  <FormField control={control} name="purchasePrice" render={({ field }) => ( <FormItem><FormLabel>Harga Beli (Rp)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage/></FormItem> )}/>
+                )}
+                <FormField control={control} name="price" render={({ field }) => ( <FormItem><FormLabel>Harga Jual (Rp)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage/></FormItem> )}/>
+                <FormField control={control} name="categoryId" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Kategori</FormLabel>
+                        <div className="flex gap-2">
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori..."/></SelectTrigger></FormControl>
+                            <SelectContent>{categories.map(c=><SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(true)}><PlusCircle className="h-4 w-4"/></Button>
+                        </div>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={control} name="unitId" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Unit</FormLabel>
+                          <div className="flex gap-2">
+                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Pilih unit..."/></SelectTrigger></FormControl>
+                              <SelectContent>{units.map(u=><SelectItem key={u.id} value={u.id}>{u.name} ({u.symbol})</SelectItem>)}</SelectContent>
+                          </Select>
+                          <Button type="button" variant="outline" onClick={() => setIsUnitDialogOpen(true)}><PlusCircle className="h-4 w-4"/></Button>
+                          </div>
+                          <FormMessage />
+                      </FormItem>
+                    )} />
+                    {productTypeWatcher === 'Barang' && <FormField control={control} name="supplierId" render={({ field }) => (<FormItem><FormLabel>Pemasok</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="Pilih pemasok..."/></SelectTrigger></FormControl><SelectContent>{suppliers.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />}
+                </div>
+                {productTypeWatcher === 'Barang' && <FormField control={control} name="lowStockThreshold" render={({ field }) => ( <FormItem><FormLabel>Ambang Batas Stok Rendah</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))}/></FormControl><FormMessage/></FormItem> )}/>}
+                
+                {selectedCategoryAttributes.length > 0 && ( <>
+                    <Separator/>
+                    <h3 className="font-semibold">Rincian Tambahan</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {watch('attributeValues')?.map((attr, index) => {
+                            const fieldName = `attributeValues.${index}.value` as const;
+                            return <div key={attr.attributeId}>{(() => { switch (attr.type) {
+                                case 'Teks': return <FormField control={control} name={fieldName} render={({ field }) => (<FormItem><FormLabel>{attr.attributeName}</FormLabel><FormControl><Input {...field} value={field.value || ''}/></FormControl><FormMessage/></FormItem>)}/>;
+                                case 'Angka': return <FormField control={control} name={fieldName} render={({ field }) => (<FormItem><FormLabel>{attr.attributeName}</FormLabel><FormControl><Input type="number" {...field} value={field.value || ''}/></FormControl><FormMessage/></FormItem>)}/>;
+                                case 'Paragraf': return <FormField control={control} name={fieldName} render={({ field }) => (<FormItem><FormLabel>{attr.attributeName}</FormLabel><FormControl><Textarea {...field} value={field.value || ''}/></FormControl><FormMessage/></FormItem>)}/>;
+                                case 'Tanggal': return <FormField control={control} name={fieldName} render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{attr.attributeName}</FormLabel><Popover open={activeDatePickers[attr.attributeId]} onOpenChange={(isOpen) => setActiveDatePickers(p=>({...p, [attr.attributeId]:isOpen}))}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal",!field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4"/>{field.value && isValid(new Date(field.value)) ? format(new Date(field.value),'PPP'):<span>Pilih tanggal</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(d)=>{field.onChange(d?.toISOString());setActiveDatePickers(p=>({...p,[attr.attributeId]:false}))}} initialFocus/></PopoverContent></Popover><FormMessage/></FormItem>)}/>;
+                                case 'Pilihan Tunggal': return <FormField control={control} name={fieldName} render={({ field }) => (<FormItem><FormLabel>{attr.attributeName}</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder={`Pilih ${attr.attributeName}`}/></SelectTrigger></FormControl><SelectContent>{attr.options?.map(opt=><SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>)}/>;
+                                case 'Checkbox': return <FormField control={control} name={fieldName} render={() => (<FormItem><FormLabel>{attr.attributeName}</FormLabel><div className="space-y-2 rounded-md border p-4">{attr.options?.map(option=>(<FormField key={option} control={control} name={fieldName} render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(option)} onCheckedChange={(checked) => { const newValue = Array.isArray(field.value) ? field.value : []; return checked ? field.onChange([...newValue,option]) : field.onChange(newValue.filter(v=>v!==option))}}/></FormControl><FormLabel className="font-normal">{option}</FormLabel></FormItem>)}/>))}</div><FormMessage/></FormItem>)}/>
+                                default: return null;
+                            }})()}</div>
+                        })}
+                    </div>
+                </>)}
+                
+                <FormField control={control} name="description" render={({ field }) => (<FormItem><FormLabel>Deskripsi</FormLabel><FormControl><Textarea value={field.value || ''} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="newImages" render={({ field: { onChange, value, ...rest } }) => (<FormItem><FormLabel>Unggah Foto Baru</FormLabel><FormControl><Input type="file" multiple {...rest} onChange={e => onChange(e.target.files)}/></FormControl><FormMessage/></FormItem>)} />
+              <DialogFooter>
+                <DialogClose asChild><Button type="button" variant="outline">Batal</Button></DialogClose>
+                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{editingProduct ? 'Simpan' : 'Tambah'}</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add New Category Dialog */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Tambah Kategori Baru</DialogTitle>
+              </DialogHeader>
+              <Form {...newCategoryForm}>
+                  <form onSubmit={newCategoryForm.handleSubmit(handleAddNewCategory)} className="space-y-4 py-4">
+                      <FormField control={newCategoryForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nama Kategori</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                      <FormField control={newCategoryForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                      <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>Batal</Button>
+                          <Button type="submit">Simpan Kategori</Button>
+                      </DialogFooter>
+                  </form>
+              </Form>
+          </DialogContent>
+      </Dialog>
+
+      {/* Add New Unit Dialog */}
+      <Dialog open={isUnitDialogOpen} onOpenChange={setIsUnitDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Tambah Unit Baru</DialogTitle>
+              </DialogHeader>
+              <Form {...newUnitForm}>
+                  <form onSubmit={newUnitForm.handleSubmit(handleAddNewUnit)} className="space-y-4 py-4">
+                      <FormField control={newUnitForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nama Unit</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                      <FormField control={newUnitForm.control} name="symbol" render={({ field }) => (<FormItem><FormLabel>Simbol</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                      <FormField control={newUnitForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                      <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setIsUnitDialogOpen(false)}>Batal</Button>
+                          <Button type="submit">Simpan Unit</Button>
+                      </DialogFooter>
+                  </form>
+              </Form>
+          </DialogContent>
+      </Dialog>
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Hapus Produk?</AlertDialogTitle><AlertDialogDescription>Tindakan ini tidak dapat diurungkan.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className={buttonVariants({ variant: "destructive" })}>Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={()=>{}}
+        accept=".xlsx, .xls"
+        className="hidden"
+      />
     </>
   );
 }

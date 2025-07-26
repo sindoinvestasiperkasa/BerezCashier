@@ -1,12 +1,5 @@
-
-'use server';
 /**
- * @fileOverview Entry point aman untuk memanggil alur createItem dari komponen React.
+ * This file is no longer needed as the product creation logic has been moved 
+ * directly into the new inventory page component (src/components/pages/inventory-page.tsx)
+ * and the corresponding Genkit flow has been removed.
  */
-import { createItemFlow, type CreateItemInput, type CreateItemOutput } from './create-item-flow';
-
-// Fungsi wrapper yang aman untuk dipanggil dari komponen client/server Next.js
-export async function createItem(input: CreateItemInput): Promise<CreateItemOutput> {
-  // Panggil flow secara langsung, Genkit akan menanganinya
-  return await createItemFlow(input);
-}

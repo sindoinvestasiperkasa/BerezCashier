@@ -2,12 +2,71 @@
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect, useMemo } from 'react';
-import type { Product } from '@/lib/data';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 import { createTransaction, CreateTransactionInput, CreateTransactionOutput } from '@/ai/flows/create-transaction-flow-entry';
+
+// --- Re-exportable Types ---
+export type Product = {
+  id: string;
+  name: string;
+  productCode?: string;
+  productType: 'Barang' | 'Jasa';
+  price: number;
+  purchasePrice?: number;
+  description?: string;
+  lowStockThreshold?: number;
+  imageUrls?: string[];
+  categoryId?: string;
+  unitId?: string;
+  supplierId?: string;
+  attributeValues?: ProductAttributeValue[];
+  stock?: number;
+  categoryName?: string;
+  unitName?: string;
+  supplierName?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type ProductCategory = {
+  id: string;
+  name: string;
+  description?: string;
+  attributes?: AttributeDefinition[];
+};
+
+export type ProductUnit = {
+  id: string;
+  name: string;
+  symbol: string;
+  description?: string;
+};
+
+export type Supplier = {
+  id: string;
+  name: string;
+  // add other supplier fields as needed
+};
+
+export type AttributeType = 'Teks' | 'Angka' | 'Paragraf' | 'Tanggal' | 'Pilihan Tunggal' | 'Checkbox';
+
+export type AttributeDefinition = {
+  id: string;
+  name: string;
+  type: AttributeType;
+  options?: string[];
+};
+
+export type ProductAttributeValue = {
+  attributeId: string;
+  attributeName: string;
+  type: AttributeType;
+  value: any;
+};
+// --- End of Re-exportable Types ---
 
 
 export interface CartItem extends Product {
@@ -218,11 +277,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const productsQuery = query(collection(db, "products"), where("idUMKM", "==", idUMKM));
     const unsubProducts = onSnapshot(productsQuery, (snapshot) => {
-        const productsData = snapshot.docs.map(doc => ({ 
-          id: doc.id, 
-          ...doc.data(),
-          imageUrl: doc.data().imageUrls?.[0] || "https://placehold.co/300x300.png",
-        } as Product));
+        const productsData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                imageUrls: data.imageUrls || [],
+            } as Product;
+        });
         setProducts(productsData);
     });
 
@@ -261,10 +323,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // Low Stock Notification Logic
   useEffect(() => {
-    const lowStockProducts = products.filter(p => p.productType === 'Barang' && typeof p.stock === 'number' && p.stock <= LOW_STOCK_THRESHOLD && p.stock > 0);
+    const lowStockProducts = products.filter(p => p.productType === 'Barang' && typeof p.stock === 'number' && p.stock <= (p.lowStockThreshold || LOW_STOCK_THRESHOLD) && p.stock > 0);
     
     setNotifications(prevNotifs => {
-        const newNotifs: Notification[] = [...prevNotifs];
+        const newNotifs: Notification[] = [...prevNotifs.filter(n => n.type !== 'low_stock')];
         lowStockProducts.forEach(p => {
             const existingNotif = newNotifs.find(n => n.type === 'low_stock' && n.relatedId === p.id);
             if (!existingNotif) {
@@ -289,11 +351,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
-
-      if (!firebaseUser.emailVerified) {
-        await signOut(auth);
-        throw new Error("Silakan periksa kotak masuk email Anda dan klik tautan verifikasi sebelum login.");
-      }
 
       let userData: UserData | null = null;
       let userRole: 'UMKM' | 'Employee' | 'SuperAdmin' = 'Employee';
@@ -355,7 +412,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...prevCart, { ...product, quantity: 1, imageUrls: product.imageUrls || [] }];
     });
   };
 

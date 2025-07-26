@@ -1,8 +1,11 @@
+// This file is being deprecated as types are now managed in app-provider.
+// For now, we will keep a minimal version for compatibility.
+
 export type Product = {
   id: string;
   name: string;
   categoryId: string;
-  categoryName?: string; // Will be populated after fetching from productCategories
+  categoryName?: string;
   price: number;
   hpp?: number; // Harga Pokok Penjualan
   stock?: number;
@@ -19,6 +22,4 @@ export type Product = {
   storageInstructions?: string;
 };
 
-// This static data is no longer used and will be removed.
-// The app now fetches product data directly from Firestore.
 export const products: Product[] = [];
