@@ -6,6 +6,7 @@
  * - CreateItemInput - Tipe input untuk fungsi createItemFlow.
  * - CreateItemOutput - Tipe output untuk fungsi createItemFlow.
  */
+'use server';
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
@@ -26,7 +27,6 @@ export const CreateItemInputSchema = z.object({
   unitId: z.string().optional().describe("ID dari satuan untuk item."),
   supplierId: z.string().optional().describe("ID dari pemasok item."),
   imageUrls: z.array(z.string()).optional().describe("URL gambar item."),
-  // idUMKM akan ditambahkan oleh middleware dari konteks otentikasi
 });
 export type CreateItemInput = z.infer<typeof CreateItemInputSchema>;
 
@@ -45,26 +45,21 @@ export const createItemFlow = ai.defineFlow(
     name: 'createItemFlow',
     inputSchema: CreateItemInputSchema,
     outputSchema: CreateItemOutputSchema,
-    middleware: async (input, auth) => {
-        if (!auth) {
-            throw new Error("Authorization required.");
-        }
-        // Ambil idUMKM dari konteks otentikasi
-        const idUMKM = auth.role === 'UMKM' ? auth.uid : auth.idUMKM;
-        if (!idUMKM) {
-            throw new Error("UMKM ID not found for the user.");
-        }
-        // Gabungkan input asli dengan idUMKM yang didapat dari auth ke dalam satu objek payload
-        return { ...input, idUMKM };
-    }
   },
-  async (payload) => {
+  async (input, auth) => {
+    if (!auth) {
+        throw new Error("Authorization required.");
+    }
+    const idUMKM = auth.role === 'UMKM' ? auth.uid : auth.idUMKM;
+    if (!idUMKM) {
+        throw new Error("UMKM ID not found for the user.");
+    }
+      
     const db = adminDb();
     const { 
         name, description, itemCategory, productType, categoryId, productCode,
         price, purchasePrice, initialStock, lowStockThreshold, unitId, supplierId, imageUrls,
-        idUMKM, // idUMKM sekarang menjadi bagian dari payload
-    } = payload;
+    } = input;
 
     const isProduct = itemCategory === 'retail_good' || itemCategory === 'manufactured_good' || itemCategory === 'service';
 
