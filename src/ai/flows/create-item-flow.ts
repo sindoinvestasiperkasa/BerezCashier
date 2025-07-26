@@ -37,10 +37,6 @@ export const CreateItemOutputSchema = z.object({
 });
 export type CreateItemOutput = z.infer<typeof CreateItemOutputSchema>;
 
-const FlowInputSchema = CreateItemInputSchema.extend({
-    idUMKM: z.string(),
-});
-
 // Definisi Flow
 export const createItemFlow = ai.defineFlow(
   {
