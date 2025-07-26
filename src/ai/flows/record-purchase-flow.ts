@@ -1,6 +1,5 @@
-
 // @/ai/flows/record-purchase-flow.ts
-'use server';
+
 /**
  * @fileOverview Flow untuk mencatat pembelian (penambahan stok) untuk produk retail.
  *
