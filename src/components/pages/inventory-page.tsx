@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { recordPurchase } from "@/ai/flows/record-purchase-flow";
+import { recordPurchase } from "@/ai/flows/record-purchase-flow-entry";
 import { createItem } from "@/ai/flows/create-item-flow-entry";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
@@ -381,7 +381,7 @@ export default function InventoryPage() {
             </div>
 
             <div className="space-y-1">
-                <Label htmlFor="item-category">Kategori Produk</Label>
+                <Label>Kategori Produk</Label>
                 <div className="flex gap-2">
                     <Select value={itemCategoryId} onValueChange={setItemCategoryId}>
                         <SelectTrigger>
@@ -414,7 +414,7 @@ export default function InventoryPage() {
             </div>
 
             <div className="space-y-1">
-                <Label htmlFor="item-unit">Unit</Label>
+                <Label>Unit</Label>
                  <div className="flex gap-2">
                      <Select value={itemUnit} onValueChange={setItemUnit}>
                         <SelectTrigger>

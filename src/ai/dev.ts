@@ -6,3 +6,4 @@ import './flows/create-transaction-flow';
 import './flows/record-purchase-flow';
 import './flows/create-item-flow';
 import './flows/create-item-flow-entry';
+import './flows/record-purchase-flow-entry';
