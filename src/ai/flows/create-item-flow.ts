@@ -11,19 +11,21 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb } from '@/services/firebase-admin';
 
-// Skema untuk input flow
+// Skema untuk input flow, disesuaikan dengan struktur di Firestore
 export const CreateItemInputSchema = z.object({
   name: z.string().describe("Nama item."),
   description: z.string().optional().describe("Deskripsi item."),
   itemCategory: z.enum(['retail_good', 'manufactured_good', 'service', 'raw_material']).describe("Kategori spesifik dari item."),
   productType: z.enum(['Barang', 'Jasa']).optional().describe("Tipe produk (jika itemCategory adalah 'product')."),
   categoryId: z.string().optional().describe("ID dari kategori produk."),
+  productCode: z.string().optional().describe("Kode unik untuk produk."),
   price: z.number().optional().describe("Harga jual."),
-  hpp: z.number().optional().describe("Harga Pokok Penjualan (HPP) untuk barang retail."),
+  purchasePrice: z.number().optional().describe("Harga beli (HPP) untuk barang retail."),
   initialStock: z.number().optional().describe("Stok awal item."),
   lowStockThreshold: z.number().optional().describe("Ambang batas untuk notifikasi stok rendah."),
-  unit: z.string().optional().describe("Satuan untuk item (e.g., kg, liter, pcs, box)."),
-  imageUrl: z.string().optional().describe("URL gambar item."),
+  unitId: z.string().optional().describe("ID dari satuan untuk item."),
+  supplierId: z.string().optional().describe("ID dari pemasok item."),
+  imageUrls: z.array(z.string()).optional().describe("URL gambar item."),
   // idUMKM akan diambil dari auth token di dalam flow
 });
 export type CreateItemInput = z.infer<typeof CreateItemInputSchema>;
@@ -58,8 +60,8 @@ export const createItemFlow = ai.defineFlow(
   async (payload) => {
     const db = adminDb();
     const { 
-        name, description, itemCategory, productType, categoryId, 
-        price, hpp, initialStock, lowStockThreshold, unit, imageUrl,
+        name, description, itemCategory, productType, categoryId, productCode,
+        price, purchasePrice, initialStock, lowStockThreshold, unitId, supplierId, imageUrls,
         idUMKM,
     } = payload;
 
@@ -70,18 +72,20 @@ export const createItemFlow = ai.defineFlow(
         await newProductRef.set({
             idUMKM,
             name,
-            description: description || null,
+            description: description || "",
             productType: productType,
+            productCode: productCode || null,
             itemCategory: itemCategory,
             categoryId: categoryId || null,
-            unit: unit || 'pcs',
+            unitId: unitId || null,
+            supplierId: supplierId || null,
             price: price || 0,
-            hpp: hpp, // Can be undefined for services or manufactured goods
+            purchasePrice: purchasePrice || 0,
             stock: productType === 'Jasa' ? null : (initialStock || 0),
             lowStockThreshold: lowStockThreshold || null,
             createdAt: new Date(),
             updatedAt: new Date(),
-            imageUrls: [imageUrl || 'https://placehold.co/300x300.png']
+            imageUrls: imageUrls && imageUrls.length > 0 ? imageUrls : ['https://placehold.co/300x300.png']
         });
         return { success: true, itemId: newProductRef.id };
     } else if (itemCategory === 'raw_material') {
@@ -89,15 +93,16 @@ export const createItemFlow = ai.defineFlow(
         await newRawMaterialRef.set({
             idUMKM,
             name,
-            description: description || null,
+            description: description || "",
             itemCategory: 'raw_material',
             categoryId: categoryId || null,
-            unit: unit || 'pcs',
+            unitId: unitId || null,
+            supplierId: supplierId || null,
             stock: initialStock || 0,
             lowStockThreshold: lowStockThreshold || null,
             createdAt: new Date(),
             updatedAt: new Date(),
-            imageUrl: imageUrl || 'https://placehold.co/300x300.png',
+            imageUrls: imageUrls && imageUrls.length > 0 ? imageUrls : ['https://placehold.co/300x300.png'],
         });
         return { success: true, itemId: newRawMaterialRef.id };
     }
