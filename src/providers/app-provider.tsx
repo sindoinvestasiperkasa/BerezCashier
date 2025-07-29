@@ -19,6 +19,7 @@ export type Product = {
   description?: string;
   lowStockThreshold?: number;
   imageUrls?: string[];
+  imageUrl?: string;
   categoryId?: string;
   unitId?: string;
   supplierId?: string;
@@ -29,6 +30,8 @@ export type Product = {
   supplierName?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  branchId?: string; // To associate product with a branch
+  warehouseId?: string; // To associate product with a warehouse
 };
 
 export type ProductCategory = {
@@ -164,7 +167,7 @@ export type UserData = {
     ownerName?: string;
     umkmName?: string;
     businessName?: string;
-    umkm_photo?: string;
+    photoUrl?: string;
     address?: string;
     phone?: string;
     // Employee fields
@@ -183,6 +186,10 @@ interface AppContextType {
   heldCarts: HeldCart[];
   accounts: Account[];
   notifications: Notification[];
+  selectedBranchId?: string;
+  setSelectedBranchId: (id: string) => void;
+  selectedWarehouseId?: string;
+  setSelectedWarehouseId: (id: string) => void;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -220,6 +227,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [localUser, setLocalUser] = useState<UserData | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>();
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>();
   const { toast } = useToast();
   const db = getFirestore();
 
@@ -551,6 +560,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         heldCarts,
         accounts,
         notifications,
+        selectedBranchId,
+        setSelectedBranchId,
+        selectedWarehouseId,
+        setSelectedWarehouseId,
         addToCart, 
         removeFromCart, 
         updateQuantity, 

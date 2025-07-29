@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, User, MapPin, Settings, LogOut } from "lucide-react";
+import { ChevronRight, User, MapPin, Settings, LogOut, Building, Warehouse } from "lucide-react";
 import type { View } from "../app-shell";
 import { useApp } from "@/hooks/use-app";
 import {
@@ -17,14 +17,35 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "../ui/button";
+import { Label } from "../ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 
 interface AccountPageProps {
   setView: (view: View) => void;
 }
 
+// Placeholder data - ideally this would come from your Firestore DB
+const branches = [
+  { id: 'jkt-01', name: 'Jakarta Pusat' },
+  { id: 'bdg-01', name: 'Bandung Kota' },
+];
+
+const warehouses = [
+  { id: 'wh-jkt-a', name: 'Gudang A (JKT)' },
+  { id: 'wh-bdg-a', name: 'Gudang A (BDG)' },
+];
+
 export default function AccountPage({ setView }: AccountPageProps) {
-  const { logout, user } = useApp();
+  const { 
+    logout, 
+    user, 
+    selectedBranchId, 
+    setSelectedBranchId, 
+    selectedWarehouseId, 
+    setSelectedWarehouseId 
+  } = useApp();
+
   const menuItems = [
     { icon: User, text: "Edit Profil", action: () => setView('edit-profile') },
     { icon: MapPin, text: "Alamat Saya", action: () => setView('my-address') },
@@ -52,7 +73,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
         </div>
       </div>
 
-      <div className="p-4 -mt-6">
+      <div className="p-4 -mt-6 space-y-4">
         <Card>
           <CardContent className="p-2">
             {menuItems.map((item, index) => (
@@ -69,7 +90,45 @@ export default function AccountPage({ setView }: AccountPageProps) {
           </CardContent>
         </Card>
         
-        <div className="mt-4">
+        <Card>
+          <CardContent className="p-4 space-y-4">
+              <h3 className="font-semibold text-lg">Pengaturan Operasional</h3>
+              <div className="space-y-2">
+                <Label htmlFor="branch-select" className="flex items-center gap-2 text-muted-foreground">
+                  <Building className="w-4 h-4"/>
+                  <span>Cabang Default</span>
+                </Label>
+                <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                  <SelectTrigger id="branch-select">
+                    <SelectValue placeholder="Pilih cabang..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map(branch => (
+                      <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="warehouse-select" className="flex items-center gap-2 text-muted-foreground">
+                  <Warehouse className="w-4 h-4"/>
+                  <span>Gudang Default</span>
+                </Label>
+                <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
+                  <SelectTrigger id="warehouse-select">
+                    <SelectValue placeholder="Pilih gudang..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map(wh => (
+                      <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+          </CardContent>
+        </Card>
+
+        <div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <button

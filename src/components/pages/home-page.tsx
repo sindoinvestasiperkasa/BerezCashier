@@ -49,7 +49,7 @@ interface HomePageProps {
 }
 
 export default function HomePage({ setView }: HomePageProps) {
-  const { user, products, notifications } = useApp();
+  const { user, products, notifications, selectedBranchId, selectedWarehouseId } = useApp();
   const { toast } = useToast();
   const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,8 +92,11 @@ export default function HomePage({ setView }: HomePageProps) {
   }, [user?.address]);
 
   const serviceProducts = useMemo(() => {
+    // This is where you would filter products based on selectedBranchId and selectedWarehouseId
+    // For now, we only filter by productType 'Jasa' as per original logic.
+    // The actual filtering by branch/warehouse would require products to have these fields.
     return products.filter(p => p.productType === 'Jasa');
-  }, [products]);
+  }, [products, selectedBranchId, selectedWarehouseId]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -105,7 +108,7 @@ export default function HomePage({ setView }: HomePageProps) {
       const db = getFirestore();
 
       try {
-        const activeCategoryIds = [...new Set(serviceProducts.map(p => p.categoryId))];
+        const activeCategoryIds = [...new Set(serviceProducts.map(p => p.categoryId))].filter(id => id);
         
         let categoriesData: ProductCategory[] = [];
         if (activeCategoryIds.length > 0) {
