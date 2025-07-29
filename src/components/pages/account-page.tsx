@@ -25,21 +25,12 @@ interface AccountPageProps {
   setView: (view: View) => void;
 }
 
-// Placeholder data - ideally this would come from your Firestore DB
-const branches = [
-  { id: 'jkt-01', name: 'Jakarta Pusat' },
-  { id: 'bdg-01', name: 'Bandung Kota' },
-];
-
-const warehouses = [
-  { id: 'wh-jkt-a', name: 'Gudang A (JKT)' },
-  { id: 'wh-bdg-a', name: 'Gudang A (BDG)' },
-];
-
 export default function AccountPage({ setView }: AccountPageProps) {
   const { 
     logout, 
     user, 
+    branches,
+    warehouses,
     selectedBranchId, 
     setSelectedBranchId, 
     selectedWarehouseId, 

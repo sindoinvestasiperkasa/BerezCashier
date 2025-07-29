@@ -69,6 +69,18 @@ export type ProductAttributeValue = {
   type: AttributeType;
   value: any;
 };
+
+export type Branch = {
+  id: string;
+  name: string;
+  [key: string]: any;
+};
+
+export type Warehouse = {
+  id: string;
+  name: string;
+  [key: string]: any;
+};
 // --- End of Re-exportable Types ---
 
 
@@ -186,6 +198,8 @@ interface AppContextType {
   heldCarts: HeldCart[];
   accounts: Account[];
   notifications: Notification[];
+  branches: Branch[];
+  warehouses: Warehouse[];
   selectedBranchId?: string;
   setSelectedBranchId: (id: string) => void;
   selectedWarehouseId?: string;
@@ -225,6 +239,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [localUser, setLocalUser] = useState<UserData | null>(null);
   const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>();
@@ -272,6 +288,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setProducts([]);
         setAccounts([]);
         setTransactions([]);
+        setBranches([]);
+        setWarehouses([]);
         return;
     };
     
@@ -321,12 +339,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setTransactions(transactionsData);
     });
 
+    const branchesQuery = query(collection(db, "branches"), where("idUMKM", "==", idUMKM));
+    const unsubBranches = onSnapshot(branchesQuery, (snapshot) => {
+        const branchesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Branch));
+        setBranches(branchesData);
+    });
+    
+    const warehousesQuery = query(collection(db, "warehouses"), where("idUMKM", "==", idUMKM));
+    const unsubWarehouses = onSnapshot(warehousesQuery, (snapshot) => {
+        const warehousesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse));
+        setWarehouses(warehousesData);
+    });
+
 
     return () => {
         unsubCustomers();
         unsubProducts();
         unsubAccounts();
         unsubTransactions();
+        unsubBranches();
+        unsubWarehouses();
     };
   }, [user, db]);
 
@@ -560,6 +592,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         heldCarts,
         accounts,
         notifications,
+        branches,
+        warehouses,
         selectedBranchId,
         setSelectedBranchId,
         selectedWarehouseId,
