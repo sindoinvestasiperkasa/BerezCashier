@@ -49,7 +49,7 @@ interface HomePageProps {
 }
 
 export default function HomePage({ setView }: HomePageProps) {
-  const { user, products, notifications, selectedBranchId, selectedWarehouseId, stockLots } = useApp();
+  const { user, products, notifications, selectedBranchId, selectedWarehouseId, stockLots, productUnits } = useApp();
   const { toast } = useToast();
   const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,7 +93,7 @@ export default function HomePage({ setView }: HomePageProps) {
 
   const availableProducts = useMemo(() => {
     if (!selectedWarehouseId) return [];
-
+    
     const stockMap = new Map<string, number>();
     stockLots
         .filter(lot => lot.warehouseId === selectedWarehouseId)
@@ -106,13 +106,14 @@ export default function HomePage({ setView }: HomePageProps) {
       .map(product => ({
         ...product,
         stock: stockMap.get(product.id) || 0,
+        unitName: productUnits.find(unit => unit.id === product.unitId)?.name || 'Unit'
       }))
       .filter(product => {
         const isService = product.productSubType === 'Jasa (Layanan)';
         const hasStock = (product.stock || 0) > 0;
         return isService || hasStock;
       });
-  }, [products, stockLots, selectedWarehouseId]);
+  }, [products, stockLots, selectedWarehouseId, productUnits]);
 
   useEffect(() => {
     const fetchCategories = async () => {

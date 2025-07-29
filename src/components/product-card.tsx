@@ -4,7 +4,7 @@
 import Image from "next/image";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import type { Product } from "@/lib/data";
+import type { Product } from "@/providers/app-provider";
 import { Heart, Plus } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +58,10 @@ export default function ProductCard({ product, onProductClick }: ProductCardProp
     }).format(amount);
   };
 
+  const stockInfo = product.productSubType === 'Jasa (Layanan)' 
+    ? 'Jasa' 
+    : `Stok: ${product.stock || 0} ${product.unitName || ''}`;
+
   return (
     <Card 
       className={cn(
@@ -81,7 +85,7 @@ export default function ProductCard({ product, onProductClick }: ProductCardProp
         </div>
         <div className="p-3">
           <h3 className="font-bold text-sm truncate">{product.name}</h3>
-          <p className="text-xs text-muted-foreground">{product.categoryName}</p>
+          <p className="text-xs text-muted-foreground">{stockInfo}</p>
           <div className="flex justify-between items-center mt-3">
             <span className="font-bold text-primary">
               {formatCurrency(product.price)}

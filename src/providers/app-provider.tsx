@@ -215,6 +215,7 @@ interface AppContextType {
   notifications: Notification[];
   branches: Branch[];
   warehouses: Warehouse[];
+  productUnits: ProductUnit[];
   filteredWarehouses: Warehouse[];
   selectedBranchId?: string;
   setSelectedBranchId: (id: string) => void;
@@ -258,6 +259,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [localUser, setLocalUser] = useState<UserData | null>(null);
   
@@ -344,6 +346,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setTransactions([]);
         setBranches([]);
         setWarehouses([]);
+        setProductUnits([]);
         return;
     };
     
@@ -422,6 +425,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setWarehouses(warehousesData);
         // Initial warehouse selection logic is now handled by the branch selection effect
     });
+    
+    const unitsQuery = query(collection(db, "productUnits"), where("idUMKM", "==", idUMKM));
+    const unsubUnits = onSnapshot(unitsQuery, (snapshot) => {
+      const unitsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProductUnit));
+      setProductUnits(unitsData);
+    });
 
 
     return () => {
@@ -432,12 +441,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         unsubTransactions();
         unsubBranches();
         unsubWarehouses();
+        unsubUnits();
     };
   }, [user, db, selectedBranchId, selectedWarehouseId]);
 
   // Low Stock Notification Logic
   useEffect(() => {
-    const lowStockProducts = products.filter(p => p.productSubType === 'Bahan Baku' && typeof p.stock === 'number' && p.stock <= (p.lowStockThreshold || LOW_STOCK_THRESHOLD) && p.stock > 0);
+    const lowStockProducts = products.filter(p => p.productSubType !== 'Jasa (Layanan)' && typeof p.stock === 'number' && p.stock <= (p.lowStockThreshold || LOW_STOCK_THRESHOLD) && p.stock > 0);
     
     setNotifications(prevNotifs => {
         const newNotifs: Notification[] = [...prevNotifs.filter(n => n.type !== 'low_stock')];
@@ -668,6 +678,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         notifications,
         branches,
         warehouses,
+        productUnits,
         filteredWarehouses,
         selectedBranchId,
         setSelectedBranchId,
