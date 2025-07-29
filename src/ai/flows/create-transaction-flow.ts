@@ -72,7 +72,7 @@ export const createTransactionFlow = ai.defineFlow(
     // 1. Buat Entri Jurnal (`lines`)
     const journalLines = [];
     const totalCogs = input.items.reduce((sum, item) => sum + ((item.cogs || 0) * item.quantity), 0);
-    const serviceFeeAccount = 'Utang Biaya Layanan'; // Asumsi nama akun untuk biaya layanan
+    const serviceFeeAccountName = 'Utang Biaya Layanan Berez';
 
     // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
     journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
@@ -102,11 +102,20 @@ export const createTransactionFlow = ai.defineFlow(
     
     // Credit: Utang Biaya Layanan (jika ada)
     if (input.serviceFee && input.serviceFee > 0) {
-      // Anda mungkin perlu mencari ID akun ini dari database
-      // Untuk sekarang, kita asumsikan ID-nya sama dengan namanya
-       const serviceFeeAcc = await db.collection('accounts').where('idUMKM', '==', input.idUMKM).where('name', '==', serviceFeeAccount).limit(1).get();
-       if (!serviceFeeAcc.empty) {
-           journalLines.push({ accountId: serviceFeeAcc.docs[0].id, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
+      const serviceFeeAccQuery = await db.collection('accounts')
+        .where('idUMKM', '==', input.idUMKM)
+        .where('name', '>=', serviceFeeAccountName)
+        .where('name', '<=', serviceFeeAccountName + '\uf8ff')
+        .limit(1)
+        .get();
+
+       if (!serviceFeeAccQuery.empty) {
+           const serviceFeeAccId = serviceFeeAccQuery.docs[0].id;
+           journalLines.push({ accountId: serviceFeeAccId, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
+       } else {
+            // Jika akun tidak ditemukan, proses tetap berjalan tapi berikan peringatan.
+            // Idealnya, ada mekanisme untuk membuat akun ini jika belum ada.
+            console.warn(`Akun '${serviceFeeAccountName}' tidak ditemukan untuk UMKM ${input.idUMKM}. Jurnal tidak seimbang.`);
        }
     }
 
@@ -150,6 +159,7 @@ export const createTransactionFlow = ai.defineFlow(
       // Hanya update stok untuk produk tipe 'Barang' yang memiliki stok
       if (item.productType === 'Barang') {
         const productRef = db.collection('products').doc(item.productId);
+        // Ini adalah pendekatan sederhana. Untuk akurasi tinggi, gunakan FIFO/LIFO dari stock lots.
         batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
       }
     });
