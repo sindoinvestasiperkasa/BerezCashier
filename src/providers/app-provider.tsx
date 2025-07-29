@@ -15,7 +15,7 @@ export type Product = {
   productCode?: string;
   productType: 'Produk Retail' | 'Produk Produksi' | 'Jasa (Layanan)' | 'Bahan Baku';
   price: number;
-  purchasePrice?: number;
+  hpp?: number; // Harga Pokok Penjualan
   description?: string;
   lowStockThreshold?: number;
   imageUrls?: string[];
@@ -697,5 +697,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    

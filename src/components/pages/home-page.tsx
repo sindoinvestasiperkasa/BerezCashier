@@ -92,10 +92,7 @@ export default function HomePage({ setView }: HomePageProps) {
   }, [user?.address]);
 
   const availableProducts = useMemo(() => {
-    // 1. Exclude 'Bahan Baku'
-    const nonRawMaterials = products.filter(p => p.productType !== 'Bahan Baku');
-
-    // 2. Calculate stock in the selected warehouse
+    // 1. Calculate stock in the selected warehouse
     const stockInWarehouse = new Map<string, number>();
     if (selectedWarehouseId) {
         stockLots
@@ -104,17 +101,21 @@ export default function HomePage({ setView }: HomePageProps) {
                 stockInWarehouse.set(lot.productId, (stockInWarehouse.get(lot.productId) || 0) + lot.remainingQuantity);
             });
     }
-    
-    // 3. Final filter based on type and availability
-    return nonRawMaterials.filter(p => {
+
+    // 2. Filter products based on type and availability
+    return products
+      .filter(p => p.productType !== 'Bahan Baku') // Filter out 'Bahan Baku'
+      .filter(p => {
         if (p.productType === 'Jasa (Layanan)') {
-            return true; // Always show services
+          return true; // Always show services
         }
-        // For goods, check if stock > 0
+        // For goods, check if stock > 0 in the selected warehouse
         return (stockInWarehouse.get(p.id) || 0) > 0;
-    }).map(p => ({
+      })
+      .map(p => ({
         ...p,
-        stock: stockInWarehouse.get(p.id) || 0, // Attach calculated stock
+        // Attach calculated stock for display or further logic if needed
+        stock: stockInWarehouse.get(p.id) || 0,
     }));
   }, [products, stockLots, selectedWarehouseId]);
 
