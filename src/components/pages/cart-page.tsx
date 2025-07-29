@@ -150,7 +150,7 @@ export default function CartPage({ setView }: CartPageProps) {
 
     // Stock validation
     for (const cartItem of cart) {
-      if (cartItem.productType === 'Barang') {
+      if (cartItem.productSubType === 'Produk Retail' || cartItem.productSubType === 'Produk Produksi') {
         const productInDb = products.find(p => p.id === cartItem.id);
         if (!productInDb || typeof productInDb.stock !== 'number' || productInDb.stock < cartItem.quantity) {
           toast({
@@ -200,7 +200,7 @@ export default function CartPage({ setView }: CartPageProps) {
         const cartItemsForTransaction = cart.map(item => ({
             productId: item.id,
             productName: item.name,
-            productType: item.productType,
+            productType: item.productSubType === 'Jasa (Layanan)' ? 'Jasa' : 'Barang',
             quantity: item.quantity,
             unitPrice: item.price,
             cogs: item.hpp || 0,

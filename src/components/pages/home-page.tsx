@@ -102,15 +102,14 @@ export default function HomePage({ setView }: HomePageProps) {
         });
 
     return products
-      .filter(p => p.productType !== 'Bahan Baku')
+      .filter(p => p.productSubType !== 'Bahan Baku')
       .map(product => ({
         ...product,
         stock: stockMap.get(product.id) || 0,
       }))
       .filter(product => {
-        const isService = product.productType === 'Jasa (Layanan)';
+        const isService = product.productSubType === 'Jasa (Layanan)';
         const hasStock = (product.stock || 0) > 0;
-        // A product is available if it's a service OR if it's a good with stock.
         return isService || hasStock;
       });
   }, [products, stockLots, selectedWarehouseId]);

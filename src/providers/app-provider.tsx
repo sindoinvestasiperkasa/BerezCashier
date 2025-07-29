@@ -13,7 +13,7 @@ export type Product = {
   id: string;
   name: string;
   productCode?: string;
-  productType: 'Produk Retail' | 'Produk Produksi' | 'Jasa (Layanan)' | 'Bahan Baku';
+  productSubType: 'Produk Retail' | 'Produk Produksi' | 'Jasa (Layanan)' | 'Bahan Baku';
   price: number;
   hpp?: number; // Harga Pokok Penjualan
   description?: string;
@@ -437,7 +437,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // Low Stock Notification Logic
   useEffect(() => {
-    const lowStockProducts = products.filter(p => p.productType === 'Bahan Baku' && typeof p.stock === 'number' && p.stock <= (p.lowStockThreshold || LOW_STOCK_THRESHOLD) && p.stock > 0);
+    const lowStockProducts = products.filter(p => p.productSubType === 'Bahan Baku' && typeof p.stock === 'number' && p.stock <= (p.lowStockThreshold || LOW_STOCK_THRESHOLD) && p.stock > 0);
     
     setNotifications(prevNotifs => {
         const newNotifs: Notification[] = [...prevNotifs.filter(n => n.type !== 'low_stock')];

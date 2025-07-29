@@ -1,3 +1,4 @@
+
 // This file is being deprecated as types are now managed in app-provider.
 // For now, we will keep a minimal version for compatibility.
 
@@ -12,7 +13,7 @@ export type Product = {
   imageUrl: string;
   imageUrls?: string[];
   description: string;
-  productType?: 'Barang' | 'Jasa';
+  productSubType?: 'Produk Retail' | 'Produk Produksi' | 'Jasa (Layanan)' | 'Bahan Baku';
   netWeight?: string;
   ingredients?: string[];
   productionCode?: string;
