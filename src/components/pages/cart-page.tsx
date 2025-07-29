@@ -518,7 +518,7 @@ export default function CartPage({ setView }: CartPageProps) {
         </div>
 
 
-        <div className="flex-grow overflow-y-auto space-y-4 pb-80">
+        <div className="flex-grow overflow-y-auto space-y-4 pb-[12rem]">
              <Card>
                 <CardContent className="p-4 space-y-4">
                     <div>
@@ -667,54 +667,61 @@ export default function CartPage({ setView }: CartPageProps) {
                     </div>
                 </CardContent>
             </Card>
+
+            <Card>
+                <CardContent className="p-4 space-y-4">
+                    <div>
+                        <Label>Metode Pembayaran</Label>
+                        <RadioGroup defaultValue="Cash" className="flex flex-wrap gap-x-4 gap-y-2 mt-2" onValueChange={setPaymentMethod}>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="cash" /><Label htmlFor="cash">Cash</Label></div>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="Transfer" id="transfer" /><Label htmlFor="transfer">Transfer</Label></div>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="QRIS" id="qris" /><Label htmlFor="qris">QRIS</Label></div>
+                        </RadioGroup>
+                    </div>
+                    {paymentMethod === 'Cash' && 
+                        <div className='flex justify-between items-center'>
+                            <Label htmlFor="received">Uang Diterima</Label>
+                            <Input id="received" type="number" placeholder='0' className="w-40 text-right" value={amountReceived || ''} onChange={(e) => setAmountReceived(Number(e.target.value))} />
+                        </div>
+                    }
+                    <Separator/>
+                    {isPkp && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Pajak (11%)</span>
+                          <span className="font-medium">{formatCurrency(taxAmount)}</span>
+                        </div>
+                     )}
+                     {serviceFee > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground flex items-center gap-1.5"><HandCoins className="w-4 h-4"/> Biaya Layanan</span>
+                          <span className="font-medium">{formatCurrency(serviceFee)}</span>
+                        </div>
+                     )}
+                     {paymentMethod === 'Cash' && <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Kembalian</span>
+                      <span className="text-lg font-bold">{formatCurrency(change)}</span>
+                    </div>}
+                </CardContent>
+            </Card>
         </div>
         
-        <div className="fixed bottom-[4.5rem] left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-4xl p-4 bg-background border-t space-y-4">
-             <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                    <Label>Metode Pembayaran</Label>
-                    <RadioGroup defaultValue="Cash" className="flex" onValueChange={setPaymentMethod}>
-                        <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="cash" /><Label htmlFor="cash">Cash</Label></div>
-                        <div className="flex items-center space-x-2"><RadioGroupItem value="Transfer" id="transfer" /><Label htmlFor="transfer">Transfer</Label></div>
-                        <div className="flex items-center space-x-2"><RadioGroupItem value="QRIS" id="qris" /><Label htmlFor="qris">QRIS</Label></div>
-                    </RadioGroup>
-                </div>
-                {paymentMethod === 'Cash' && <div className='flex justify-between items-center'>
-                    <Label htmlFor="received">Uang Diterima</Label>
-                    <Input id="received" type="number" placeholder='0' className="w-40 text-right" value={amountReceived || ''} onChange={(e) => setAmountReceived(Number(e.target.value))} />
-                </div>}
-                <Separator />
-                 {isPkp && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Pajak (11%)</span>
-                      <span className="font-medium">{formatCurrency(taxAmount)}</span>
-                    </div>
-                 )}
-                 {serviceFee > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground flex items-center gap-1.5"><HandCoins className="w-4 h-4"/> Biaya Layanan</span>
-                      <span className="font-medium">{formatCurrency(serviceFee)}</span>
-                    </div>
-                 )}
-                 {paymentMethod === 'Cash' && <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Kembalian</span>
-                  <span className="text-lg font-bold">{formatCurrency(change)}</span>
-                </div>}
+        <div className="fixed bottom-[4.5rem] left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-4xl p-4 bg-background border-t">
+            <div className='space-y-4'>
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-lg">Total</span>
                   <span className="text-2xl font-bold text-primary">{formatCurrency(total)}</span>
                 </div>
-            </div>
 
-            <div className="flex gap-4">
-                <Button variant="outline" className="h-12 text-md font-bold flex-1" onClick={handleHoldCart} disabled={cart.length === 0 || isProcessing}>
-                    <PauseCircle className="mr-2 h-5 w-5" />
-                    Tahan
-                </Button>
-                <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handleOpenPaymentDialog} disabled={cart.length === 0 || isProcessing}>
-                    {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wallet className="mr-2 h-5 w-5" />}
-                    {isProcessing ? 'Memproses...' : 'Bayar'}
-                </Button>
+                <div className="flex gap-4">
+                    <Button variant="outline" className="h-12 text-md font-bold flex-1" onClick={handleHoldCart} disabled={cart.length === 0 || isProcessing}>
+                        <PauseCircle className="mr-2 h-5 w-5" />
+                        Tahan
+                    </Button>
+                    <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handleOpenPaymentDialog} disabled={cart.length === 0 || isProcessing}>
+                        {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wallet className="mr-2 h-5 w-5" />}
+                        {isProcessing ? 'Memproses...' : 'Bayar'}
+                    </Button>
+                </div>
             </div>
         </div>
     </div>
