@@ -519,7 +519,7 @@ export default function CartPage({ setView }: CartPageProps) {
         </div>
 
 
-        <div className="flex-grow overflow-y-auto space-y-4 pb-64">
+        <div className="flex-grow overflow-y-auto space-y-4 pb-80">
              <Card>
                 <CardContent className="p-4 space-y-4">
                     <div>
