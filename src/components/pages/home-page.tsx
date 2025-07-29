@@ -92,31 +92,26 @@ export default function HomePage({ setView }: HomePageProps) {
   }, [user?.address]);
 
   const availableProducts = useMemo(() => {
-    // 1. Calculate stock in the selected warehouse
-    const stockInWarehouse = new Map<string, number>();
-    if (selectedWarehouseId) {
-        stockLots
-            .filter(lot => lot.warehouseId === selectedWarehouseId)
-            .forEach(lot => {
-                stockInWarehouse.set(lot.productId, (stockInWarehouse.get(lot.productId) || 0) + lot.remainingQuantity);
-            });
-    }
+    if (!selectedWarehouseId) return [];
 
-    // 2. Filter products based on type and availability
+    const stockMap = new Map<string, number>();
+    stockLots
+        .filter(lot => lot.warehouseId === selectedWarehouseId)
+        .forEach(lot => {
+            stockMap.set(lot.productId, (stockMap.get(lot.productId) || 0) + lot.remainingQuantity);
+        });
+
     return products
-      .filter(p => p.productType !== 'Bahan Baku') // Filter out 'Bahan Baku'
-      .filter(p => {
-        if (p.productType === 'Jasa (Layanan)') {
-          return true; // Always show services
-        }
-        // For goods, check if stock > 0 in the selected warehouse
-        return (stockInWarehouse.get(p.id) || 0) > 0;
-      })
-      .map(p => ({
-        ...p,
-        // Attach calculated stock for display or further logic if needed
-        stock: stockInWarehouse.get(p.id) || 0,
-    }));
+      .filter(p => p.productType !== 'Bahan Baku')
+      .map(product => ({
+        ...product,
+        stock: stockMap.get(product.id) || 0,
+      }))
+      .filter(product => {
+        const isService = product.productType === 'Jasa (Layanan)';
+        const hasStock = (product.stock || 0) > 0;
+        return isService || hasStock;
+      });
   }, [products, stockLots, selectedWarehouseId]);
 
   useEffect(() => {
