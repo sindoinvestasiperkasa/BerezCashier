@@ -110,6 +110,7 @@ export default function HomePage({ setView }: HomePageProps) {
       .filter(product => {
         const isService = product.productType === 'Jasa (Layanan)';
         const hasStock = (product.stock || 0) > 0;
+        // A product is available if it's a service OR if it's a good with stock.
         return isService || hasStock;
       });
   }, [products, stockLots, selectedWarehouseId]);
