@@ -51,17 +51,14 @@ interface CartPageProps {
   setView: (view: View) => void;
 }
 
-// Placeholder data - will be replaced with dynamic data from Firestore later
-const branches = [{ id: 'jkt-01', name: 'Jakarta Pusat' }, { id: 'bdg-01', name: 'Bandung Kota' }];
-const warehouses = [{ id: 'wh-jkt-a', name: 'Gudang A (JKT)' }, { id: 'wh-bdg-a', name: 'Gudang A (BDG)' }];
-
-
 export default function CartPage({ setView }: CartPageProps) {
   const { 
     cart, updateQuantity, removeFromCart, clearCart, addTransaction, 
     heldCarts, holdCart, resumeCart, deleteHeldCart, 
     transactions, customers, addCustomer, accounts, user, addShiftReportNotification,
-    products
+    products,
+    selectedBranchId, // Get from context
+    selectedWarehouseId, // Get from context
   } = useApp();
   const { toast } = useToast();
 
@@ -70,8 +67,6 @@ export default function CartPage({ setView }: CartPageProps) {
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [amountReceived, setAmountReceived] = useState(0);
   const [selectedCustomerId, setSelectedCustomerId] = useState("_general_");
-  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>();
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>();
   
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -145,6 +140,11 @@ export default function CartPage({ setView }: CartPageProps) {
   const handleOpenPaymentDialog = () => {
     if (cart.length === 0) {
       toast({ title: "Keranjang Kosong", description: "Silakan tambahkan produk terlebih dahulu.", variant: "destructive" });
+      return;
+    }
+    
+    if(!selectedWarehouseId) {
+      toast({ title: "Gudang Belum Dipilih", description: "Silakan pilih gudang default di halaman Akun.", variant: "destructive" });
       return;
     }
 
@@ -503,30 +503,6 @@ export default function CartPage({ setView }: CartPageProps) {
         <div className="flex-grow overflow-y-auto space-y-4 pb-64">
              <Card>
                 <CardContent className="p-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Cabang</Label>
-                        <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-                            <SelectTrigger><SelectValue placeholder="Pilih cabang..." /></SelectTrigger>
-                            <SelectContent>
-                                {branches.map(branch => (
-                                    <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Gudang</Label>
-                         <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
-                            <SelectTrigger><SelectValue placeholder="Pilih gudang..." /></SelectTrigger>
-                            <SelectContent>
-                                {warehouses.map(wh => (
-                                    <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
                     <div>
                       <Label>Pelanggan</Label>
                       <div className="flex gap-2 mt-1">
