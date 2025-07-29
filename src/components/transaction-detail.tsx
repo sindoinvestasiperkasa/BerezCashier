@@ -57,6 +57,7 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
   const discount = transaction.discountAmount || 0;
   const tax = transaction.taxAmount || 0;
   const shipping = 0; // Shipping is not part of cashier transaction
+  const serviceFee = transaction.serviceFee || 0;
   const total = transaction.total || 0;
 
   return (
@@ -131,6 +132,10 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                    {tax > 0 && <div className="flex justify-between text-muted-foreground">
                       <span>Pajak</span>
                       <span className="font-medium text-foreground">{formatCurrency(tax)}</span>
+                  </div>}
+                   {serviceFee > 0 && <div className="flex justify-between text-muted-foreground">
+                      <span>Biaya Layanan</span>
+                      <span className="font-medium text-foreground">{formatCurrency(serviceFee)}</span>
                   </div>}
                   <Separator/>
                   <div className="flex justify-between font-bold text-lg">

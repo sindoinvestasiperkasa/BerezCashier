@@ -124,6 +124,7 @@ export interface Transaction {
   paidAmount?: number;
   taxAmount?: number;
   discountAmount?: number;
+  serviceFee?: number;
   transactionNumber?: string;
   branchId?: string;
   warehouseId?: string;
@@ -149,6 +150,7 @@ export type NewTransactionClientData = {
     discountAccountId?: string;
     taxAccountId?: string;
     isPkp?: boolean;
+    serviceFee?: number;
 };
 
 export type Customer = {
@@ -196,6 +198,9 @@ export type UserData = {
     photoUrl?: string;
     address?: string;
     phone?: string;
+    serviceFeeTier1?: number;
+    serviceFeeTier2?: number;
+    serviceFeeTier3?: number;
     // Employee fields
     name?: string;
     photo_url?: string;

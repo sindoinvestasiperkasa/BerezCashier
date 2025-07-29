@@ -40,6 +40,7 @@ const CreateTransactionInputSchema = z.object({
   branchId: z.string().optional(),
   warehouseId: z.string().optional(),
   isPkp: z.boolean().optional().default(false),
+  serviceFee: z.number().optional().default(0),
   // Account IDs
   paymentAccountId: z.string(),
   salesAccountId: z.string(),
@@ -71,6 +72,7 @@ export const createTransactionFlow = ai.defineFlow(
     // 1. Buat Entri Jurnal (`lines`)
     const journalLines = [];
     const totalCogs = input.items.reduce((sum, item) => sum + ((item.cogs || 0) * item.quantity), 0);
+    const serviceFeeAccount = 'Utang Biaya Layanan'; // Asumsi nama akun untuk biaya layanan
 
     // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
     journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
@@ -97,6 +99,17 @@ export const createTransactionFlow = ai.defineFlow(
     if (totalCogs > 0) {
         journalLines.push({ accountId: input.inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
     }
+    
+    // Credit: Utang Biaya Layanan (jika ada)
+    if (input.serviceFee && input.serviceFee > 0) {
+      // Anda mungkin perlu mencari ID akun ini dari database
+      // Untuk sekarang, kita asumsikan ID-nya sama dengan namanya
+       const serviceFeeAcc = await db.collection('accounts').where('idUMKM', '==', input.idUMKM).where('name', '==', serviceFeeAccount).limit(1).get();
+       if (!serviceFeeAcc.empty) {
+           journalLines.push({ accountId: serviceFeeAcc.docs[0].id, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
+       }
+    }
+
 
     // 2. Siapkan data transaksi untuk disimpan
     const transactionData = {
@@ -114,6 +127,7 @@ export const createTransactionFlow = ai.defineFlow(
       subtotal: input.subtotal,
       discountAmount: input.discountAmount,
       taxAmount: input.taxAmount,
+      serviceFee: input.serviceFee || 0,
       items: input.items, // Simpan semua data item, termasuk cogs dan attributes
       customerId: input.customerId,
       customerName: input.customerName,

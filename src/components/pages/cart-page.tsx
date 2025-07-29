@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent, Building, Warehouse } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent, Building, Warehouse, HandCoins } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -38,6 +38,7 @@ interface ReceiptData {
     subtotal: number;
     discountAmount: number;
     taxAmount: number;
+    serviceFee: number;
     total: number;
     paymentMethod: string;
     cashReceived: number;
@@ -57,8 +58,8 @@ export default function CartPage({ setView }: CartPageProps) {
     heldCarts, holdCart, resumeCart, deleteHeldCart, 
     transactions, customers, addCustomer, accounts, user, addShiftReportNotification,
     products,
-    selectedBranchId, // Get from context
-    selectedWarehouseId, // Get from context
+    selectedBranchId, 
+    selectedWarehouseId, 
   } = useApp();
   const { toast } = useToast();
 
@@ -120,9 +121,19 @@ export default function CartPage({ setView }: CartPageProps) {
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
   const discountAmount = useMemo(() => (subtotal * discountPercent) / 100, [subtotal, discountPercent]);
-  const taxableAmount = useMemo(() => subtotal - discountAmount, [subtotal, discountAmount]);
-  const taxAmount = useMemo(() => isPkp ? taxableAmount * TAX_RATE : 0, [isPkp, taxableAmount]);
-  const total = useMemo(() => taxableAmount + taxAmount, [taxableAmount, taxAmount]);
+  const subtotalAfterDiscount = useMemo(() => subtotal - discountAmount, [subtotal, discountAmount]);
+
+  const serviceFee = useMemo(() => {
+    if (!user) return 0;
+    // Tiers are based on subtotal AFTER discount
+    if (subtotalAfterDiscount > 10000) return user.serviceFeeTier3 || 0;
+    if (subtotalAfterDiscount >= 5000) return user.serviceFeeTier2 || 0;
+    if (subtotalAfterDiscount > 0) return user.serviceFeeTier1 || 0;
+    return 0;
+  }, [subtotalAfterDiscount, user]);
+
+  const taxAmount = useMemo(() => isPkp ? subtotalAfterDiscount * TAX_RATE : 0, [isPkp, subtotalAfterDiscount]);
+  const total = useMemo(() => subtotalAfterDiscount + taxAmount + serviceFee, [subtotalAfterDiscount, taxAmount, serviceFee]);
   const change = useMemo(() => amountReceived > total ? amountReceived - total : 0, [amountReceived, total]);
 
   const formatCurrency = (amount: number | undefined) => {
@@ -225,6 +236,7 @@ export default function CartPage({ setView }: CartPageProps) {
             inventoryAccountId: inventoryAccountId!,
             discountAccountId: discountAmount > 0 ? discountAccountId : undefined,
             taxAccountId: isPkp ? taxAccountId : undefined,
+            serviceFee: serviceFee,
         });
 
         if (result.success) {
@@ -233,6 +245,7 @@ export default function CartPage({ setView }: CartPageProps) {
                 subtotal: subtotal,
                 discountAmount: discountAmount,
                 taxAmount: taxAmount,
+                serviceFee: serviceFee,
                 total: total,
                 paymentMethod: paymentMethod,
                 cashReceived: amountReceived,
@@ -381,6 +394,7 @@ export default function CartPage({ setView }: CartPageProps) {
     printLine('Subtotal', lastTransactionForReceipt.subtotal.toLocaleString('id-ID'));
     if(lastTransactionForReceipt.discountAmount > 0) printLine(`Diskon`, `-${lastTransactionForReceipt.discountAmount.toLocaleString('id-ID')}`);
     if(lastTransactionForReceipt.taxAmount > 0) printLine(`Pajak (11%)`, lastTransactionForReceipt.taxAmount.toLocaleString('id-ID'));
+    if(lastTransactionForReceipt.serviceFee > 0) printLine(`Biaya Layanan`, lastTransactionForReceipt.serviceFee.toLocaleString('id-ID'));
     
     doc.text('--------------------------', pageWidth / 2, y, { align: 'center' });
     y += 4;
@@ -417,6 +431,7 @@ export default function CartPage({ setView }: CartPageProps) {
       subtotal: tx.subtotal || 0,
       discountAmount: tx.discountAmount || 0,
       taxAmount: tx.taxAmount || 0,
+      serviceFee: tx.serviceFee || 0,
       total: tx.total || 0,
       paymentMethod: tx.paymentMethod || 'N/A',
       cashReceived: tx.paidAmount || tx.total || 0,
@@ -664,6 +679,12 @@ export default function CartPage({ setView }: CartPageProps) {
                       <span className="font-medium">{formatCurrency(taxAmount)}</span>
                     </div>
                  )}
+                 {serviceFee > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><HandCoins className="w-4 h-4"/> Biaya Layanan</span>
+                      <span className="font-medium">{formatCurrency(serviceFee)}</span>
+                    </div>
+                 )}
                  {paymentMethod === 'Cash' && <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Kembalian</span>
                   <span className="text-lg font-bold">{formatCurrency(change)}</span>
@@ -721,6 +742,10 @@ export default function CartPage({ setView }: CartPageProps) {
                      {isPkp && <div className="flex justify-between">
                         <span>Pajak (11%)</span>
                         <span>{formatCurrency(taxAmount)}</span>
+                    </div>}
+                     {serviceFee > 0 && <div className="flex justify-between">
+                        <span>Biaya Layanan</span>
+                        <span>{formatCurrency(serviceFee)}</span>
                     </div>}
                   </div>
                   <Separator className="my-3"/>
