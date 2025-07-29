@@ -1,7 +1,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { Home, Warehouse, ShoppingCart, Receipt, User } from "lucide-react";
+import { Home, Heart, ShoppingCart, Receipt, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tab } from "./app-shell";
 import { useApp } from "@/hooks/use-app";
@@ -13,7 +13,7 @@ interface BottomNavProps {
 
 const navItems = [
   { id: "home", label: "Home", icon: Home },
-  { id: "inventory", label: "Inventaris", icon: Warehouse },
+  { id: "wishlist", label: "Wishlist", icon: Heart },
   { id: "cart", label: "Cart", icon: ShoppingCart },
   { id: "transactions", label: "Transactions", icon: Receipt },
   { id: "account", label: "Account", icon: User },
