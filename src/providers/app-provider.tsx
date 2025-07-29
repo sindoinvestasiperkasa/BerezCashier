@@ -34,6 +34,19 @@ export type Product = {
   warehouseId?: string; // To associate product with a warehouse
 };
 
+export type StockLot = {
+    id: string;
+    productId: string;
+    warehouseId: string;
+    initialQuantity: number;
+    remainingQuantity: number;
+    purchasePrice: number;
+    expirationDate?: Date;
+    createdAt: Date;
+    idUMKM: string;
+};
+
+
 export type ProductCategory = {
   id: string;
   name: string;
@@ -192,6 +205,7 @@ export type UserData = {
 
 interface AppContextType {
   products: Product[];
+  stockLots: StockLot[];
   cart: CartItem[];
   wishlist: Product[];
   transactions: Transaction[];
@@ -234,6 +248,7 @@ const LOW_STOCK_THRESHOLD = 5;
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [stockLots, setStockLots] = useState<StockLot[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
@@ -354,6 +369,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setProducts(productsData);
     });
 
+    const stockLotsQuery = query(collection(db, "stockLots"), where("idUMKM", "==", idUMKM));
+    const unsubStockLots = onSnapshot(stockLotsQuery, (snapshot) => {
+        const lotsData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: (data.createdAt as Timestamp)?.toDate(),
+                expirationDate: (data.expirationDate as Timestamp)?.toDate(),
+            } as StockLot;
+        });
+        setStockLots(lotsData);
+    });
+
     const accountsQuery = query(collection(db, "accounts"), where("idUMKM", "==", idUMKM));
     const unsubAccounts = onSnapshot(accountsQuery, (snapshot) => {
         const accountsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
@@ -398,6 +427,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => {
         unsubCustomers();
         unsubProducts();
+        unsubStockLots();
         unsubAccounts();
         unsubTransactions();
         unsubBranches();
@@ -628,6 +658,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     <AppContext.Provider
       value={{ 
         products,
+        stockLots,
         cart, 
         wishlist, 
         transactions,

@@ -17,7 +17,7 @@ import {
   Car,
   MapPin,
 } from "lucide-react";
-import type { Product } from "@/lib/data";
+import type { Product } from "@/providers/app-provider";
 import ProductCard from "../product-card";
 import { cn } from "@/lib/utils";
 import ProductDetail from "../product-detail";
@@ -49,7 +49,7 @@ interface HomePageProps {
 }
 
 export default function HomePage({ setView }: HomePageProps) {
-  const { user, products, notifications, selectedBranchId, selectedWarehouseId } = useApp();
+  const { user, products, notifications, selectedBranchId, selectedWarehouseId, stockLots } = useApp();
   const { toast } = useToast();
   const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,16 +91,36 @@ export default function HomePage({ setView }: HomePageProps) {
     }
   }, [user?.address]);
 
-  const serviceProducts = useMemo(() => {
-    // This is where you would filter products based on selectedBranchId and selectedWarehouseId
-    // For now, we only filter by productType 'Jasa' as per original logic.
-    // The actual filtering by branch/warehouse would require products to have these fields.
-    return products.filter(p => p.productType === 'Jasa');
-  }, [products, selectedBranchId, selectedWarehouseId]);
+  const availableProducts = useMemo(() => {
+    // 1. Exclude 'Bahan Baku'
+    const nonRawMaterials = products.filter(p => p.productType !== 'Bahan Baku');
+
+    // 2. Calculate stock in the selected warehouse
+    const stockInWarehouse = new Map<string, number>();
+    if (selectedWarehouseId) {
+        stockLots
+            .filter(lot => lot.warehouseId === selectedWarehouseId)
+            .forEach(lot => {
+                stockInWarehouse.set(lot.productId, (stockInWarehouse.get(lot.productId) || 0) + lot.remainingQuantity);
+            });
+    }
+    
+    // 3. Final filter based on type and availability
+    return nonRawMaterials.filter(p => {
+        if (p.productType === 'Jasa (Layanan)') {
+            return true; // Always show services
+        }
+        // For goods, check if stock > 0
+        return (stockInWarehouse.get(p.id) || 0) > 0;
+    }).map(p => ({
+        ...p,
+        stock: stockInWarehouse.get(p.id) || 0, // Attach calculated stock
+    }));
+  }, [products, stockLots, selectedWarehouseId]);
 
   useEffect(() => {
     const fetchCategories = async () => {
-      if (!user || serviceProducts.length === 0) {
+      if (!user || availableProducts.length === 0) {
         setIsLoading(false);
         return;
       }
@@ -108,7 +128,7 @@ export default function HomePage({ setView }: HomePageProps) {
       const db = getFirestore();
 
       try {
-        const activeCategoryIds = [...new Set(serviceProducts.map(p => p.categoryId))].filter(id => id);
+        const activeCategoryIds = [...new Set(availableProducts.map(p => p.categoryId))].filter(id => id);
         
         let categoriesData: ProductCategory[] = [];
         if (activeCategoryIds.length > 0) {
@@ -131,17 +151,17 @@ export default function HomePage({ setView }: HomePageProps) {
     
     fetchCategories();
 
-  }, [serviceProducts, user]);
+  }, [availableProducts, user]);
   
   const productsWithCategoryNames = useMemo(() => {
-    return serviceProducts.map(product => {
+    return availableProducts.map(product => {
       const category = productCategories.find(cat => cat.id === product.categoryId);
       return {
         ...product,
         categoryName: category ? category.name : "Uncategorized",
       };
     });
-  }, [serviceProducts, productCategories]);
+  }, [availableProducts, productCategories]);
 
   const displayCategories = useMemo(() => {
     const allCategory: ProductCategory = { id: "All", name: "All", icon: "All" };
@@ -265,7 +285,7 @@ export default function HomePage({ setView }: HomePageProps) {
             <Frown className="w-16 h-16 text-muted-foreground" />
             <h3 className="text-lg font-semibold">Layanan tidak ditemukan</h3>
             <p className="text-muted-foreground max-w-xs">
-              Tidak ada produk tipe 'Jasa' yang cocok dengan pencarian Anda atau tersedia untuk UMKM ini.
+              Tidak ada produk yang cocok dengan pencarian Anda atau tersedia di gudang/cabang yang dipilih.
             </p>
           </div>
         )}
