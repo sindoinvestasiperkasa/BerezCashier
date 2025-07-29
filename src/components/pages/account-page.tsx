@@ -30,7 +30,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
     logout, 
     user, 
     branches,
-    warehouses,
+    filteredWarehouses, // Use filtered warehouses
     selectedBranchId, 
     setSelectedBranchId, 
     selectedWarehouseId, 
@@ -105,12 +105,12 @@ export default function AccountPage({ setView }: AccountPageProps) {
                   <Warehouse className="w-4 h-4"/>
                   <span>Gudang Default</span>
                 </Label>
-                <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
+                <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId} disabled={!selectedBranchId || filteredWarehouses.length === 0}>
                   <SelectTrigger id="warehouse-select">
                     <SelectValue placeholder="Pilih gudang..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {warehouses.map(wh => (
+                    {filteredWarehouses.map(wh => (
                       <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>
                     ))}
                   </SelectContent>

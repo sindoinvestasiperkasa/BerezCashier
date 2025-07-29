@@ -13,7 +13,7 @@ export type Product = {
   id: string;
   name: string;
   productCode?: string;
-  productType: 'Barang' | 'Jasa';
+  productType: 'Produk Retail' | 'Produk Produksi' | 'Jasa (Layanan)' | 'Bahan Baku';
   price: number;
   purchasePrice?: number;
   description?: string;
@@ -79,6 +79,7 @@ export type Branch = {
 export type Warehouse = {
   id: string;
   name: string;
+  branchId: string; // Crucial for filtering
   [key: string]: any;
 };
 // --- End of Re-exportable Types ---
@@ -200,6 +201,7 @@ interface AppContextType {
   notifications: Notification[];
   branches: Branch[];
   warehouses: Warehouse[];
+  filteredWarehouses: Warehouse[];
   selectedBranchId?: string;
   setSelectedBranchId: (id: string) => void;
   selectedWarehouseId?: string;
@@ -262,11 +264,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const setSelectedBranchId = (id: string) => {
     setSelectedBranchIdState(id);
     localStorage.setItem('selectedBranchId', id);
+    // Reset warehouse selection if it's not valid for the new branch
+    const newFilteredWarehouses = warehouses.filter(wh => wh.branchId === id);
+    if (!newFilteredWarehouses.some(wh => wh.id === selectedWarehouseId)) {
+        setSelectedWarehouseId(''); // Reset or set to the first available
+    }
   };
   
   const setSelectedWarehouseId = (id: string) => {
     setSelectedWarehouseIdState(id);
-    localStorage.setItem('selectedWarehouseId', id);
+    if(id) {
+        localStorage.setItem('selectedWarehouseId', id);
+    } else {
+        localStorage.removeItem('selectedWarehouseId');
+    }
   };
 
   const user = useMemo(() => {
@@ -284,6 +295,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     return null;
   }, [localUser]);
+  
+  const filteredWarehouses = useMemo(() => {
+    if (!selectedBranchId) {
+      return [];
+    }
+    return warehouses.filter(wh => wh.branchId === selectedBranchId);
+  }, [warehouses, selectedBranchId]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseAuthUser | null) => {
@@ -373,9 +391,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const unsubWarehouses = onSnapshot(warehousesQuery, (snapshot) => {
         const warehousesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse));
         setWarehouses(warehousesData);
-        if (!selectedWarehouseId && warehousesData.length > 0) {
-            setSelectedWarehouseId(warehousesData[0].id);
-        }
+        // Initial warehouse selection logic is now handled by the branch selection effect
     });
 
 
@@ -391,7 +407,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // Low Stock Notification Logic
   useEffect(() => {
-    const lowStockProducts = products.filter(p => p.productType === 'Barang' && typeof p.stock === 'number' && p.stock <= (p.lowStockThreshold || LOW_STOCK_THRESHOLD) && p.stock > 0);
+    const lowStockProducts = products.filter(p => p.productType === 'Bahan Baku' && typeof p.stock === 'number' && p.stock <= (p.lowStockThreshold || LOW_STOCK_THRESHOLD) && p.stock > 0);
     
     setNotifications(prevNotifs => {
         const newNotifs: Notification[] = [...prevNotifs.filter(n => n.type !== 'low_stock')];
@@ -621,6 +637,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         notifications,
         branches,
         warehouses,
+        filteredWarehouses,
         selectedBranchId,
         setSelectedBranchId,
         selectedWarehouseId,
