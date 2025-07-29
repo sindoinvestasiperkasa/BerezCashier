@@ -243,10 +243,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [localUser, setLocalUser] = useState<UserData | null>(null);
-  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>();
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>();
+  
+  const [selectedBranchId, setSelectedBranchIdState] = useState<string | undefined>();
+  const [selectedWarehouseId, setSelectedWarehouseIdState] = useState<string | undefined>();
+  
   const { toast } = useToast();
   const db = getFirestore();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedBranchId = localStorage.getItem('selectedBranchId');
+      if (storedBranchId) setSelectedBranchIdState(storedBranchId);
+      const storedWarehouseId = localStorage.getItem('selectedWarehouseId');
+      if (storedWarehouseId) setSelectedWarehouseIdState(storedWarehouseId);
+    }
+  }, []);
+
+  const setSelectedBranchId = (id: string) => {
+    setSelectedBranchIdState(id);
+    localStorage.setItem('selectedBranchId', id);
+  };
+  
+  const setSelectedWarehouseId = (id: string) => {
+    setSelectedWarehouseIdState(id);
+    localStorage.setItem('selectedWarehouseId', id);
+  };
 
   const user = useMemo(() => {
     if (localUser) return localUser;
@@ -343,12 +364,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const unsubBranches = onSnapshot(branchesQuery, (snapshot) => {
         const branchesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Branch));
         setBranches(branchesData);
+        if (!selectedBranchId && branchesData.length > 0) {
+            setSelectedBranchId(branchesData[0].id);
+        }
     });
     
     const warehousesQuery = query(collection(db, "warehouses"), where("idUMKM", "==", idUMKM));
     const unsubWarehouses = onSnapshot(warehousesQuery, (snapshot) => {
         const warehousesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse));
         setWarehouses(warehousesData);
+        if (!selectedWarehouseId && warehousesData.length > 0) {
+            setSelectedWarehouseId(warehousesData[0].id);
+        }
     });
 
 
@@ -360,7 +387,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         unsubBranches();
         unsubWarehouses();
     };
-  }, [user, db]);
+  }, [user, db, selectedBranchId, selectedWarehouseId]);
 
   // Low Stock Notification Logic
   useEffect(() => {
@@ -622,3 +649,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    
