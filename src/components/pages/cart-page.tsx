@@ -486,6 +486,10 @@ export default function CartPage({ setView }: CartPageProps) {
     addShiftReportNotification(shiftSummary);
   }
 
+  const utangBiayaLayananAccount = useMemo(() => {
+      return accounts.find(a => a.name.toLowerCase().includes('utang biaya layanan berez'))
+  }, [accounts]);
+
   return (
     <>
     <div className="p-4 md:p-6 flex flex-col h-full bg-secondary/30">
@@ -635,6 +639,14 @@ export default function CartPage({ setView }: CartPageProps) {
                                     ))}
                                 </SelectContent>
                             </Select>
+                        </div>
+                         <div className='space-y-1'>
+                            <Label className="text-muted-foreground">Akun Utang Biaya Layanan</Label>
+                            <Input
+                                value={utangBiayaLayananAccount ? `${utangBiayaLayananAccount.name} (${utangBiayaLayananAccount.id})` : 'Otomatis'}
+                                disabled
+                                className="bg-muted/50"
+                            />
                         </div>
                         {isPkp && (
                              <div className='space-y-1 col-span-2'>
