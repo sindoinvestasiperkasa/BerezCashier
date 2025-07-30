@@ -114,16 +114,19 @@ export const createTransactionFlow = ai.defineFlow(
         let serviceFeeAccountId: string | null = null;
         if (input.serviceFee && input.serviceFee > 0) {
             const serviceFeeAccountName = 'Utang Biaya Layanan Berez';
-            const allAccountsQuery = await db.collection('accounts')
+            const allAccountsQuery = db.collection('accounts')
                 .where('idUMKM', '==', input.idUMKM)
-                .get();
+                .where('name', '==', serviceFeeAccountName)
 
-            const serviceFeeAccountDoc = allAccountsQuery.docs.find(doc => doc.data().name === serviceFeeAccountName);
+            // Menggunakan `transaction.get` di dalam transaksi
+            const serviceFeeAccountSnapshot = await transaction.get(allAccountsQuery);
+            const serviceFeeAccountDoc = serviceFeeAccountSnapshot.docs[0];
 
             if (serviceFeeAccountDoc) {
                 serviceFeeAccountId = serviceFeeAccountDoc.id;
             } else {
                  console.warn(`Akun '${serviceFeeAccountName}' tidak ditemukan untuk UMKM ${input.idUMKM}. Jurnal mungkin tidak seimbang.`);
+                 // Jika tidak ditemukan, entri jurnal untuk biaya layanan tidak akan dibuat
             }
         }
 
@@ -188,7 +191,7 @@ export const createTransactionFlow = ai.defineFlow(
             journalLines.push({ accountId: input.inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
         }
         
-        // Credit: Utang Biaya Layanan (jika ada)
+        // Credit: Utang Biaya Layanan (jika ada dan ditemukan)
         if (serviceFeeAccountId && input.serviceFee > 0) {
             journalLines.push({ accountId: serviceFeeAccountId, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
         }
@@ -254,3 +257,5 @@ export const createTransactionFlow = ai.defineFlow(
     });
   }
 );
+
+    
