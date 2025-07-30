@@ -121,10 +121,40 @@ export const createTransactionFlow = ai.defineFlow(
 
         // --- END READ PHASE / START WRITE PHASE ---
         
-        // 4. Buat Entri Jurnal (`lines`)
-        const journalLines = [];
-        const totalCogs = input.items.reduce((sum, item) => sum + ((item.cogs || 0) * item.quantity), 0);
+        // 4. Hitung ulang COGS berdasarkan FIFO & siapkan item untuk disimpan
+        const itemsWithCogs: any[] = [];
+        let totalCogs = 0;
+        
+        for (const { item, snapshotDocs } of stockLotResults) {
+            let quantityToDeduct = item.quantity;
+            let itemCogs = 0;
+            for (const doc of snapshotDocs) {
+                if (quantityToDeduct <= 0) break;
+                
+                const lot = doc.data();
+                if (!lot.purchasePrice || lot.purchasePrice <= 0) {
+                  throw new Error(`Lot stok ${doc.id} untuk produk ${item.productName} tidak memiliki harga beli yang valid.`);
+                }
+                
+                const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+                itemCogs += quantityFromThisLot * lot.purchasePrice;
+                quantityToDeduct -= quantityFromThisLot;
+            }
+            itemsWithCogs.push({ ...item, cogs: itemCogs });
+            totalCogs += itemCogs;
+        }
 
+        // Tambahkan item Jasa (yang tidak punya COGS) ke dalam daftar
+        input.items.forEach(item => {
+            if (item.productType === 'Jasa') {
+                itemsWithCogs.push({ ...item, cogs: 0 });
+            }
+        });
+
+
+        // 5. Buat Entri Jurnal (`lines`)
+        const journalLines = [];
+        
         // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
         journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
         
@@ -157,7 +187,7 @@ export const createTransactionFlow = ai.defineFlow(
         }
 
 
-        // 5. Siapkan data transaksi untuk disimpan
+        // 6. Siapkan data transaksi untuk disimpan
         const transactionData = {
           idUMKM: input.idUMKM,
           branchId: input.branchId || null,
@@ -174,7 +204,7 @@ export const createTransactionFlow = ai.defineFlow(
           discountAmount: input.discountAmount,
           taxAmount: input.taxAmount,
           serviceFee: input.serviceFee || 0,
-          items: input.items,
+          items: itemsWithCogs, // Gunakan items yang sudah dihitung COGS-nya
           customerId: input.customerId,
           customerName: input.customerName,
           paymentMethod: input.paymentMethod,
@@ -188,10 +218,10 @@ export const createTransactionFlow = ai.defineFlow(
           taxAccountId: input.taxAccountId || null,
         };
         
-        // 6. Tulis data transaksi
+        // 7. Tulis data transaksi
         transaction.set(transactionRef, transactionData);
 
-        // 7. Update Stok Produk menggunakan FIFO dari hasil baca sebelumnya
+        // 8. Update Stok Produk menggunakan FIFO dari hasil baca sebelumnya
         for (const { item, snapshotDocs } of stockLotResults) {
             let quantityToDeduct = item.quantity;
             for (const doc of snapshotDocs) {
