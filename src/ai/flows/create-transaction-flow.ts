@@ -80,20 +80,20 @@ export const createTransactionFlow = ai.defineFlow(
                 const stockLotsQuery = db.collection('stockLots')
                     .where('productId', '==', item.productId)
                     .where('warehouseId', '==', input.warehouseId)
-                    .where('remainingQuantity', '>', 0)
                     .orderBy('createdAt', 'asc');
                 return transaction.get(stockLotsQuery).then(snapshot => ({
                     item,
-                    snapshot,
+                    // Filter for remaining quantity in code instead of in the query
+                    snapshotDocs: snapshot.docs.filter(doc => doc.data().remainingQuantity > 0),
                 }));
             });
 
         const stockLotResults = await Promise.all(productStockLotReads);
 
         // 2. Validasi stok yang tersedia berdasarkan hasil baca.
-        for (const { item, snapshot } of stockLotResults) {
+        for (const { item, snapshotDocs } of stockLotResults) {
             let totalStockAvailable = 0;
-            snapshot.forEach(doc => {
+            snapshotDocs.forEach(doc => {
                 totalStockAvailable += doc.data().remainingQuantity || 0;
             });
 
@@ -192,9 +192,9 @@ export const createTransactionFlow = ai.defineFlow(
         transaction.set(transactionRef, transactionData);
 
         // 7. Update Stok Produk menggunakan FIFO dari hasil baca sebelumnya
-        for (const { item, snapshot } of stockLotResults) {
+        for (const { item, snapshotDocs } of stockLotResults) {
             let quantityToDeduct = item.quantity;
-            for (const doc of snapshot.docs) {
+            for (const doc of snapshotDocs) {
                 if (quantityToDeduct <= 0) break;
 
                 const lot = doc.data();
