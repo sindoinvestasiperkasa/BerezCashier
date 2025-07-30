@@ -1,0 +1,14 @@
+{
+  "nav.home": "Home",
+  "nav.wishlist": "Wishlist",
+  "nav.cart": "Cart",
+  "nav.transactions": "Transactions",
+  "nav.account": "Account",
+  "lang.title": "Language Settings",
+  "lang.description": "Choose your preferred language for the application.",
+  "lang.indonesian": "Indonesian",
+  "lang.english": "English",
+  "lang.save": "Save Changes",
+  "lang.save.toast.title": "Settings Saved",
+  "lang.save.toast.description": "Your language preference has been successfully saved."
+}

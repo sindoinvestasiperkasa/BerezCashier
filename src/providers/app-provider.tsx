@@ -1,13 +1,17 @@
 
 "use client";
 
-import React, { createContext, useState, ReactNode, useEffect, useMemo } from 'react';
+import React, { createContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 import { createTransaction, CreateTransactionInput, CreateTransactionOutput } from '@/ai/flows/create-transaction-flow-entry';
 import { FirebaseError } from 'firebase/app';
+
+import en from '@/lib/locales/en.json';
+import id from '@/lib/locales/id.json';
+
 
 // --- Re-exportable Types ---
 export type Product = {
@@ -210,6 +214,8 @@ export type UserData = {
     [key: string]: any;
 };
 
+type Locale = 'en' | 'id';
+type Translations = typeof en; // Assuming 'en' has all keys
 
 interface AppContextType {
   products: Product[];
@@ -248,6 +254,10 @@ interface AppContextType {
   user: UserData | null;
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
+  // i18n
+  locale: Locale;
+  changeLocale: (locale: Locale) => void;
+  t: (key: keyof Translations) => string;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -255,6 +265,8 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 const initialTransactions: Transaction[] = [];
 
 const LOW_STOCK_THRESHOLD = 5;
+
+const locales = { en, id };
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -275,8 +287,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [selectedBranchId, setSelectedBranchIdState] = useState<string | undefined>();
   const [selectedWarehouseId, setSelectedWarehouseIdState] = useState<string | undefined>();
   
+  const [locale, setLocale] = useState<Locale>('id');
   const { toast } = useToast();
   const db = getFirestore();
+
+  useEffect(() => {
+    const savedLocale = localStorage.getItem('locale') as Locale | null;
+    if (savedLocale && (savedLocale === 'en' || savedLocale === 'id')) {
+      setLocale(savedLocale);
+    }
+  }, []);
+
+  const changeLocale = (newLocale: Locale) => {
+    setLocale(newLocale);
+    localStorage.setItem('locale', newLocale);
+  };
+
+  const t = useCallback((key: keyof Translations) => {
+    return locales[locale][key] || key;
+  }, [locale]);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -725,6 +755,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         user,
         login,
         logout,
+        locale,
+        changeLocale,
+        t,
       }}
     >
       {children}

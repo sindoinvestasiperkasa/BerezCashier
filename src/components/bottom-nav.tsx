@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
@@ -11,16 +12,17 @@ interface BottomNavProps {
   setActiveTab: Dispatch<SetStateAction<Tab>>;
 }
 
-const navItems = [
-  { id: "home", label: "Home", icon: Home },
-  { id: "wishlist", label: "Wishlist", icon: Heart },
-  { id: "cart", label: "Cart", icon: ShoppingCart },
-  { id: "transactions", label: "Transactions", icon: Receipt },
-  { id: "account", label: "Account", icon: User },
-] as const;
-
 export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
-  const { cart } = useApp();
+  const { cart, t } = useApp();
+
+  const navItems = [
+    { id: "home", label: t('nav.home'), icon: Home },
+    { id: "wishlist", label: t('nav.wishlist'), icon: Heart },
+    { id: "cart", label: t('nav.cart'), icon: ShoppingCart },
+    { id: "transactions", label: t('nav.transactions'), icon: Receipt },
+    { id: "account", label: t('nav.account'), icon: User },
+  ] as const;
+
 
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-4xl">

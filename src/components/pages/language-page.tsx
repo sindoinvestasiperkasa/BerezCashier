@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Check, Save } from "lucide-react";
 import { Button } from "../ui/button";
 import type { View } from "../app-shell";
@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useApp } from "@/hooks/use-app";
 
 interface LanguagePageProps {
   setView: (view: View) => void;
@@ -21,15 +22,26 @@ const languages = [
 ];
 
 export default function LanguagePage({ setView }: LanguagePageProps) {
-  const [selectedLanguage, setSelectedLanguage] = useState('id');
+  const { locale, changeLocale, t } = useApp();
+  const [selectedLanguage, setSelectedLanguage] = useState(locale);
   const { toast } = useToast();
 
+  useEffect(() => {
+    setSelectedLanguage(locale);
+  }, [locale]);
+
   const handleSave = () => {
+    changeLocale(selectedLanguage);
     toast({
-        title: "Pengaturan Disimpan",
-        description: "Pilihan bahasa Anda telah berhasil disimpan.",
+        title: t('lang.save.toast.title'),
+        description: t('lang.save.toast.description'),
     });
     setView('settings');
+  }
+
+  const getLangName = (langId: 'id' | 'en') => {
+      if (langId === 'id') return t('lang.indonesian');
+      return t('lang.english');
   }
 
   return (
@@ -38,12 +50,12 @@ export default function LanguagePage({ setView }: LanguagePageProps) {
         <Button variant="ghost" size="icon" className="mr-2" onClick={() => setView('settings')}>
           <ArrowLeft />
         </Button>
-        <h1 className="text-xl font-bold">Pengaturan Bahasa</h1>
+        <h1 className="text-xl font-bold">{t('lang.title')}</h1>
       </header>
       <div className="p-4 flex-grow overflow-y-auto space-y-4">
         <Card>
           <CardContent className="p-4">
-            <RadioGroup value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <RadioGroup value={selectedLanguage} onValueChange={(value) => setSelectedLanguage(value as 'id' | 'en')}>
                 {languages.map(lang => (
                     <Label 
                         key={lang.id} 
@@ -54,7 +66,7 @@ export default function LanguagePage({ setView }: LanguagePageProps) {
                         )}
                     >
                         <RadioGroupItem value={lang.id} id={`lang-${lang.id}`} className="mr-4" />
-                        <span className="font-medium flex-grow">{lang.name}</span>
+                        <span className="font-medium flex-grow">{getLangName(lang.id as 'id' | 'en')}</span>
                          {selectedLanguage === lang.id && <Check className="w-5 h-5 text-primary"/>}
                     </Label>
                 ))}
@@ -63,7 +75,7 @@ export default function LanguagePage({ setView }: LanguagePageProps) {
         </Card>
         <Button onClick={handleSave} className="w-full h-12 text-lg font-bold">
             <Save className="mr-2 h-5 w-5"/>
-            Simpan Perubahan
+            {t('lang.save')}
         </Button>
       </div>
     </div>

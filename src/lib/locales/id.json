@@ -1,0 +1,14 @@
+{
+  "nav.home": "Beranda",
+  "nav.wishlist": "Wishlist",
+  "nav.cart": "Keranjang",
+  "nav.transactions": "Transaksi",
+  "nav.account": "Akun",
+  "lang.title": "Pengaturan Bahasa",
+  "lang.description": "Pilih bahasa pilihan Anda untuk aplikasi.",
+  "lang.indonesian": "Bahasa Indonesia",
+  "lang.english": "English",
+  "lang.save": "Simpan Perubahan",
+  "lang.save.toast.title": "Pengaturan Disimpan",
+  "lang.save.toast.description": "Pilihan bahasa Anda telah berhasil disimpan."
+}
