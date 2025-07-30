@@ -21,7 +21,7 @@ const AttributeValueSchema = z.object({
 const CartItemSchema = z.object({
   productId: z.string(),
   productName: z.string(),
-  productSubType: z.enum(['Produk Retail', 'Produk Produksi', 'Jasa (Layanan)']).optional(),
+  productType: z.enum(['Barang', 'Jasa']).optional().default('Barang'),
   quantity: z.number(),
   unitPrice: z.number(),
   cogs: z.number().default(0),
@@ -75,7 +75,7 @@ export const createTransactionFlow = ai.defineFlow(
 
         // 1. Baca semua stockLot yang relevan terlebih dahulu.
         const productStockLotReads = input.items
-            .filter(item => item.productSubType !== 'Jasa (Layanan)')
+            .filter(item => item.productType === 'Barang') // Hanya produk tipe 'Barang'
             .map(item => {
                 const stockLotsQuery = db.collection('stockLots')
                     .where('productId', '==', item.productId)
