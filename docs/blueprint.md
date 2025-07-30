@@ -1,4 +1,4 @@
-# **App Name**: WarungQ
+# **App Name**: Berez Cashier
 
 ## Core Features:
 
