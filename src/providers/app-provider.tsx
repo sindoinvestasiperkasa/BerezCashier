@@ -609,156 +609,145 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return wishlist.some(item => item.id === productId);
   };
 
-  const addTransaction = async (data: NewTransactionClientData): Promise<{ success: boolean; transactionId: string }> => {
+  const addTransaction = useCallback(async (data: NewTransactionClientData): Promise<{ success: boolean; transactionId: string }> => {
     if (!user) throw new Error("User not authenticated");
     const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
     if (!idUMKM) throw new Error("UMKM ID not found for the current user.");
 
-    const db = getFirestore();
     let transactionId = "";
 
     await runTransaction(db, async (transaction) => {
-      const {
-          items: cartItems, total: totalPrice, subtotal: subtotalPrice,
-          discountAmount, taxAmount, isPkp,
-          paymentMethod,
-          salesAccountId, cogsAccountId, inventoryAccountId, paymentAccountId,
-          discountAccountId, taxAccountId,
-          warehouseId, branchId, customerId, customerName, serviceFee
-      } = data;
-      
-      if (!warehouseId) throw new Error("Gudang tidak dipilih.");
+        const {
+            items: cartItems, total: totalPrice, subtotal: subtotalPrice,
+            discountAmount, taxAmount, isPkp,
+            paymentMethod,
+            salesAccountId, cogsAccountId, inventoryAccountId, paymentAccountId,
+            discountAccountId, taxAccountId,
+            warehouseId, branchId, customerId, customerName, serviceFee
+        } = data;
 
-      const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan'));
+        if (!warehouseId) throw new Error("Gudang tidak dipilih.");
 
-      const missingAccounts = [];
-      if (!paymentAccountId) missingAccounts.push(`Akun untuk metode pembayaran '${paymentMethod}'`);
-      if (!salesAccountId) missingAccounts.push("Akun Pendapatan Penjualan");
-      if (discountAmount > 0 && !discountAccountId) missingAccounts.push("Akun Potongan Penjualan");
-      if (!cogsAccountId) missingAccounts.push("Akun Harga Pokok Penjualan (HPP)");
-      if (!inventoryAccountId) missingAccounts.push("Akun Persediaan Barang");
-      if (isPkp && taxAmount > 0 && !taxAccountId) missingAccounts.push("Akun PPN Keluaran");
-      if (serviceFee && serviceFee > 0 && !serviceFeeAccount) missingAccounts.push("Akun Utang Layanan Berez");
+        const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan'));
 
-      if (missingAccounts.length > 0) throw new Error(`Harap pilih/buat akun berikut: ${missingAccounts.join(', ')}.`);
+        const missingAccounts = [];
+        if (!paymentAccountId) missingAccounts.push(`Akun untuk metode pembayaran '${paymentMethod}'`);
+        if (!salesAccountId) missingAccounts.push("Akun Pendapatan Penjualan");
+        if (discountAmount > 0 && !discountAccountId) missingAccounts.push("Akun Potongan Penjualan");
+        if (!cogsAccountId) missingAccounts.push("Akun Harga Pokok Penjualan (HPP)");
+        if (!inventoryAccountId) missingAccounts.push("Akun Persediaan Barang");
+        if (isPkp && taxAmount > 0 && !taxAccountId) missingAccounts.push("Akun PPN Keluaran");
+        if (serviceFee && serviceFee > 0 && !serviceFeeAccount) missingAccounts.push("Akun Utang Layanan Berez");
 
-      let totalCogs = 0;
-      const itemsForTransaction: SaleItem[] = [];
+        if (missingAccounts.length > 0) throw new Error(`Harap pilih/buat akun berikut: ${missingAccounts.join(', ')}.`);
 
-      const physicalItems = cartItems.filter(item => item.productSubType === 'Produk Retail' || item.productSubType === 'Produk Produksi');
+        let totalCogs = 0;
+        const itemsForTransaction: SaleItem[] = [];
 
-      for (const item of physicalItems) {
-        const lotsQuery = query(
-            collection(db, 'stockLots'),
-            where('idUMKM', '==', idUMKM),
-            where('warehouseId', '==', warehouseId),
-            where('productId', '==', item.id)
-        );
-
-        // Firestore transactions require reads to happen before writes.
-        // We get all docs and then process them.
-        const lotsSnapshot = await transaction.get(lotsQuery);
-        const availableLots = lotsSnapshot.docs
-            .map(d => ({ id: d.id, ...d.data() } as StockLot))
-            .filter(lot => lot.remainingQuantity > 0)
-            .sort((a, b) => (a.createdAt as any).seconds - (b.createdAt as any).seconds); // FIFO Sort
+        const physicalItems = cartItems.filter(item => item.productSubType === 'Produk Retail' || item.productSubType === 'Produk Produksi');
         
-        let quantityToDeduct = item.quantity;
-        let itemCogs = 0;
-        
-        const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
-        if (totalStockForProduct < quantityToDeduct) throw new Error(`Stok tidak mencukupi untuk ${item.name}.`);
-        
-        for (const lot of availableLots) {
-            if (quantityToDeduct <= 0) break;
-            if (!lot.purchasePrice || lot.purchasePrice <= 0) throw new Error(`Lot stok ${lot.id} untuk produk ${item.name} tidak memiliki harga beli.`);
+        for (const item of physicalItems) {
+            const lotsQuery = query(
+                collection(db, 'stockLots'),
+                where('idUMKM', '==', idUMKM),
+                where('warehouseId', '==', warehouseId),
+                where('productId', '==', item.id)
+            );
+
+            const lotsSnapshot = await transaction.get(lotsQuery);
+            const availableLots = lotsSnapshot.docs
+                .map(d => ({ id: d.id, ...d.data() } as StockLot))
+                .filter(lot => lot.remainingQuantity > 0)
+                .sort((a, b) => (a.createdAt as any).seconds - (b.createdAt as any).seconds); // FIFO
+
+            let quantityToDeduct = item.quantity;
+            let itemCogs = 0;
             
-            const lotRef = doc(db, 'stockLots', lot.id);
-            const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
-            itemCogs += quantityFromThisLot * lot.purchasePrice;
+            const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+            if (totalStockForProduct < quantityToDeduct) throw new Error(`Stok tidak mencukupi untuk ${item.name}.`);
             
-            transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
-            quantityToDeduct -= quantityFromThisLot;
+            for (const lot of availableLots) {
+                if (quantityToDeduct <= 0) break;
+                if (!lot.purchasePrice || lot.purchasePrice <= 0) throw new Error(`Lot stok ${lot.id} untuk produk ${item.name} tidak memiliki harga beli yang valid.`);
+                
+                const lotRef = doc(db, 'stockLots', lot.id);
+                const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+                itemCogs += quantityFromThisLot * lot.purchasePrice;
+                
+                transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
+                quantityToDeduct -= quantityFromThisLot;
+            }
+
+            itemsForTransaction.push({
+              productId: item.id,
+              productName: item.name,
+              productType: 'Barang',
+              quantity: item.quantity,
+              unitPrice: item.price,
+              cogs: itemCogs,
+            });
+
+            totalCogs += itemCogs;
         }
 
-        itemsForTransaction.push({
-          productId: item.id,
-          productName: item.name,
-          productType: 'Barang',
-          quantity: item.quantity,
-          unitPrice: item.price,
-          cogs: itemCogs,
+        cartItems.forEach(item => {
+            if (item.productSubType === 'Jasa (Layanan)') {
+                itemsForTransaction.push({
+                    productId: item.id,
+                    productName: item.name,
+                    productType: 'Jasa',
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                    cogs: 0,
+                });
+            }
         });
-
-        totalCogs += itemCogs;
-      }
-      
-      // Add service items
-      cartItems.forEach(item => {
-        if (item.productSubType === 'Jasa (Layanan)') {
-          itemsForTransaction.push({
-            productId: item.id,
-            productName: item.name,
-            productType: 'Jasa',
-            quantity: item.quantity,
-            unitPrice: item.price,
-            cogs: 0,
-          });
+        
+        const transactionTimestamp = Timestamp.now();
+        const transactionNumber = `KSR-${Date.now()}`;
+        
+        const lines = [
+            { accountId: paymentAccountId, debit: totalPrice, credit: 0, description: `Penerimaan Penjualan Kasir via ${paymentMethod}` },
+            { accountId: salesAccountId, debit: 0, credit: subtotalPrice, description: `Pendapatan Penjualan dari Kasir` },
+        ];
+        if (totalCogs > 0) {
+            lines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
+            lines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
         }
-      });
+        if (discountAmount > 0 && discountAccountId) lines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
+        if (isPkp && taxAmount > 0 && taxAccountId) lines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
+        if (serviceFee && serviceFee > 0 && serviceFeeAccount) {
+            lines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
+        }
 
-      const transactionTimestamp = Timestamp.now();
-      const transactionNumber = `KSR-${Date.now()}`;
-      
-      const lines = [
-          { accountId: paymentAccountId, debit: totalPrice, credit: 0, description: `Penerimaan Penjualan Kasir via ${paymentMethod}` },
-          { accountId: salesAccountId, debit: 0, credit: subtotalPrice, description: `Pendapatan Penjualan dari Kasir` },
-          { accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' },
-          { accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' },
-      ];
-      
-      if (discountAmount > 0 && discountAccountId) lines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
-      if (isPkp && taxAmount > 0 && taxAccountId) lines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
-      if (serviceFee && serviceFee > 0 && serviceFeeAccount) {
-          lines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
-      }
-      
-      const transactionData = {
-          idUMKM,
-          warehouseId,
-          branchId,
-          date: transactionTimestamp,
-          description: `Penjualan Kasir - ${paymentMethod}`,
-          type: 'Sale',
-          status: 'Lunas',
-          paymentStatus: 'Berhasil',
-          transactionNumber,
-          amount: totalPrice,
-          paidAmount: totalPrice,
-          subtotal: subtotalPrice,
-          discountAmount,
-          taxAmount,
-          items: itemsForTransaction,
-          customerId,
-          customerName,
-          paymentMethod,
-          lines,
-          paymentAccountId, salesAccountId, cogsAccountId, discountAccountId: discountAccountId || null,
-          inventoryAccountId, taxAccountId: taxAccountId || null,
-          isPkp,
-          serviceFee: serviceFee || 0,
-      };
-
-      const txDocRef = doc(collection(db, 'transactions'));
-      transaction.set(txDocRef, transactionData);
-      transactionId = txDocRef.id;
+        const txDocRef = doc(collection(db, 'transactions'));
+        transaction.set(txDocRef, {
+            idUMKM, warehouseId, branchId, customerId, customerName,
+            date: transactionTimestamp,
+            description: `Penjualan Kasir - ${paymentMethod}`,
+            type: 'Sale',
+            status: 'Lunas',
+            paymentStatus: 'Berhasil',
+            transactionNumber,
+            amount: totalPrice,
+            paidAmount: totalPrice,
+            total: totalPrice,
+            subtotal: subtotalPrice,
+            discountAmount, taxAmount,
+            items: itemsForTransaction,
+            paymentMethod,
+            lines,
+            paymentAccountId, salesAccountId, cogsAccountId,
+            discountAccountId: discountAccountId || null,
+            inventoryAccountId, taxAccountId: taxAccountId || null,
+            isPkp,
+            serviceFee: serviceFee || 0,
+        });
+        transactionId = txDocRef.id;
     });
 
-    return {
-      success: true,
-      transactionId,
-    };
-  };
+    return { success: true, transactionId };
+  }, [user, db, accounts]);
 
   const clearCart = () => {
       setCart([]);
