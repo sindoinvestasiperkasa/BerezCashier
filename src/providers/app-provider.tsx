@@ -649,7 +649,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             
             let totalCogs = 0;
             const itemsForTransaction: SaleItem[] = [];
-            const physicalItems = cartItems.filter(item => item.productSubType === 'Produk Retail' || item.productSubType === 'Produk Produksi');
+            const physicalItems = cartItems.filter(item => item.productSubType !== 'Jasa (Layanan)');
 
             console.log(`addTransaction: Ditemukan ${physicalItems.length} item fisik yang perlu pemrosesan stok.`);
 
