@@ -269,7 +269,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [localUser, setLocalUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<UserData | null>(null);
   
   const [selectedBranchId, setSelectedBranchIdState] = useState<string | undefined>();
   const [selectedWarehouseId, setSelectedWarehouseIdState] = useState<string | undefined>();
@@ -304,22 +304,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('selectedWarehouseId');
     }
   };
-
-  const user = useMemo(() => {
-    if (localUser) return localUser;
-    if (typeof window !== 'undefined') {
-        const storedUser = localStorage.getItem('sagara-user-data');
-        if (storedUser) {
-            try {
-              return JSON.parse(storedUser);
-            } catch (e) {
-              console.error("Failed to parse user data from localStorage", e);
-              return null;
-            }
-        }
-    }
-    return null;
-  }, [localUser]);
   
   const filteredWarehouses = useMemo(() => {
     if (!selectedBranchId) {
@@ -328,17 +312,41 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return warehouses.filter(wh => wh.branchId === selectedBranchId);
   }, [warehouses, selectedBranchId]);
 
+  // Real-time listener for user data
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    let userDocRef;
+    if (user.role === 'UMKM') {
+      userDocRef = doc(db, 'dataUMKM', user.uid);
+    } else if (user.role === 'Employee') {
+      userDocRef = doc(db, 'employees', user.uid);
+    } else {
+      return; // No listener for SuperAdmin or other roles for now
+    }
+
+    const unsub = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const freshData = { ...user, ...docSnap.data() };
+        setUser(freshData);
+        localStorage.setItem('sagara-user-data', JSON.stringify(freshData));
+      }
+    });
+
+    return () => unsub();
+  }, [user?.uid, user?.role, db]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseAuthUser | null) => {
         if (firebaseUser) {
             const storedUser = localStorage.getItem('sagara-user-data');
             if(storedUser) {
                 const parsedUser = JSON.parse(storedUser);
-                setLocalUser(parsedUser);
+                setUser(parsedUser);
                 setIsAuthenticated(true);
             }
         } else {
-            setLocalUser(null);
+            setUser(null);
             setIsAuthenticated(false);
             localStorage.removeItem('sagara-user-data');
         }
@@ -484,41 +492,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
 
-      let userData: Partial<UserData> | null = null;
-      let userRole: 'UMKM' | 'Employee' | 'SuperAdmin' = 'Employee';
-
+      let userDataDoc;
       const umkmDocRef = doc(db, 'dataUMKM', firebaseUser.uid);
       const umkmDocSnap = await getDoc(umkmDocRef);
 
       if (umkmDocSnap.exists()) {
-        const data = umkmDocSnap.data();
-        userRole = data.role || 'UMKM';
-        userData = { uid: firebaseUser.uid, ...data, role: userRole };
-
+        userDataDoc = { uid: firebaseUser.uid, ...umkmDocSnap.data(), role: umkmDocSnap.data().role || 'UMKM' };
       } else {
-        const employeeQuery = query(collection(db, 'employees'), where('email', '==', email));
-        const employeeQuerySnapshot = await getDocs(employeeQuery);
+        const employeeDocRef = doc(db, 'employees', firebaseUser.uid);
+        const employeeDocSnap = await getDoc(employeeDocRef);
 
-        if (!employeeQuerySnapshot.empty) {
-          const employeeDoc = employeeQuerySnapshot.docs[0];
-          const employeeData = employeeDoc.data();
-
-          if (employeeData.canLogin !== true) {
+        if (employeeDocSnap.exists()) {
+           const employeeData = employeeDocSnap.data();
+           if (employeeData.canLogin !== true) {
               await signOut(auth);
               throw new Error("Akun karyawan Anda tidak aktif. Silakan hubungi administrator.");
           }
-
-          if (employeeData.uid === firebaseUser.uid) {
-            userRole = 'Employee';
-            // Consolidate photoUrl from employee data
-            userData = { id: employeeDoc.id, ...employeeData, role: userRole, photoUrl: employeeData.photoUrl };
-          }
+           userDataDoc = { uid: firebaseUser.uid, ...employeeData, role: 'Employee' };
         }
       }
 
-      if (userData) {
-        setLocalUser(userData as UserData);
-        localStorage.setItem('sagara-user-data', JSON.stringify(userData));
+      if (userDataDoc) {
+        setUser(userDataDoc as UserData);
+        localStorage.setItem('sagara-user-data', JSON.stringify(userDataDoc));
         setIsAuthenticated(true);
         return true;
       } else {
@@ -680,9 +676,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const docRef = doc(db, user.role === 'UMKM' ? 'dataUMKM' : 'employees', user.uid);
     try {
         await updateDoc(docRef, data);
-        const updatedUser = { ...user, ...data };
-        setLocalUser(updatedUser);
-        localStorage.setItem('sagara-user-data', JSON.stringify(updatedUser));
+        // Data will be updated automatically by the onSnapshot listener
         return true;
     } catch (error) {
         console.error("Error updating user data:", error);
