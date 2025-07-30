@@ -7,6 +7,8 @@ import { Button } from "../ui/button";
 import type { View } from "../app-shell";
 import { Card, CardContent } from "../ui/card";
 import { Switch } from "../ui/switch";
+import { Label } from "../ui/label";
+import { cn } from "@/lib/utils";
 
 interface SettingsPageProps {
   setView: (view: View) => void;
@@ -17,18 +19,21 @@ export default function SettingsPage({ setView }: SettingsPageProps) {
 
   const settingsItems = [
     { 
+      id: "notifications",
       icon: Bell, 
       text: "Notifikasi", 
       hasSwitch: true,
       action: () => setNotificationsEnabled(prev => !prev) 
     },
     { 
+      id: "security",
       icon: Lock, 
       text: "Keamanan Akun", 
       hasSwitch: false,
       action: () => setView('account-security') 
     },
     { 
+      id: "language",
       icon: Globe, 
       text: "Bahasa", 
       hasSwitch: false,
@@ -47,20 +52,28 @@ export default function SettingsPage({ setView }: SettingsPageProps) {
       <div className="p-4 flex-grow overflow-y-auto">
         <Card>
           <CardContent className="p-2">
-             {settingsItems.map((item, index) => (
-              <button 
-                key={index} 
-                onClick={item.action} 
-                className="flex w-full items-center p-3 hover:bg-secondary rounded-lg transition-colors text-left"
-              >
-                <item.icon className="w-5 h-5 mr-4 text-primary" />
-                <span className="flex-grow font-medium">{item.text}</span>
-                {item.hasSwitch 
-                  ? <Switch checked={notificationsEnabled} onCheckedChange={setNotificationsEnabled}/> 
-                  : <ChevronRight className="w-5 h-5 text-muted-foreground" />
+             {settingsItems.map((item) => {
+                if(item.hasSwitch) {
+                    return (
+                        <div key={item.id} className="flex w-full items-center p-3">
+                            <item.icon className="w-5 h-5 mr-4 text-primary" />
+                            <Label htmlFor={item.id} className="flex-grow font-medium cursor-pointer">{item.text}</Label>
+                            <Switch id={item.id} checked={notificationsEnabled} onCheckedChange={setNotificationsEnabled}/> 
+                        </div>
+                    )
                 }
-              </button>
-            ))}
+                return (
+                    <button 
+                        key={item.id} 
+                        onClick={item.action} 
+                        className="flex w-full items-center p-3 hover:bg-secondary rounded-lg transition-colors text-left"
+                    >
+                        <item.icon className="w-5 h-5 mr-4 text-primary" />
+                        <span className="flex-grow font-medium">{item.text}</span>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                )
+             })}
           </CardContent>
         </Card>
       </div>
