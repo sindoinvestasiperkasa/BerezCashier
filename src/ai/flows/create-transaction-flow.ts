@@ -20,7 +20,7 @@ const AttributeValueSchema = z.object({
 const CartItemSchema = z.object({
   productId: z.string(),
   productName: z.string(),
-  productType: z.enum(['Barang', 'Jasa']).optional(),
+  productSubType: z.enum(['Produk Retail', 'Produk Produksi', 'Jasa (Layanan)']).optional(),
   quantity: z.number(),
   unitPrice: z.number(),
   cogs: z.number().default(0),
@@ -64,111 +64,140 @@ export const createTransactionFlow = ai.defineFlow(
   },
   async (input) => {
     const db = adminDb();
-    const batch = db.batch();
-
-    const transactionRef = db.collection('transactions').doc();
-    const transactionTimestamp = Timestamp.now();
     
-    // 1. Buat Entri Jurnal (`lines`)
-    const journalLines = [];
-    const totalCogs = input.items.reduce((sum, item) => sum + ((item.cogs || 0) * item.quantity), 0);
-    const serviceFeeAccountName = 'Utang Biaya Layanan Berez';
+    // Gunakan transaksi Firestore untuk memastikan semua operasi berhasil atau gagal bersamaan
+    return await db.runTransaction(async (transaction) => {
+        const transactionRef = db.collection('transactions').doc();
+        const transactionTimestamp = Timestamp.now();
+        
+        // 1. Buat Entri Jurnal (`lines`)
+        const journalLines = [];
+        const totalCogs = input.items.reduce((sum, item) => sum + ((item.cogs || 0) * item.quantity), 0);
+        const serviceFeeAccountName = 'Utang Biaya Layanan Berez';
 
-    // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
-    journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
-    
-    // Debit: HPP
-    if (totalCogs > 0) {
-      journalLines.push({ accountId: input.cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
-    }
-    
-    // Debit: Diskon Penjualan (jika ada)
-    if (input.discountAmount > 0 && input.discountAccountId) {
-      journalLines.push({ accountId: input.discountAccountId, debit: input.discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
-    }
+        // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
+        journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
+        
+        // Debit: HPP
+        if (totalCogs > 0) {
+          journalLines.push({ accountId: input.cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
+        }
+        
+        // Debit: Diskon Penjualan (jika ada)
+        if (input.discountAmount > 0 && input.discountAccountId) {
+          journalLines.push({ accountId: input.discountAccountId, debit: input.discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
+        }
 
-    // Credit: Pendapatan Penjualan sejumlah subtotal
-    journalLines.push({ accountId: input.salesAccountId, debit: 0, credit: input.subtotal, description: 'Pendapatan Penjualan dari Kasir' });
-    
-    // Credit: PPN Keluaran (jika ada)
-    if (input.taxAmount > 0 && input.taxAccountId) {
-      journalLines.push({ accountId: input.taxAccountId, debit: 0, credit: input.taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
-    }
-    
-    // Credit: Persediaan
-    if (totalCogs > 0) {
-        journalLines.push({ accountId: input.inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
-    }
-    
-    // Credit: Utang Biaya Layanan (jika ada)
-    if (input.serviceFee && input.serviceFee > 0) {
-      const serviceFeeAccQuery = await db.collection('accounts')
-        .where('idUMKM', '==', input.idUMKM)
-        .where('name', '>=', serviceFeeAccountName)
-        .where('name', '<=', serviceFeeAccountName + '\uf8ff')
-        .limit(1)
-        .get();
+        // Credit: Pendapatan Penjualan sejumlah subtotal
+        journalLines.push({ accountId: input.salesAccountId, debit: 0, credit: input.subtotal, description: 'Pendapatan Penjualan dari Kasir' });
+        
+        // Credit: PPN Keluaran (jika ada)
+        if (input.taxAmount > 0 && input.taxAccountId) {
+          journalLines.push({ accountId: input.taxAccountId, debit: 0, credit: input.taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
+        }
+        
+        // Credit: Persediaan
+        if (totalCogs > 0) {
+            journalLines.push({ accountId: input.inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
+        }
+        
+        // Credit: Utang Biaya Layanan (jika ada)
+        if (input.serviceFee && input.serviceFee > 0) {
+            const serviceFeeAccQuery = await db.collection('accounts')
+                .where('idUMKM', '==', input.idUMKM)
+                .where('name', '>=', serviceFeeAccountName)
+                .where('name', '<=', serviceFeeAccountName + '\uf8ff')
+                .limit(1)
+                .get();
 
-       if (!serviceFeeAccQuery.empty) {
-           const serviceFeeAccId = serviceFeeAccQuery.docs[0].id;
-           journalLines.push({ accountId: serviceFeeAccId, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
-       } else {
-            // Jika akun tidak ditemukan, proses tetap berjalan tapi berikan peringatan.
-            // Idealnya, ada mekanisme untuk membuat akun ini jika belum ada.
-            console.warn(`Akun '${serviceFeeAccountName}' tidak ditemukan untuk UMKM ${input.idUMKM}. Jurnal tidak seimbang.`);
-       }
-    }
+            if (!serviceFeeAccQuery.empty) {
+                const serviceFeeAccId = serviceFeeAccQuery.docs[0].id;
+                journalLines.push({ accountId: serviceFeeAccId, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
+            } else {
+                console.warn(`Akun '${serviceFeeAccountName}' tidak ditemukan untuk UMKM ${input.idUMKM}. Jurnal mungkin tidak seimbang.`);
+            }
+        }
 
 
-    // 2. Siapkan data transaksi untuk disimpan
-    const transactionData = {
-      idUMKM: input.idUMKM,
-      branchId: input.branchId || null,
-      warehouseId: input.warehouseId || null,
-      date: transactionTimestamp,
-      description: `Penjualan Kasir - Transaksi #${transactionRef.id.substring(0, 5)}`,
-      type: 'Sale',
-      status: 'Lunas',
-      paymentStatus: 'Berhasil', // Dianggap berhasil karena ini alur backend
-      transactionNumber: `KSR-${Date.now()}`,
-      amount: input.total,
-      paidAmount: input.total,
-      subtotal: input.subtotal,
-      discountAmount: input.discountAmount,
-      taxAmount: input.taxAmount,
-      serviceFee: input.serviceFee || 0,
-      items: input.items, // Simpan semua data item, termasuk cogs dan attributes
-      customerId: input.customerId,
-      customerName: input.customerName,
-      paymentMethod: input.paymentMethod,
-      isPkp: input.isPkp,
-      lines: journalLines,
-      // Simpan juga ID akun yang digunakan
-      paymentAccountId: input.paymentAccountId,
-      salesAccountId: input.salesAccountId,
-      cogsAccountId: input.cogsAccountId,
-      inventoryAccountId: input.inventoryAccountId,
-      discountAccountId: input.discountAccountId || null,
-      taxAccountId: input.taxAccountId || null,
-    };
-    
-    batch.set(transactionRef, transactionData);
+        // 2. Siapkan data transaksi untuk disimpan
+        const transactionData = {
+          idUMKM: input.idUMKM,
+          branchId: input.branchId || null,
+          warehouseId: input.warehouseId || null,
+          date: transactionTimestamp,
+          description: `Penjualan Kasir - Transaksi #${transactionRef.id.substring(0, 5)}`,
+          type: 'Sale',
+          status: 'Lunas',
+          paymentStatus: 'Berhasil', 
+          transactionNumber: `KSR-${Date.now()}`,
+          amount: input.total,
+          paidAmount: input.total,
+          subtotal: input.subtotal,
+          discountAmount: input.discountAmount,
+          taxAmount: input.taxAmount,
+          serviceFee: input.serviceFee || 0,
+          items: input.items,
+          customerId: input.customerId,
+          customerName: input.customerName,
+          paymentMethod: input.paymentMethod,
+          isPkp: input.isPkp,
+          lines: journalLines,
+          paymentAccountId: input.paymentAccountId,
+          salesAccountId: input.salesAccountId,
+          cogsAccountId: input.cogsAccountId,
+          inventoryAccountId: input.inventoryAccountId,
+          discountAccountId: input.discountAccountId || null,
+          taxAccountId: input.taxAccountId || null,
+        };
+        
+        transaction.set(transactionRef, transactionData);
 
-    // 3. Update Stok Produk
-    input.items.forEach(item => {
-      // Hanya update stok untuk produk tipe 'Barang' yang memiliki stok
-      if (item.productType === 'Barang') {
-        const productRef = db.collection('products').doc(item.productId);
-        // Ini adalah pendekatan sederhana. Untuk akurasi tinggi, gunakan FIFO/LIFO dari stock lots.
-        batch.update(productRef, { stock: FieldValue.increment(-item.quantity) });
-      }
+        // 3. Update Stok Produk menggunakan FIFO dari StockLots
+        for (const item of input.items) {
+          if (item.productSubType === 'Jasa (Layanan)') {
+            continue; // Lewati produk jasa
+          }
+
+          let quantityToDeduct = item.quantity;
+          const stockLotsQuery = db.collection('stockLots')
+            .where('productId', '==', item.productId)
+            .where('warehouseId', '==', input.warehouseId)
+            .where('remainingQuantity', '>', 0)
+            .orderBy('remainingQuantity')
+            .orderBy('createdAt', 'asc'); // Urutkan berdasarkan tanggal masuk (FIFO)
+
+          const stockLotsSnapshot = await stockLotsQuery.get();
+
+          let totalStockAvailable = 0;
+          stockLotsSnapshot.forEach(doc => {
+            totalStockAvailable += doc.data().remainingQuantity || 0;
+          });
+
+          if (totalStockAvailable < quantityToDeduct) {
+              throw new Error(`Stok tidak cukup untuk produk ${item.productName}. Tersedia: ${totalStockAvailable}, Dibutuhkan: ${quantityToDeduct}.`);
+          }
+
+          for (const doc of stockLotsSnapshot.docs) {
+            if (quantityToDeduct <= 0) break;
+
+            const lot = doc.data();
+            const lotRef = doc.ref;
+            const quantityInLot = lot.remainingQuantity;
+
+            if (quantityInLot >= quantityToDeduct) {
+              transaction.update(lotRef, { remainingQuantity: FieldValue.increment(-quantityToDeduct) });
+              quantityToDeduct = 0;
+            } else {
+              transaction.update(lotRef, { remainingQuantity: 0 });
+              quantityToDeduct -= quantityInLot;
+            }
+          }
+        }
+        
+        return {
+          success: true,
+          transactionId: transactionRef.id,
+        };
     });
-
-    await batch.commit();
-
-    return {
-      success: true,
-      transactionId: transactionRef.id,
-    };
   }
 );
