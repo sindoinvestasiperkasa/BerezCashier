@@ -38,9 +38,11 @@ const iconMap: { [key: string]: React.ElementType } = {
   Default: ShoppingBasket,
 };
 
+type CategoryName = string | { id: string; en: string };
+
 interface ProductCategory {
   id: string;
-  name: string;
+  name: CategoryName;
   icon?: string;
 }
 
@@ -49,7 +51,7 @@ interface HomePageProps {
 }
 
 export default function HomePage({ setView }: HomePageProps) {
-  const { user, products, notifications, selectedBranchId, selectedWarehouseId, stockLots, productUnits, t } = useApp();
+  const { user, products, notifications, selectedBranchId, selectedWarehouseId, stockLots, productUnits, t, locale } = useApp();
   const { toast } = useToast();
   const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +59,13 @@ export default function HomePage({ setView }: HomePageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
+
+  const getCategoryDisplayName = (name: CategoryName) => {
+    if (typeof name === 'object' && name !== null) {
+      return locale === 'en' ? name.en : name.id;
+    }
+    return name;
+  };
 
   useEffect(() => {
     const fetchLocation = async (latitude: number, longitude: number) => {
@@ -131,11 +140,17 @@ export default function HomePage({ setView }: HomePageProps) {
         if (activeCategoryIds.length > 0) {
           const categoriesQuery = query(collection(db, "productCategories"), where(documentId(), "in", activeCategoryIds));
           const categoriesSnapshot = await getDocs(categoriesQuery);
-          categoriesData = categoriesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            icon: doc.data().name 
-          }));
+          categoriesData = categoriesSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const name: CategoryName = data.name;
+            // For icon mapping, we use the Indonesian name or the base string.
+            const iconName = typeof name === 'object' ? name.id : name;
+            return {
+              id: doc.id,
+              name: name,
+              icon: iconName
+            };
+          });
         }
         
         setProductCategories(categoriesData);
@@ -155,10 +170,10 @@ export default function HomePage({ setView }: HomePageProps) {
       const category = productCategories.find(cat => cat.id === product.categoryId);
       return {
         ...product,
-        categoryName: category ? category.name : "Uncategorized",
+        categoryName: category ? getCategoryDisplayName(category.name) : "Uncategorized",
       };
     });
-  }, [availableProducts, productCategories]);
+  }, [availableProducts, productCategories, locale]);
 
   const displayCategories = useMemo(() => {
     const allCategory: ProductCategory = { id: "All", name: t('home.category.all'), icon: "All" };
@@ -221,20 +236,21 @@ export default function HomePage({ setView }: HomePageProps) {
              [...Array(5)].map((_, i) => <Skeleton key={i} className="w-20 h-20 rounded-lg flex-shrink-0" />)
           ) : (
             displayCategories.map((category) => {
+              const displayName = getCategoryDisplayName(category.name);
               const Icon = iconMap[category.icon || "Default"] || iconMap["Default"];
               return (
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategoryId(category.id)}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-lg border transition-colors flex-shrink-0 shadow-md",
+                    "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-lg border transition-colors flex-shrink-0 shadow-md text-center",
                     selectedCategoryId === category.id
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-card text-foreground hover:bg-secondary"
                   )}
                 >
                   {Icon && <Icon className="w-6 h-6" />}
-                  <span className="text-xs font-medium">{category.name}</span>
+                  <span className="text-xs font-medium">{displayName}</span>
                 </button>
               );
             })
@@ -296,3 +312,5 @@ export default function HomePage({ setView }: HomePageProps) {
     </div>
   );
 }
+
+    
