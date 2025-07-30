@@ -1,22 +1,39 @@
+
 "use client";
 
-import { ArrowLeft, Bell, Lock, Globe } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Bell, Lock, Globe, ChevronRight } from "lucide-react";
 import { Button } from "../ui/button";
 import type { View } from "../app-shell";
 import { Card, CardContent } from "../ui/card";
-import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
-import { ChevronRight } from "lucide-react";
 
 interface SettingsPageProps {
   setView: (view: View) => void;
 }
 
 export default function SettingsPage({ setView }: SettingsPageProps) {
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
   const settingsItems = [
-    { icon: Bell, text: "Notifikasi", hasSwitch: true },
-    { icon: Lock, text: "Keamanan Akun", hasSwitch: false },
-    { icon: Globe, text: "Bahasa", hasSwitch: false },
+    { 
+      icon: Bell, 
+      text: "Notifikasi", 
+      hasSwitch: true,
+      action: () => setNotificationsEnabled(prev => !prev) 
+    },
+    { 
+      icon: Lock, 
+      text: "Keamanan Akun", 
+      hasSwitch: false,
+      action: () => setView('account-security') 
+    },
+    { 
+      icon: Globe, 
+      text: "Bahasa", 
+      hasSwitch: false,
+      action: () => setView('language') 
+    },
   ];
 
   return (
@@ -31,11 +48,18 @@ export default function SettingsPage({ setView }: SettingsPageProps) {
         <Card>
           <CardContent className="p-2">
              {settingsItems.map((item, index) => (
-              <div key={index} className="flex items-center p-3 hover:bg-secondary rounded-lg transition-colors">
+              <button 
+                key={index} 
+                onClick={item.action} 
+                className="flex w-full items-center p-3 hover:bg-secondary rounded-lg transition-colors text-left"
+              >
                 <item.icon className="w-5 h-5 mr-4 text-primary" />
                 <span className="flex-grow font-medium">{item.text}</span>
-                {item.hasSwitch ? <Switch /> : <ChevronRight className="w-5 h-5 text-muted-foreground" />}
-              </div>
+                {item.hasSwitch 
+                  ? <Switch checked={notificationsEnabled} onCheckedChange={setNotificationsEnabled}/> 
+                  : <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                }
+              </button>
             ))}
           </CardContent>
         </Card>

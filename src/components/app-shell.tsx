@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -13,9 +14,11 @@ import EditProfilePage from "./pages/edit-profile-page";
 import MyAddressPage from "./pages/my-address-page";
 import SettingsPage from "./pages/settings-page";
 import NotificationsPage from "./pages/notifications-page";
+import AccountSecurityPage from "./pages/account-security-page";
+import LanguagePage from "./pages/language-page";
 
 export type Tab = "home" | "wishlist" | "cart" | "transactions" | "account";
-export type View = Tab | "checkout" | "payment" | "edit-profile" | "my-address" | "settings" | "notifications";
+export type View = Tab | "checkout" | "payment" | "edit-profile" | "my-address" | "settings" | "notifications" | "account-security" | "language";
 
 export default function AppShell() {
   const [view, setView] = useState<View>("home");
@@ -44,6 +47,10 @@ export default function AppShell() {
         return <SettingsPage setView={setView} />;
       case "notifications":
         return <NotificationsPage setView={setView} />;
+      case "account-security":
+        return <AccountSecurityPage setView={setView} />;
+      case "language":
+        return <LanguagePage setView={setView} />;
       default:
         return <HomePage setView={setView} />;
     }
