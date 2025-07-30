@@ -4,7 +4,7 @@
 import React, { createContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch, runTransaction } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 
@@ -615,128 +615,148 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!idUMKM) throw new Error("UMKM ID not found for the current user.");
 
     const db = getFirestore();
-    const batch = writeBatch(db);
+    let transactionId = "";
 
-    // 1. Calculate COGS and prepare item data based on FIFO from available stockLots
-    let totalCogs = 0;
-    const itemsForTransaction: SaleItem[] = [];
-    
-    // Filter for items that need stock management
-    const physicalItems = data.items.filter(item => item.productSubType === 'Produk Retail' || item.productSubType === 'Produk Produksi');
-
-    for (const item of physicalItems) {
-      let quantityToDeduct = item.quantity;
+    await runTransaction(db, async (transaction) => {
+      const {
+          items: cartItems, total: totalPrice, subtotal: subtotalPrice,
+          discountAmount, taxAmount, isPkp,
+          paymentMethod,
+          salesAccountId, cogsAccountId, inventoryAccountId, paymentAccountId,
+          discountAccountId, taxAccountId,
+          warehouseId, branchId, customerId, customerName, serviceFee
+      } = data;
       
-      const relevantStockLots = stockLots
-        .filter(lot => lot.productId === item.id && lot.warehouseId === data.warehouseId && lot.remainingQuantity > 0)
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()); // FIFO
+      if (!warehouseId) throw new Error("Gudang tidak dipilih.");
 
-      let itemCogs = 0;
-      for (const lot of relevantStockLots) {
-          if (quantityToDeduct <= 0) break;
-          
-          if (!lot.purchasePrice || lot.purchasePrice <= 0) {
-            throw new Error(`Lot stok ${lot.id} untuk produk ${item.name} tidak memiliki harga beli yang valid.`);
-          }
+      const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan'));
 
-          const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
-          itemCogs += quantityFromThisLot * lot.purchasePrice;
-          quantityToDeduct -= quantityFromThisLot;
+      const missingAccounts = [];
+      if (!paymentAccountId) missingAccounts.push(`Akun untuk metode pembayaran '${paymentMethod}'`);
+      if (!salesAccountId) missingAccounts.push("Akun Pendapatan Penjualan");
+      if (discountAmount > 0 && !discountAccountId) missingAccounts.push("Akun Potongan Penjualan");
+      if (!cogsAccountId) missingAccounts.push("Akun Harga Pokok Penjualan (HPP)");
+      if (!inventoryAccountId) missingAccounts.push("Akun Persediaan Barang");
+      if (isPkp && taxAmount > 0 && !taxAccountId) missingAccounts.push("Akun PPN Keluaran");
+      if (serviceFee && serviceFee > 0 && !serviceFeeAccount) missingAccounts.push("Akun Utang Layanan Berez");
 
-          // Add stock update to the batch
-          const lotRef = doc(db, "stockLots", lot.id);
-          const newRemainingQuantity = lot.remainingQuantity - quantityFromThisLot;
-          batch.update(lotRef, { remainingQuantity: newRemainingQuantity });
-      }
+      if (missingAccounts.length > 0) throw new Error(`Harap pilih/buat akun berikut: ${missingAccounts.join(', ')}.`);
 
-      if (quantityToDeduct > 0) {
-        throw new Error(`Stok tidak cukup untuk produk ${item.name}.`);
-      }
+      let totalCogs = 0;
+      const itemsForTransaction: SaleItem[] = [];
 
-      itemsForTransaction.push({
-        productId: item.id,
-        productName: item.name,
-        productType: 'Barang',
-        quantity: item.quantity,
-        unitPrice: item.price,
-        cogs: itemCogs,
-        // ... any other relevant fields
-      });
-      totalCogs += itemCogs;
-    }
+      const physicalItems = cartItems.filter(item => item.productSubType === 'Produk Retail' || item.productSubType === 'Produk Produksi');
 
-    // Add service items to the transaction list (they don't have COGS)
-    data.items.forEach(item => {
-      if (item.productSubType === 'Jasa (Layanan)') {
+      for (const item of physicalItems) {
+        const lotsQuery = query(
+            collection(db, 'stockLots'),
+            where('idUMKM', '==', idUMKM),
+            where('warehouseId', '==', warehouseId),
+            where('productId', '==', item.id)
+        );
+
+        // Firestore transactions require reads to happen before writes.
+        // We get all docs and then process them.
+        const lotsSnapshot = await transaction.get(lotsQuery);
+        const availableLots = lotsSnapshot.docs
+            .map(d => ({ id: d.id, ...d.data() } as StockLot))
+            .filter(lot => lot.remainingQuantity > 0)
+            .sort((a, b) => (a.createdAt as any).seconds - (b.createdAt as any).seconds); // FIFO Sort
+        
+        let quantityToDeduct = item.quantity;
+        let itemCogs = 0;
+        
+        const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+        if (totalStockForProduct < quantityToDeduct) throw new Error(`Stok tidak mencukupi untuk ${item.name}.`);
+        
+        for (const lot of availableLots) {
+            if (quantityToDeduct <= 0) break;
+            if (!lot.purchasePrice || lot.purchasePrice <= 0) throw new Error(`Lot stok ${lot.id} untuk produk ${item.name} tidak memiliki harga beli.`);
+            
+            const lotRef = doc(db, 'stockLots', lot.id);
+            const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+            itemCogs += quantityFromThisLot * lot.purchasePrice;
+            
+            transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
+            quantityToDeduct -= quantityFromThisLot;
+        }
+
         itemsForTransaction.push({
           productId: item.id,
           productName: item.name,
-          productType: 'Jasa',
+          productType: 'Barang',
           quantity: item.quantity,
           unitPrice: item.price,
-          cogs: 0,
+          cogs: itemCogs,
         });
+
+        totalCogs += itemCogs;
       }
+      
+      // Add service items
+      cartItems.forEach(item => {
+        if (item.productSubType === 'Jasa (Layanan)') {
+          itemsForTransaction.push({
+            productId: item.id,
+            productName: item.name,
+            productType: 'Jasa',
+            quantity: item.quantity,
+            unitPrice: item.price,
+            cogs: 0,
+          });
+        }
+      });
+
+      const transactionTimestamp = Timestamp.now();
+      const transactionNumber = `KSR-${Date.now()}`;
+      
+      const lines = [
+          { accountId: paymentAccountId, debit: totalPrice, credit: 0, description: `Penerimaan Penjualan Kasir via ${paymentMethod}` },
+          { accountId: salesAccountId, debit: 0, credit: subtotalPrice, description: `Pendapatan Penjualan dari Kasir` },
+          { accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' },
+          { accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' },
+      ];
+      
+      if (discountAmount > 0 && discountAccountId) lines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
+      if (isPkp && taxAmount > 0 && taxAccountId) lines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
+      if (serviceFee && serviceFee > 0 && serviceFeeAccount) {
+          lines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
+      }
+      
+      const transactionData = {
+          idUMKM,
+          warehouseId,
+          branchId,
+          date: transactionTimestamp,
+          description: `Penjualan Kasir - ${paymentMethod}`,
+          type: 'Sale',
+          status: 'Lunas',
+          paymentStatus: 'Berhasil',
+          transactionNumber,
+          amount: totalPrice,
+          paidAmount: totalPrice,
+          subtotal: subtotalPrice,
+          discountAmount,
+          taxAmount,
+          items: itemsForTransaction,
+          customerId,
+          customerName,
+          paymentMethod,
+          lines,
+          paymentAccountId, salesAccountId, cogsAccountId, discountAccountId: discountAccountId || null,
+          inventoryAccountId, taxAccountId: taxAccountId || null,
+          isPkp,
+          serviceFee: serviceFee || 0,
+      };
+
+      const txDocRef = doc(collection(db, 'transactions'));
+      transaction.set(txDocRef, transactionData);
+      transactionId = txDocRef.id;
     });
-
-    // 2. Prepare Journal Entry
-    const journalLines = [];
-    journalLines.push({ accountId: data.paymentAccountId, debit: data.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${data.paymentMethod}` });
-    if (totalCogs > 0) journalLines.push({ accountId: data.cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
-    if (data.discountAmount > 0 && data.discountAccountId) journalLines.push({ accountId: data.discountAccountId, debit: data.discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
-    journalLines.push({ accountId: data.salesAccountId, debit: 0, credit: data.subtotal, description: 'Pendapatan Penjualan dari Kasir' });
-    if (data.taxAmount > 0 && data.taxAccountId) journalLines.push({ accountId: data.taxAccountId, debit: 0, credit: data.taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
-    if (totalCogs > 0) journalLines.push({ accountId: data.inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
-
-    // Optional: Service Fee journal entry
-    if (data.serviceFee && data.serviceFee > 0) {
-      const serviceFeeAccount = accounts.find(a => a.name.toLowerCase().includes('utang biaya layanan berez'));
-      if(serviceFeeAccount) {
-        journalLines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: data.serviceFee, description: 'Biaya layanan aplikasi' });
-      }
-    }
-
-
-    // 3. Prepare Transaction Document
-    const transactionDoc = {
-      idUMKM,
-      branchId: data.branchId || null,
-      warehouseId: data.warehouseId || null,
-      date: Timestamp.now(),
-      description: `Penjualan Kasir`,
-      type: 'Sale',
-      status: 'Lunas',
-      paymentStatus: 'Berhasil',
-      transactionNumber: `KSR-${Date.now()}`,
-      amount: data.total,
-      paidAmount: data.total,
-      subtotal: data.subtotal,
-      discountAmount: data.discountAmount,
-      taxAmount: data.taxAmount,
-      serviceFee: data.serviceFee || 0,
-      items: itemsForTransaction,
-      customerId: data.customerId,
-      customerName: data.customerName,
-      paymentMethod: data.paymentMethod,
-      isPkp: data.isPkp,
-      lines: journalLines,
-      paymentAccountId: data.paymentAccountId,
-      salesAccountId: data.salesAccountId,
-      cogsAccountId: data.cogsAccountId,
-      inventoryAccountId: data.inventoryAccountId,
-      discountAccountId: data.discountAccountId || null,
-      taxAccountId: data.taxAccountId || null,
-    };
-    
-    const transactionRef = doc(collection(db, 'transactions'));
-    batch.set(transactionRef, transactionDoc);
-
-    // 4. Commit all writes at once
-    await batch.commit();
 
     return {
       success: true,
-      transactionId: transactionRef.id
+      transactionId,
     };
   };
 
