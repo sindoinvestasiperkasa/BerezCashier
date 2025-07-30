@@ -49,7 +49,7 @@ interface HomePageProps {
 }
 
 export default function HomePage({ setView }: HomePageProps) {
-  const { user, products, notifications, selectedBranchId, selectedWarehouseId, stockLots, productUnits } = useApp();
+  const { user, products, notifications, selectedBranchId, selectedWarehouseId, stockLots, productUnits, t } = useApp();
   const { toast } = useToast();
   const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,11 +68,11 @@ export default function HomePage({ setView }: HomePageProps) {
         if (city && country) {
           setLocationName(`${city}, ${country}`);
         } else {
-          setLocationName(user?.address || "Lokasi tidak diatur");
+          setLocationName(user?.address || t('home.locationNotSet'));
         }
       } catch (error) {
         console.error("Error fetching location name:", error);
-        setLocationName(user?.address || "Lokasi tidak diatur");
+        setLocationName(user?.address || t('home.locationNotSet'));
       }
     };
     
@@ -83,13 +83,13 @@ export default function HomePage({ setView }: HomePageProps) {
         },
         (error) => {
           console.error("Error getting location:", error);
-          setLocationName(user?.address || "Lokasi tidak diatur");
+          setLocationName(user?.address || t('home.locationNotSet'));
         }
       );
     } else {
-      setLocationName(user?.address || "Lokasi tidak diatur");
+      setLocationName(user?.address || t('home.locationNotSet'));
     }
-  }, [user?.address]);
+  }, [user?.address, t]);
 
   const availableProducts = useMemo(() => {
     if (!selectedWarehouseId) return [];
@@ -161,9 +161,9 @@ export default function HomePage({ setView }: HomePageProps) {
   }, [availableProducts, productCategories]);
 
   const displayCategories = useMemo(() => {
-    const allCategory: ProductCategory = { id: "All", name: "All", icon: "All" };
+    const allCategory: ProductCategory = { id: "All", name: t('home.category.all'), icon: "All" };
     return [allCategory, ...productCategories];
-  }, [productCategories]);
+  }, [productCategories, t]);
 
   const filteredProducts = productsWithCategoryNames.filter((product) => {
     const matchesCategory =
@@ -189,9 +189,9 @@ export default function HomePage({ setView }: HomePageProps) {
       <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <p className="text-muted-foreground text-sm flex items-center gap-1"><MapPin className="w-4 h-4"/> Lokasi Anda</p>
+            <p className="text-muted-foreground text-sm flex items-center gap-1"><MapPin className="w-4 h-4"/> {t('home.yourLocation')}</p>
             <h1 className="font-bold text-lg text-foreground">
-              {locationName || "Mencari lokasi..."}
+              {locationName || t('home.searchingLocation')}
             </h1>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setView('notifications')} className="relative">
@@ -206,7 +206,7 @@ export default function HomePage({ setView }: HomePageProps) {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Cari di Berez Cashier..."
+            placeholder={t('home.searchPlaceholder')}
             className="pl-10 h-12 rounded-full"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -215,7 +215,7 @@ export default function HomePage({ setView }: HomePageProps) {
       </header>
 
       <section className="p-4 md:p-6">
-        <h2 className="text-xl font-bold mb-3 text-foreground">Kategori</h2>
+        <h2 className="text-xl font-bold mb-3 text-foreground">{t('home.categories')}</h2>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
           {isLoading && productCategories.length === 0 ? (
              [...Array(5)].map((_, i) => <Skeleton key={i} className="w-20 h-20 rounded-lg flex-shrink-0" />)
@@ -245,10 +245,10 @@ export default function HomePage({ setView }: HomePageProps) {
       <section className="p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-foreground">
-            {searchQuery ? `Hasil Pencarian` : "Layanan Tersedia"}
+            {searchQuery ? t('home.searchResults') : t('home.availableServices')}
           </h2>
           <Button variant="link" className="text-primary p-0 h-auto">
-            Lihat Semua
+            {t('home.seeAll')}
           </Button>
         </div>
         {isLoading && products.length === 0 ? (
@@ -280,9 +280,9 @@ export default function HomePage({ setView }: HomePageProps) {
         ) : (
           <div className="text-center py-10 flex flex-col items-center gap-4">
             <Frown className="w-16 h-16 text-muted-foreground" />
-            <h3 className="text-lg font-semibold">Layanan tidak ditemukan</h3>
+            <h3 className="text-lg font-semibold">{t('home.noServicesFound.title')}</h3>
             <p className="text-muted-foreground max-w-xs">
-              Tidak ada produk yang cocok dengan pencarian Anda atau tersedia di gudang/cabang yang dipilih.
+              {t('home.noServicesFound.description')}
             </p>
           </div>
         )}

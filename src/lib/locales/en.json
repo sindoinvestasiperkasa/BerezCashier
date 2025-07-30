@@ -55,5 +55,16 @@
   "login.success.title": "Login Successful",
   "login.success.description": "Welcome back!",
   "login.error.title": "Login Failed",
-  "login.error.description": "An error occurred. Please try again."
+  "login.error.description": "An error occurred. Please try again.",
+  "home.yourLocation": "Your Location",
+  "home.searchingLocation": "Searching for location...",
+  "home.locationNotSet": "Location not set",
+  "home.searchPlaceholder": "Search in Berez Cashier...",
+  "home.categories": "Categories",
+  "home.category.all": "All",
+  "home.searchResults": "Search Results",
+  "home.availableServices": "Available Services",
+  "home.seeAll": "See All",
+  "home.noServicesFound.title": "Services not found",
+  "home.noServicesFound.description": "There are no products that match your search or are available in the selected warehouse/branch."
 }

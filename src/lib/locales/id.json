@@ -55,5 +55,16 @@
   "login.success.title": "Login Berhasil",
   "login.success.description": "Selamat datang kembali!",
   "login.error.title": "Login Gagal",
-  "login.error.description": "Terjadi kesalahan. Silakan coba lagi."
+  "login.error.description": "Terjadi kesalahan. Silakan coba lagi.",
+  "home.yourLocation": "Lokasi Anda",
+  "home.searchingLocation": "Mencari lokasi...",
+  "home.locationNotSet": "Lokasi tidak diatur",
+  "home.searchPlaceholder": "Cari di Berez Cashier...",
+  "home.categories": "Kategori",
+  "home.category.all": "Semua",
+  "home.searchResults": "Hasil Pencarian",
+  "home.availableServices": "Layanan Tersedia",
+  "home.seeAll": "Lihat Semua",
+  "home.noServicesFound.title": "Layanan tidak ditemukan",
+  "home.noServicesFound.description": "Tidak ada produk yang cocok dengan pencarian Anda atau tersedia di gudang/cabang yang dipilih."
 }
