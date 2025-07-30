@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -9,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword, FirebaseError } from 'firebase/auth';
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { app } from "@/lib/firebase";
 
 
@@ -46,9 +45,9 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
     const user = auth.currentUser;
     if (!user || !user.email) {
         toast({ title: "Gagal", description: "Sesi Anda tidak valid. Silakan login kembali.", variant: "destructive" });
+        setIsLoading(false);
         // Di sini kita tidak punya akses ke `logout`, tapi bisa mengarahkan ke halaman login
         // atau membiarkan AppProvider menanganinya. Untuk sekarang, kita hanya stop prosesnya.
-        setIsLoading(false);
         return;
     }
     
@@ -64,12 +63,10 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
     } catch (error: any) {
         console.error("Password change error:", error);
         let description = "Terjadi kesalahan yang tidak terduga. Silakan coba lagi.";
-        if (error instanceof FirebaseError) {
-            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                description = "Kata sandi saat ini yang Anda masukkan salah.";
-            } else if (error.code === 'auth/weak-password') {
-                description = "Kata sandi baru terlalu lemah. Gunakan minimal 6 karakter.";
-            }
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            description = "Kata sandi saat ini yang Anda masukkan salah.";
+        } else if (error.code === 'auth/weak-password') {
+            description = "Kata sandi baru terlalu lemah. Gunakan minimal 6 karakter.";
         }
         toast({ title: "Gagal Mengubah Kata Sandi", description, variant: "destructive" });
     } finally {
