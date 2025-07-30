@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, ReactNode, useEffect, useMemo } from 'react';
 import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 import { createTransaction, CreateTransactionInput, CreateTransactionOutput } from '@/ai/flows/create-transaction-flow-entry';
@@ -243,6 +243,7 @@ interface AppContextType {
   markNotificationAsRead: (notificationId: string) => void;
   addShiftReportNotification: (summary: { totalTransactions: number; totalRevenue: number }) => void;
   updateUserData: (data: Partial<UserData>) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   isAuthenticated: boolean;
   user: UserData | null;
   login: (email: string, pass: string) => Promise<boolean>;
@@ -497,7 +498,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const umkmDocSnap = await getDoc(umkmDocRef);
 
       if (umkmDocSnap.exists()) {
-        userDataDoc = { uid: firebaseUser.uid, ...umkmDocSnap.data(), role: umkmDocSnap.data().role || 'UMKM' };
+        const data = umkmDocSnap.data();
+        userDataDoc = { uid: firebaseUser.uid, ...data, role: data.role || 'UMKM', photoUrl: data.photoUrl };
       } else {
         const employeeDocRef = doc(db, 'employees', firebaseUser.uid);
         const employeeDocSnap = await getDoc(employeeDocRef);
@@ -508,7 +510,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               await signOut(auth);
               throw new Error("Akun karyawan Anda tidak aktif. Silakan hubungi administrator.");
           }
-           userDataDoc = { uid: firebaseUser.uid, ...employeeData, role: 'Employee' };
+           userDataDoc = { uid: firebaseUser.uid, ...employeeData, role: 'Employee', photoUrl: employeeData.photoUrl };
         }
       }
 
@@ -684,6 +686,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || !firebaseUser.email) {
+      toast({ title: "Pengguna tidak terautentikasi.", variant: "destructive" });
+      return false;
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(firebaseUser.email, currentPassword);
+      await reauthenticateWithCredential(firebaseUser, credential);
+      await updatePassword(firebaseUser, newPassword);
+      return true;
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      return false;
+    }
+  };
 
   return (
     <AppContext.Provider
@@ -720,6 +739,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         markNotificationAsRead,
         addShiftReportNotification,
         updateUserData,
+        changePassword,
         isAuthenticated,
         user,
         login,
