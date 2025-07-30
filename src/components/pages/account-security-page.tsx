@@ -56,10 +56,10 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
       });
       form.reset();
     } catch (error: any) {
-      if (error instanceof FirebaseError && error.code === 'auth/invalid-credential') {
+      if (error instanceof FirebaseError && (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential')) {
         form.setError("currentPassword", {
           type: "manual",
-          message: "Kata sandi saat ini salah.",
+          message: "Kata sandi saat ini yang Anda masukkan salah.",
         });
         toast({
           variant: "destructive",
