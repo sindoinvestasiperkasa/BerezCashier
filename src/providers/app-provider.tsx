@@ -4,7 +4,7 @@
 import React, { createContext, useState, ReactNode, useEffect, useMemo } from 'react';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 import { createTransaction, CreateTransactionInput, CreateTransactionOutput } from '@/ai/flows/create-transaction-flow-entry';
 
@@ -105,6 +105,7 @@ export interface CartItem extends Product {
 export interface SaleItem {
     productId: string;
     productName: string;
+    productType?: 'Barang' | 'Jasa';
     quantity: number;
     unitPrice: number;
     cogs: number;
@@ -240,6 +241,7 @@ interface AppContextType {
   deleteHeldCart: (cartId: number) => void;
   markNotificationAsRead: (notificationId: string) => void;
   addShiftReportNotification: (summary: { totalTransactions: number; totalRevenue: number }) => void;
+  updateUserData: (data: Partial<UserData>) => Promise<boolean>;
   isAuthenticated: boolean;
   user: UserData | null;
   login: (email: string, pass: string) => Promise<boolean>;
@@ -667,6 +669,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
     setNotifications(prev => [newNotif, ...prev]);
   };
+  
+  const updateUserData = async (data: Partial<UserData>): Promise<boolean> => {
+    if (!user) {
+        toast({ title: "Anda harus login", variant: "destructive" });
+        return false;
+    }
+    const docRef = doc(db, user.role === 'UMKM' ? 'dataUMKM' : 'employees', user.uid);
+    try {
+        await updateDoc(docRef, data);
+        const updatedUser = { ...user, ...data };
+        setLocalUser(updatedUser);
+        localStorage.setItem('sagara-user-data', JSON.stringify(updatedUser));
+        return true;
+    } catch (error) {
+        console.error("Error updating user data:", error);
+        return false;
+    }
+  };
 
 
   return (
@@ -703,6 +723,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         deleteHeldCart,
         markNotificationAsRead,
         addShiftReportNotification,
+        updateUserData,
         isAuthenticated,
         user,
         login,
