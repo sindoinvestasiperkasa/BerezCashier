@@ -11,6 +11,8 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { app } from "@/lib/firebase";
+import { FirebaseError } from 'firebase/app';
+import { useApp } from "@/hooks/use-app";
 
 
 interface AccountSecurityPageProps {
@@ -20,6 +22,7 @@ interface AccountSecurityPageProps {
 export default function AccountSecurityPage({ setView }: AccountSecurityPageProps) {
   const { toast } = useToast();
   const auth = getAuth(app);
+  const { t } = useApp();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -32,12 +35,12 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
-        toast({ title: "Gagal", description: "Konfirmasi kata sandi baru tidak cocok.", variant: "destructive" });
+        toast({ title: t('common.error'), description: t('security.error.passwordMismatch'), variant: "destructive" });
         return;
     }
     
     if (newPassword.length < 6) {
-        toast({ title: "Gagal", description: "Kata sandi baru minimal 6 karakter.", variant: "destructive" });
+        toast({ title: t('common.error'), description: t('security.error.passwordLength'), variant: "destructive" });
         return;
     }
 
@@ -45,10 +48,8 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
 
     const user = auth.currentUser;
     if (!user || !user.email) {
-        toast({ title: "Gagal", description: "Sesi Anda tidak valid. Silakan login kembali.", variant: "destructive" });
+        toast({ title: t('common.error'), description: t('security.error.sessionInvalid'), variant: "destructive" });
         setIsLoading(false);
-        // Di sini kita tidak punya akses ke `logout`, tapi bisa mengarahkan ke halaman login
-        // atau membiarkan AppProvider menanganinya. Untuk sekarang, kita hanya stop prosesnya.
         return;
     }
     
@@ -58,18 +59,19 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
         
         await updatePassword(user, newPassword);
 
-        toast({ title: "Berhasil", description: "Kata sandi Anda telah berhasil diperbarui." });
+        toast({ title: t('common.success'), description: t('security.success.passwordUpdated') });
         setView('settings');
 
     } catch (error: any) {
-        console.error("Password change error:", error.code, error.message);
-        let description = "Terjadi kesalahan yang tidak terduga. Silakan coba lagi.";
-        if (error.code === 'auth/invalid-credential') {
-            description = "Kata sandi saat ini yang Anda masukkan salah.";
-        } else if (error.code === 'auth/weak-password') {
-            description = "Kata sandi baru terlalu lemah. Gunakan minimal 6 karakter.";
+        let description = t('security.error.unexpected');
+        if (error instanceof FirebaseError) {
+          if (error.code === 'auth/invalid-credential') {
+              description = t('security.error.wrongPassword');
+          } else if (error.code === 'auth/weak-password') {
+              description = t('security.error.weakPassword');
+          }
         }
-        toast({ title: "Gagal Mengubah Kata Sandi", description, variant: "destructive" });
+        toast({ title: t('security.error.updateFailed'), description, variant: "destructive" });
     } finally {
         setIsLoading(false);
     }
@@ -82,19 +84,19 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
         <Button variant="ghost" size="icon" className="mr-2" onClick={() => setView('settings')}>
           <ArrowLeft />
         </Button>
-        <h1 className="text-xl font-bold">Keamanan Akun</h1>
+        <h1 className="text-xl font-bold">{t('security.title')}</h1>
       </header>
       <form onSubmit={handlePasswordChange} className="p-4 flex-grow overflow-y-auto space-y-4">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Lock className="w-5 h-5 text-primary" />
-              <span>Ubah Kata Sandi</span>
+              <span>{t('security.changePassword')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="current-password">Kata Sandi Saat Ini</Label>
+              <Label htmlFor="current-password">{t('security.currentPassword')}</Label>
               <div className="relative mt-1">
                 <Input id="current-password" type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required disabled={isLoading} />
                 <button
@@ -107,7 +109,7 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
               </div>
             </div>
             <div>
-              <Label htmlFor="new-password">Kata Sandi Baru</Label>
+              <Label htmlFor="new-password">{t('security.newPassword')}</Label>
                <div className="relative mt-1">
                   <Input id="new-password" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required disabled={isLoading}/>
                   <button
@@ -120,7 +122,7 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
               </div>
             </div>
             <div>
-              <Label htmlFor="confirm-password">Konfirmasi Kata Sandi Baru</Label>
+              <Label htmlFor="confirm-password">{t('security.confirmNewPassword')}</Label>
               <div className="relative mt-1">
                 <Input id="confirm-password" type={showNewPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={isLoading}/>
               </div>
@@ -129,7 +131,7 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
         </Card>
         <Button type="submit" className="w-full h-12 text-lg font-bold" disabled={isLoading}>
           {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-          {isLoading ? 'Menyimpan...' : 'Simpan Kata Sandi'}
+          {isLoading ? t('common.saving') : t('common.savePassword')}
         </Button>
       </form>
     </div>

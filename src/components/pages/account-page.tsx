@@ -35,13 +35,14 @@ export default function AccountPage({ setView }: AccountPageProps) {
     selectedBranchId, 
     setSelectedBranchId, 
     selectedWarehouseId, 
-    setSelectedWarehouseId 
+    setSelectedWarehouseId,
+    t
   } = useApp();
 
   const menuItems = [
-    { icon: User, text: "Edit Profil", action: () => setView('edit-profile') },
-    { icon: MapPin, text: "Alamat Saya", action: () => setView('my-address') },
-    { icon: Settings, text: "Pengaturan", action: () => setView('settings') },
+    { icon: User, text: t('account.editProfile'), action: () => setView('edit-profile') },
+    { icon: MapPin, text: t('account.myAddress'), action: () => setView('my-address') },
+    { icon: Settings, text: t('account.settings'), action: () => setView('settings') },
   ];
 
   const userName = user?.role === 'UMKM' ? user.ownerName : user?.name;
@@ -59,7 +60,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
             <AvatarFallback>{nameFallback}</AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="text-2xl font-bold">{userName || "User Keren"}</h1>
+            <h1 className="text-2xl font-bold">{userName || t('account.coolUser')}</h1>
             <p className="text-sm opacity-90">{userEmail || "user.keren@email.com"}</p>
           </div>
         </div>
@@ -84,15 +85,15 @@ export default function AccountPage({ setView }: AccountPageProps) {
         
         <Card>
           <CardContent className="p-4 space-y-4">
-              <h3 className="font-semibold text-lg">Pengaturan Operasional</h3>
+              <h3 className="font-semibold text-lg">{t('account.operationalSettings')}</h3>
               <div className="space-y-2">
                 <Label htmlFor="branch-select" className="flex items-center gap-2 text-muted-foreground">
                   <Building className="w-4 h-4"/>
-                  <span>Cabang Default</span>
+                  <span>{t('account.defaultBranch')}</span>
                 </Label>
                 <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
                   <SelectTrigger id="branch-select">
-                    <SelectValue placeholder="Pilih cabang..." />
+                    <SelectValue placeholder={t('account.selectBranch')} />
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map(branch => (
@@ -104,11 +105,11 @@ export default function AccountPage({ setView }: AccountPageProps) {
               <div className="space-y-2">
                 <Label htmlFor="warehouse-select" className="flex items-center gap-2 text-muted-foreground">
                   <Warehouse className="w-4 h-4"/>
-                  <span>Gudang Default</span>
+                  <span>{t('account.defaultWarehouse')}</span>
                 </Label>
                 <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId} disabled={!selectedBranchId || filteredWarehouses.length === 0}>
                   <SelectTrigger id="warehouse-select">
-                    <SelectValue placeholder="Pilih gudang..." />
+                    <SelectValue placeholder={t('account.selectWarehouse')} />
                   </SelectTrigger>
                   <SelectContent>
                     {filteredWarehouses.map(wh => (
@@ -127,20 +128,20 @@ export default function AccountPage({ setView }: AccountPageProps) {
                   className="flex w-full items-center p-3 hover:bg-card rounded-lg transition-colors text-destructive text-left"
                 >
                   <LogOut className="w-5 h-5 mr-4" />
-                  <span className="flex-grow font-medium">Keluar</span>
+                  <span className="flex-grow font-medium">{t('account.logout')}</span>
               </button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Anda yakin ingin keluar?</AlertDialogTitle>
+                <AlertDialogTitle>{t('account.logoutConfirmTitle')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Anda akan dikembalikan ke halaman login dan perlu masuk kembali untuk mengakses akun Anda.
+                  {t('account.logoutConfirmDesc')}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                 <AlertDialogAction onClick={logout} variant="destructive">
-                  Keluar
+                  {t('account.logout')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
