@@ -62,9 +62,9 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
         setView('settings');
 
     } catch (error: any) {
-        console.error("Password change error:", error);
+        console.error("Password change error:", error.code, error.message);
         let description = "Terjadi kesalahan yang tidak terduga. Silakan coba lagi.";
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        if (error.code === 'auth/invalid-credential') {
             description = "Kata sandi saat ini yang Anda masukkan salah.";
         } else if (error.code === 'auth/weak-password') {
             description = "Kata sandi baru terlalu lemah. Gunakan minimal 6 karakter.";
