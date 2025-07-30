@@ -53,7 +53,7 @@ export type StockLot = {
 
 export type ProductCategory = {
   id: string;
-  name: string;
+  name: string | { id: string; en: string };
   description?: string;
   attributes?: AttributeDefinition[];
 };
