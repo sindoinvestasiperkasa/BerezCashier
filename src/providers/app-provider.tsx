@@ -4,9 +4,8 @@
 import React, { createContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
-import { createTransaction, CreateTransactionInput, CreateTransactionOutput } from '@/ai/flows/create-transaction-flow-entry';
 import { FirebaseError } from 'firebase/app';
 
 import en from '@/lib/locales/en.json';
@@ -139,7 +138,7 @@ export interface Transaction {
 }
 
 export type NewTransactionClientData = {
-    items: any[];
+    items: CartItem[]; // Changed to CartItem for client-side processing
     subtotal: number;
     discountAmount: number;
     taxAmount: number;
@@ -241,7 +240,7 @@ interface AppContextType {
   addToWishlist: (product: Product) => void;
   removeFromWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
-  addTransaction: (data: NewTransactionClientData) => Promise<CreateTransactionOutput>;
+  addTransaction: (data: NewTransactionClientData) => Promise<{ success: boolean; transactionId: string }>;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
@@ -610,18 +609,135 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return wishlist.some(item => item.id === productId);
   };
 
-  const addTransaction = async (data: NewTransactionClientData): Promise<CreateTransactionOutput> => {
+  const addTransaction = async (data: NewTransactionClientData): Promise<{ success: boolean; transactionId: string }> => {
     if (!user) throw new Error("User not authenticated");
     const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
-    if (!idUMKM) throw new Error("UMKM ID not found");
+    if (!idUMKM) throw new Error("UMKM ID not found for the current user.");
 
-    const transactionData: CreateTransactionInput = {
-      ...data,
+    const db = getFirestore();
+    const batch = writeBatch(db);
+
+    // 1. Calculate COGS and prepare item data based on FIFO from available stockLots
+    let totalCogs = 0;
+    const itemsForTransaction: SaleItem[] = [];
+    
+    // Filter for items that need stock management
+    const physicalItems = data.items.filter(item => item.productSubType === 'Produk Retail' || item.productSubType === 'Produk Produksi');
+
+    for (const item of physicalItems) {
+      let quantityToDeduct = item.quantity;
+      
+      const relevantStockLots = stockLots
+        .filter(lot => lot.productId === item.id && lot.warehouseId === data.warehouseId && lot.remainingQuantity > 0)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()); // FIFO
+
+      let itemCogs = 0;
+      for (const lot of relevantStockLots) {
+          if (quantityToDeduct <= 0) break;
+          
+          if (!lot.purchasePrice || lot.purchasePrice <= 0) {
+            throw new Error(`Lot stok ${lot.id} untuk produk ${item.name} tidak memiliki harga beli yang valid.`);
+          }
+
+          const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+          itemCogs += quantityFromThisLot * lot.purchasePrice;
+          quantityToDeduct -= quantityFromThisLot;
+
+          // Add stock update to the batch
+          const lotRef = doc(db, "stockLots", lot.id);
+          const newRemainingQuantity = lot.remainingQuantity - quantityFromThisLot;
+          batch.update(lotRef, { remainingQuantity: newRemainingQuantity });
+      }
+
+      if (quantityToDeduct > 0) {
+        throw new Error(`Stok tidak cukup untuk produk ${item.name}.`);
+      }
+
+      itemsForTransaction.push({
+        productId: item.id,
+        productName: item.name,
+        productType: 'Barang',
+        quantity: item.quantity,
+        unitPrice: item.price,
+        cogs: itemCogs,
+        // ... any other relevant fields
+      });
+      totalCogs += itemCogs;
+    }
+
+    // Add service items to the transaction list (they don't have COGS)
+    data.items.forEach(item => {
+      if (item.productSubType === 'Jasa (Layanan)') {
+        itemsForTransaction.push({
+          productId: item.id,
+          productName: item.name,
+          productType: 'Jasa',
+          quantity: item.quantity,
+          unitPrice: item.price,
+          cogs: 0,
+        });
+      }
+    });
+
+    // 2. Prepare Journal Entry
+    const journalLines = [];
+    journalLines.push({ accountId: data.paymentAccountId, debit: data.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${data.paymentMethod}` });
+    if (totalCogs > 0) journalLines.push({ accountId: data.cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
+    if (data.discountAmount > 0 && data.discountAccountId) journalLines.push({ accountId: data.discountAccountId, debit: data.discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
+    journalLines.push({ accountId: data.salesAccountId, debit: 0, credit: data.subtotal, description: 'Pendapatan Penjualan dari Kasir' });
+    if (data.taxAmount > 0 && data.taxAccountId) journalLines.push({ accountId: data.taxAccountId, debit: 0, credit: data.taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
+    if (totalCogs > 0) journalLines.push({ accountId: data.inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
+
+    // Optional: Service Fee journal entry
+    if (data.serviceFee && data.serviceFee > 0) {
+      const serviceFeeAccount = accounts.find(a => a.name.toLowerCase().includes('utang biaya layanan berez'));
+      if(serviceFeeAccount) {
+        journalLines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: data.serviceFee, description: 'Biaya layanan aplikasi' });
+      }
+    }
+
+
+    // 3. Prepare Transaction Document
+    const transactionDoc = {
       idUMKM,
+      branchId: data.branchId || null,
+      warehouseId: data.warehouseId || null,
+      date: Timestamp.now(),
+      description: `Penjualan Kasir`,
+      type: 'Sale',
+      status: 'Lunas',
+      paymentStatus: 'Berhasil',
+      transactionNumber: `KSR-${Date.now()}`,
+      amount: data.total,
+      paidAmount: data.total,
+      subtotal: data.subtotal,
+      discountAmount: data.discountAmount,
+      taxAmount: data.taxAmount,
+      serviceFee: data.serviceFee || 0,
+      items: itemsForTransaction,
+      customerId: data.customerId,
+      customerName: data.customerName,
+      paymentMethod: data.paymentMethod,
+      isPkp: data.isPkp,
+      lines: journalLines,
+      paymentAccountId: data.paymentAccountId,
+      salesAccountId: data.salesAccountId,
+      cogsAccountId: data.cogsAccountId,
+      inventoryAccountId: data.inventoryAccountId,
+      discountAccountId: data.discountAccountId || null,
+      taxAccountId: data.taxAccountId || null,
     };
     
-    // onSnapshot akan memperbarui state transaksi secara otomatis
-    return await createTransaction(transactionData);
+    const transactionRef = doc(collection(db, 'transactions'));
+    batch.set(transactionRef, transactionDoc);
+
+    // 4. Commit all writes at once
+    await batch.commit();
+
+    return {
+      success: true,
+      transactionId: transactionRef.id
+    };
   };
 
   const clearCart = () => {

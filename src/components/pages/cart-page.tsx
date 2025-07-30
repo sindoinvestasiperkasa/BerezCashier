@@ -56,7 +56,7 @@ export default function CartPage({ setView }: CartPageProps) {
     cart, updateQuantity, removeFromCart, clearCart, addTransaction, 
     heldCarts, holdCart, resumeCart, deleteHeldCart, 
     transactions, customers, addCustomer, accounts, user, addShiftReportNotification,
-    products,
+    stockLots,
     selectedBranchId, 
     selectedWarehouseId, 
   } = useApp();
@@ -146,7 +146,6 @@ export default function CartPage({ setView }: CartPageProps) {
     }).format(amount);
   };
   
-
   const handleOpenPaymentDialog = () => {
     if (cart.length === 0) {
       toast({ title: "Keranjang Kosong", description: "Silakan tambahkan produk terlebih dahulu.", variant: "destructive" });
@@ -161,11 +160,14 @@ export default function CartPage({ setView }: CartPageProps) {
     // Stock validation
     for (const cartItem of cart) {
       if (cartItem.productSubType === 'Produk Retail' || cartItem.productSubType === 'Produk Produksi') {
-        const productInDb = products.find(p => p.id === cartItem.id);
-        if (!productInDb || typeof productInDb.stock !== 'number' || productInDb.stock < cartItem.quantity) {
+         const totalStockForProduct = stockLots
+            .filter(lot => lot.productId === cartItem.id && lot.warehouseId === selectedWarehouseId)
+            .reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+
+        if (totalStockForProduct < cartItem.quantity) {
           toast({
             title: "Stok Tidak Cukup",
-            description: `Stok untuk ${cartItem.name} hanya tersisa ${productInDb?.stock || 0}.`,
+            description: `Stok untuk ${cartItem.name} hanya tersisa ${totalStockForProduct}.`,
             variant: "destructive",
           });
           return;
@@ -207,18 +209,8 @@ export default function CartPage({ setView }: CartPageProps) {
         const customer = customers.find(c => c.id === selectedCustomerId);
         const customerName = customer ? customer.name : "Pelanggan Umum";
         
-        const cartItemsForTransaction = cart.map(item => ({
-            productId: item.id,
-            productName: item.name,
-            productType: item.productSubType === 'Jasa (Layanan)' ? 'Jasa' : 'Barang',
-            quantity: item.quantity,
-            unitPrice: item.price,
-            cogs: item.hpp || 0,
-            attributeValues: [],
-        }));
-
         const result = await addTransaction({
-            items: cartItemsForTransaction,
+            items: cart,
             subtotal,
             discountAmount,
             taxAmount,
@@ -257,9 +249,9 @@ export default function CartPage({ setView }: CartPageProps) {
         } else {
              toast({ title: "Transaksi Gagal", description: "Terjadi kesalahan saat memproses transaksi.", variant: "destructive" });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
-        toast({ title: "Transaksi Gagal", description: "Terjadi kesalahan yang tidak terduga.", variant: "destructive" });
+        toast({ title: "Transaksi Gagal", description: error.message || "Terjadi kesalahan yang tidak terduga.", variant: "destructive" });
     } finally {
         setIsProcessing(false);
     }
