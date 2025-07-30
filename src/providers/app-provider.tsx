@@ -206,7 +206,6 @@ export type UserData = {
     serviceFeeTier3?: number;
     // Employee fields
     name?: string;
-    photo_url?: string; // Legacy from employee data
     [key: string]: any;
 };
 
@@ -511,8 +510,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
           if (employeeData.uid === firebaseUser.uid) {
             userRole = 'Employee';
-            // Consolidate photo_url into photoUrl
-            userData = { id: employeeDoc.id, ...employeeData, role: userRole, photoUrl: employeeData.photo_url };
+            // Consolidate photoUrl from employee data
+            userData = { id: employeeDoc.id, ...employeeData, role: userRole, photoUrl: employeeData.photoUrl };
           }
         }
       }
