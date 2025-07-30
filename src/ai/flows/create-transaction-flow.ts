@@ -86,7 +86,12 @@ export const createTransactionFlow = ai.defineFlow(
                     const docs = snapshot.docs
                       .map(doc => ({ id: doc.id, ...doc.data() as any}))
                       .filter(lot => lot.remainingQuantity > 0)
-                      .sort((a, b) => a.createdAt.seconds - b.createdAt.seconds); // FIFO Sort by timestamp
+                      .sort((a, b) => {
+                          // Defensive check for missing createdAt
+                          if (!a.createdAt) return 1;
+                          if (!b.createdAt) return -1;
+                          return a.createdAt.seconds - b.createdAt.seconds;
+                      }); // FIFO Sort by timestamp
                     
                     return { item, snapshotDocs: docs };
                 });
