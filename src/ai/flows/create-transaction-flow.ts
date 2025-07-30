@@ -71,10 +71,59 @@ export const createTransactionFlow = ai.defineFlow(
         const transactionRef = db.collection('transactions').doc();
         const transactionTimestamp = Timestamp.now();
         
-        // 1. Buat Entri Jurnal (`lines`)
+        // --- START READ PHASE ---
+
+        // 1. Baca semua stockLot yang relevan terlebih dahulu.
+        const productStockLotReads = input.items
+            .filter(item => item.productSubType !== 'Jasa (Layanan)')
+            .map(item => {
+                const stockLotsQuery = db.collection('stockLots')
+                    .where('productId', '==', item.productId)
+                    .where('warehouseId', '==', input.warehouseId)
+                    .where('remainingQuantity', '>', 0)
+                    .orderBy('createdAt', 'asc');
+                return transaction.get(stockLotsQuery).then(snapshot => ({
+                    item,
+                    snapshot,
+                }));
+            });
+
+        const stockLotResults = await Promise.all(productStockLotReads);
+
+        // 2. Validasi stok yang tersedia berdasarkan hasil baca.
+        for (const { item, snapshot } of stockLotResults) {
+            let totalStockAvailable = 0;
+            snapshot.forEach(doc => {
+                totalStockAvailable += doc.data().remainingQuantity || 0;
+            });
+
+            if (totalStockAvailable < item.quantity) {
+                throw new Error(`Stok tidak cukup untuk produk ${item.productName}. Tersedia: ${totalStockAvailable}, Dibutuhkan: ${item.quantity}.`);
+            }
+        }
+        
+        // 3. Baca akun biaya layanan jika diperlukan
+        let serviceFeeAccountId: string | null = null;
+        if (input.serviceFee && input.serviceFee > 0) {
+            const serviceFeeAccountName = 'Utang Biaya Layanan Berez';
+            const allAccountsQuery = await db.collection('accounts')
+                .where('idUMKM', '==', input.idUMKM)
+                .get();
+
+            const serviceFeeAccountDoc = allAccountsQuery.docs.find(doc => doc.data().name === serviceFeeAccountName);
+
+            if (serviceFeeAccountDoc) {
+                serviceFeeAccountId = serviceFeeAccountDoc.id;
+            } else {
+                 console.warn(`Akun '${serviceFeeAccountName}' tidak ditemukan untuk UMKM ${input.idUMKM}. Jurnal mungkin tidak seimbang.`);
+            }
+        }
+
+        // --- END READ PHASE / START WRITE PHASE ---
+        
+        // 4. Buat Entri Jurnal (`lines`)
         const journalLines = [];
         const totalCogs = input.items.reduce((sum, item) => sum + ((item.cogs || 0) * item.quantity), 0);
-        const serviceFeeAccountName = 'Utang Biaya Layanan Berez';
 
         // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
         journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
@@ -103,24 +152,12 @@ export const createTransactionFlow = ai.defineFlow(
         }
         
         // Credit: Utang Biaya Layanan (jika ada)
-        if (input.serviceFee && input.serviceFee > 0) {
-            // Firestore query without composite index
-            const allAccountsQuery = await db.collection('accounts')
-                .where('idUMKM', '==', input.idUMKM)
-                .get();
-
-            const serviceFeeAccountDoc = allAccountsQuery.docs.find(doc => doc.data().name === serviceFeeAccountName);
-
-            if (serviceFeeAccountDoc) {
-                const serviceFeeAccId = serviceFeeAccountDoc.id;
-                journalLines.push({ accountId: serviceFeeAccId, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
-            } else {
-                console.warn(`Akun '${serviceFeeAccountName}' tidak ditemukan untuk UMKM ${input.idUMKM}. Jurnal mungkin tidak seimbang.`);
-            }
+        if (serviceFeeAccountId && input.serviceFee > 0) {
+            journalLines.push({ accountId: serviceFeeAccountId, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
         }
 
 
-        // 2. Siapkan data transaksi untuk disimpan
+        // 5. Siapkan data transaksi untuk disimpan
         const transactionData = {
           idUMKM: input.idUMKM,
           branchId: input.branchId || null,
@@ -151,47 +188,27 @@ export const createTransactionFlow = ai.defineFlow(
           taxAccountId: input.taxAccountId || null,
         };
         
+        // 6. Tulis data transaksi
         transaction.set(transactionRef, transactionData);
 
-        // 3. Update Stok Produk menggunakan FIFO dari StockLots
-        for (const item of input.items) {
-          if (item.productSubType === 'Jasa (Layanan)') {
-            continue; // Lewati produk jasa
-          }
+        // 7. Update Stok Produk menggunakan FIFO dari hasil baca sebelumnya
+        for (const { item, snapshot } of stockLotResults) {
+            let quantityToDeduct = item.quantity;
+            for (const doc of snapshot.docs) {
+                if (quantityToDeduct <= 0) break;
 
-          let quantityToDeduct = item.quantity;
-          const stockLotsQuery = db.collection('stockLots')
-            .where('productId', '==', item.productId)
-            .where('warehouseId', '==', input.warehouseId)
-            .where('remainingQuantity', '>', 0)
-            .orderBy('createdAt', 'asc'); // Urutkan berdasarkan tanggal masuk (FIFO)
+                const lot = doc.data();
+                const lotRef = doc.ref;
+                const quantityInLot = lot.remainingQuantity;
 
-          const stockLotsSnapshot = await transaction.get(stockLotsQuery);
-
-          let totalStockAvailable = 0;
-          stockLotsSnapshot.forEach(doc => {
-            totalStockAvailable += doc.data().remainingQuantity || 0;
-          });
-
-          if (totalStockAvailable < quantityToDeduct) {
-              throw new Error(`Stok tidak cukup untuk produk ${item.productName}. Tersedia: ${totalStockAvailable}, Dibutuhkan: ${quantityToDeduct}.`);
-          }
-
-          for (const doc of stockLotsSnapshot.docs) {
-            if (quantityToDeduct <= 0) break;
-
-            const lot = doc.data();
-            const lotRef = doc.ref;
-            const quantityInLot = lot.remainingQuantity;
-
-            if (quantityInLot >= quantityToDeduct) {
-              transaction.update(lotRef, { remainingQuantity: FieldValue.increment(-quantityToDeduct) });
-              quantityToDeduct = 0;
-            } else {
-              transaction.update(lotRef, { remainingQuantity: 0 });
-              quantityToDeduct -= quantityInLot;
+                if (quantityInLot >= quantityToDeduct) {
+                    transaction.update(lotRef, { remainingQuantity: FieldValue.increment(-quantityToDeduct) });
+                    quantityToDeduct = 0;
+                } else {
+                    transaction.update(lotRef, { remainingQuantity: 0 });
+                    quantityToDeduct -= quantityInLot;
+                }
             }
-          }
         }
         
         return {
