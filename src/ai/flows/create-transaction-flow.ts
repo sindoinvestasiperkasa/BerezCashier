@@ -74,27 +74,30 @@ export const createTransactionFlow = ai.defineFlow(
         // --- START READ PHASE ---
 
         // 1. Baca semua stockLot yang relevan terlebih dahulu.
-        const productStockLotReads = input.items
+        const productStockLotReads = await Promise.all(
+          input.items
             .filter(item => item.productType === 'Barang') // Hanya produk tipe 'Barang'
             .map(item => {
                 const stockLotsQuery = db.collection('stockLots')
                     .where('productId', '==', item.productId)
-                    .where('warehouseId', '==', input.warehouseId)
-                    .orderBy('createdAt', 'asc');
-                return transaction.get(stockLotsQuery).then(snapshot => ({
-                    item,
-                    // Filter for remaining quantity in code instead of in the query
-                    snapshotDocs: snapshot.docs.filter(doc => doc.data().remainingQuantity > 0),
-                }));
-            });
-
-        const stockLotResults = await Promise.all(productStockLotReads);
-
+                    .where('warehouseId', '==', input.warehouseId);
+                return transaction.get(stockLotsQuery).then(snapshot => {
+                    // Filter and sort in code, not in the query, to avoid composite indexes
+                    const docs = snapshot.docs
+                      .map(doc => ({ id: doc.id, ...doc.data() as any}))
+                      .filter(lot => lot.remainingQuantity > 0)
+                      .sort((a, b) => a.createdAt.seconds - b.createdAt.seconds); // FIFO Sort by timestamp
+                    
+                    return { item, snapshotDocs: docs };
+                });
+            })
+        );
+        
         // 2. Validasi stok yang tersedia berdasarkan hasil baca.
-        for (const { item, snapshotDocs } of stockLotResults) {
+        for (const { item, snapshotDocs } of productStockLotReads) {
             let totalStockAvailable = 0;
             snapshotDocs.forEach(doc => {
-                totalStockAvailable += doc.data().remainingQuantity || 0;
+                totalStockAvailable += doc.remainingQuantity || 0;
             });
 
             if (totalStockAvailable < item.quantity) {
@@ -125,15 +128,14 @@ export const createTransactionFlow = ai.defineFlow(
         const itemsWithCogs: any[] = [];
         let totalCogs = 0;
         
-        for (const { item, snapshotDocs } of stockLotResults) {
+        for (const { item, snapshotDocs } of productStockLotReads) {
             let quantityToDeduct = item.quantity;
             let itemCogs = 0;
-            for (const doc of snapshotDocs) {
+            for (const lot of snapshotDocs) {
                 if (quantityToDeduct <= 0) break;
                 
-                const lot = doc.data();
                 if (!lot.purchasePrice || lot.purchasePrice <= 0) {
-                  throw new Error(`Lot stok ${doc.id} untuk produk ${item.productName} tidak memiliki harga beli yang valid.`);
+                  throw new Error(`Lot stok ${lot.id} untuk produk ${item.productName} tidak memiliki harga beli yang valid.`);
                 }
                 
                 const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
@@ -222,13 +224,12 @@ export const createTransactionFlow = ai.defineFlow(
         transaction.set(transactionRef, transactionData);
 
         // 8. Update Stok Produk menggunakan FIFO dari hasil baca sebelumnya
-        for (const { item, snapshotDocs } of stockLotResults) {
+        for (const { item, snapshotDocs } of productStockLotReads) {
             let quantityToDeduct = item.quantity;
-            for (const doc of snapshotDocs) {
+            for (const lot of snapshotDocs) {
                 if (quantityToDeduct <= 0) break;
 
-                const lot = doc.data();
-                const lotRef = doc.ref;
+                const lotRef = db.collection('stockLots').doc(lot.id);
                 const quantityInLot = lot.remainingQuantity;
 
                 if (quantityInLot >= quantityToDeduct) {
