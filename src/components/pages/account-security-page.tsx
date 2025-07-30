@@ -57,6 +57,10 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
       form.reset();
     } catch (error: any) {
       if (error instanceof FirebaseError && error.code === 'auth/invalid-credential') {
+        form.setError("currentPassword", {
+          type: "manual",
+          message: "Kata sandi saat ini salah.",
+        });
         toast({
           variant: "destructive",
           title: "Gagal Mengubah Kata Sandi",
