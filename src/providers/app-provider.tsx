@@ -244,7 +244,6 @@ interface AppContextType {
   markNotificationAsRead: (notificationId: string) => void;
   addShiftReportNotification: (summary: { totalTransactions: number; totalRevenue: number }) => void;
   updateUserData: (data: Partial<UserData>) => Promise<boolean>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   isAuthenticated: boolean;
   user: UserData | null;
   login: (email: string, pass: string) => Promise<boolean>;
@@ -687,23 +686,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
-    const firebaseUser = auth.currentUser;
-    if (!firebaseUser || !firebaseUser.email) {
-      throw new FirebaseError('auth/no-user', 'Pengguna tidak terautentikasi.');
-    }
-
-    try {
-      const credential = EmailAuthProvider.credential(firebaseUser.email, currentPassword);
-      await reauthenticateWithCredential(firebaseUser, credential);
-      await updatePassword(firebaseUser, newPassword);
-    } catch (error) {
-      console.error("Error changing password:", error);
-      // Re-throw the error to be caught by the calling component
-      throw error;
-    }
-  };
-
   return (
     <AppContext.Provider
       value={{ 
@@ -739,7 +721,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         markNotificationAsRead,
         addShiftReportNotification,
         updateUserData,
-        changePassword,
         isAuthenticated,
         user,
         login,

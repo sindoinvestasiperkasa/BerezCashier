@@ -6,75 +6,77 @@ import { ArrowLeft, KeyRound, Lock, Eye, EyeOff, Loader2, Save } from "lucide-re
 import { Button } from "../ui/button";
 import type { View } from "../app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useApp } from "@/hooks/use-app";
 import { useToast } from "@/hooks/use-toast";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
-import { FirebaseError } from "firebase/app";
+import { Label } from "../ui/label";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword, FirebaseError } from 'firebase/auth';
+import { app } from "@/lib/firebase";
+
 
 interface AccountSecurityPageProps {
   setView: (view: View) => void;
 }
 
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, "Kata sandi saat ini diperlukan."),
-  newPassword: z.string().min(6, "Kata sandi baru minimal 6 karakter."),
-  confirmPassword: z.string()
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Konfirmasi kata sandi tidak cocok.",
-  path: ["confirmPassword"],
-});
-
-type PasswordFormValues = z.infer<typeof passwordSchema>;
-
 export default function AccountSecurityPage({ setView }: AccountSecurityPageProps) {
-  const { changePassword } = useApp();
   const { toast } = useToast();
+  const auth = getAuth(app);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  const form = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: ""
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+        toast({ title: "Gagal", description: "Konfirmasi kata sandi baru tidak cocok.", variant: "destructive" });
+        return;
     }
-  });
+    
+    if (newPassword.length < 6) {
+        toast({ title: "Gagal", description: "Kata sandi baru minimal 6 karakter.", variant: "destructive" });
+        return;
+    }
 
-  const { isSubmitting } = form.formState;
+    setIsLoading(true);
 
-  const onSubmit = async (data: PasswordFormValues) => {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+        toast({ title: "Gagal", description: "Sesi Anda tidak valid. Silakan login kembali.", variant: "destructive" });
+        // Di sini kita tidak punya akses ke `logout`, tapi bisa mengarahkan ke halaman login
+        // atau membiarkan AppProvider menanganinya. Untuk sekarang, kita hanya stop prosesnya.
+        setIsLoading(false);
+        return;
+    }
+    
     try {
-      await changePassword(data.currentPassword, data.newPassword);
-      toast({
-        title: "Berhasil!",
-        description: "Kata sandi Anda telah berhasil diperbarui."
-      });
-      form.reset();
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
+        await reauthenticateWithCredential(user, credential);
+        
+        await updatePassword(user, newPassword);
+
+        toast({ title: "Berhasil", description: "Kata sandi Anda telah berhasil diperbarui." });
+        setView('settings');
+
     } catch (error: any) {
-      if (error instanceof FirebaseError && (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential')) {
-        form.setError("currentPassword", {
-          type: "manual",
-          message: "Kata sandi saat ini yang Anda masukkan salah.",
-        });
-        toast({
-          variant: "destructive",
-          title: "Gagal Mengubah Kata Sandi",
-          description: "Kata sandi saat ini yang Anda masukkan salah. Silakan coba lagi."
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Gagal",
-          description: error.message || "Terjadi kesalahan yang tidak terduga. Silakan coba lagi."
-        });
-      }
+        console.error("Password change error:", error);
+        let description = "Terjadi kesalahan yang tidak terduga. Silakan coba lagi.";
+        if (error instanceof FirebaseError) {
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                description = "Kata sandi saat ini yang Anda masukkan salah.";
+            } else if (error.code === 'auth/weak-password') {
+                description = "Kata sandi baru terlalu lemah. Gunakan minimal 6 karakter.";
+            }
+        }
+        toast({ title: "Gagal Mengubah Kata Sandi", description, variant: "destructive" });
+    } finally {
+        setIsLoading(false);
     }
   };
+
 
   return (
     <div className="flex flex-col h-full">
@@ -84,81 +86,54 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
         </Button>
         <h1 className="text-xl font-bold">Keamanan Akun</h1>
       </header>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 flex-grow overflow-y-auto space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Lock className="w-5 h-5 text-primary" />
-                <span>Ubah Kata Sandi</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="currentPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kata Sandi Saat Ini</FormLabel>
-                    <div className="relative">
-                      <FormControl>
-                        <Input type={showCurrentPassword ? "text" : "password"} {...field} />
-                      </FormControl>
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
-                      >
-                        {showCurrentPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="newPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kata Sandi Baru</FormLabel>
-                     <div className="relative">
-                      <FormControl>
-                        <Input type={showNewPassword ? "text" : "password"} {...field} />
-                      </FormControl>
-                       <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
-                      >
-                        {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
-                    <FormControl>
-                      <Input type={showNewPassword ? "text" : "password"} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-           <Button type="submit" className="w-full h-12 text-lg font-bold" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-            Simpan Kata Sandi
-          </Button>
-        </form>
-      </Form>
+      <form onSubmit={handlePasswordChange} className="p-4 flex-grow overflow-y-auto space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Lock className="w-5 h-5 text-primary" />
+              <span>Ubah Kata Sandi</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="current-password">Kata Sandi Saat Ini</Label>
+              <div className="relative mt-1">
+                <Input id="current-password" type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required disabled={isLoading} />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                >
+                  {showCurrentPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="new-password">Kata Sandi Baru</Label>
+               <div className="relative mt-1">
+                  <Input id="new-password" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required disabled={isLoading}/>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                  >
+                    {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="confirm-password">Konfirmasi Kata Sandi Baru</Label>
+              <div className="relative mt-1">
+                <Input id="confirm-password" type={showNewPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={isLoading}/>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Button type="submit" className="w-full h-12 text-lg font-bold" disabled={isLoading}>
+          {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
+          {isLoading ? 'Menyimpan...' : 'Simpan Kata Sandi'}
+        </Button>
+      </form>
     </div>
   );
 }
