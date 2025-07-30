@@ -1,3 +1,4 @@
+
 // @/ai/flows/create-transaction-flow.ts
 'use server';
 /**
@@ -103,15 +104,15 @@ export const createTransactionFlow = ai.defineFlow(
         
         // Credit: Utang Biaya Layanan (jika ada)
         if (input.serviceFee && input.serviceFee > 0) {
-            const serviceFeeAccQuery = await db.collection('accounts')
+            // Firestore query without composite index
+            const allAccountsQuery = await db.collection('accounts')
                 .where('idUMKM', '==', input.idUMKM)
-                .where('name', '>=', serviceFeeAccountName)
-                .where('name', '<=', serviceFeeAccountName + '\uf8ff')
-                .limit(1)
                 .get();
 
-            if (!serviceFeeAccQuery.empty) {
-                const serviceFeeAccId = serviceFeeAccQuery.docs[0].id;
+            const serviceFeeAccountDoc = allAccountsQuery.docs.find(doc => doc.data().name === serviceFeeAccountName);
+
+            if (serviceFeeAccountDoc) {
+                const serviceFeeAccId = serviceFeeAccountDoc.id;
                 journalLines.push({ accountId: serviceFeeAccId, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
             } else {
                 console.warn(`Akun '${serviceFeeAccountName}' tidak ditemukan untuk UMKM ${input.idUMKM}. Jurnal mungkin tidak seimbang.`);
@@ -163,10 +164,9 @@ export const createTransactionFlow = ai.defineFlow(
             .where('productId', '==', item.productId)
             .where('warehouseId', '==', input.warehouseId)
             .where('remainingQuantity', '>', 0)
-            .orderBy('remainingQuantity')
             .orderBy('createdAt', 'asc'); // Urutkan berdasarkan tanggal masuk (FIFO)
 
-          const stockLotsSnapshot = await stockLotsQuery.get();
+          const stockLotsSnapshot = await transaction.get(stockLotsQuery);
 
           let totalStockAvailable = 0;
           stockLotsSnapshot.forEach(doc => {
