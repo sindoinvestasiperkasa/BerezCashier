@@ -13,6 +13,7 @@ import { useApp } from "@/hooks/use-app";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
+import { FirebaseError } from "firebase/app";
 
 interface AccountSecurityPageProps {
   setView: (view: View) => void;
@@ -47,19 +48,27 @@ export default function AccountSecurityPage({ setView }: AccountSecurityPageProp
   const { isSubmitting } = form.formState;
 
   const onSubmit = async (data: PasswordFormValues) => {
-    const success = await changePassword(data.currentPassword, data.newPassword);
-    if (success) {
+    try {
+      await changePassword(data.currentPassword, data.newPassword);
       toast({
         title: "Berhasil!",
         description: "Kata sandi Anda telah berhasil diperbarui."
       });
       form.reset();
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Gagal",
-        description: "Kata sandi saat ini salah atau terjadi kesalahan. Silakan coba lagi."
-      });
+    } catch (error: any) {
+      if (error instanceof FirebaseError && error.code === 'auth/invalid-credential') {
+        toast({
+          variant: "destructive",
+          title: "Gagal Mengubah Kata Sandi",
+          description: "Kata sandi saat ini yang Anda masukkan salah. Silakan coba lagi."
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Gagal",
+          description: error.message || "Terjadi kesalahan yang tidak terduga. Silakan coba lagi."
+        });
+      }
     }
   };
 
