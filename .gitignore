@@ -45,4 +45,4 @@ firebase-debug.log
 firestore-debug.log
 
 /android
-/src/services/firebase-credentials.json
+src/services/firebase-credentials.json
