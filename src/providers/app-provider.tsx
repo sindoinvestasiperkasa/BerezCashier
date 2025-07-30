@@ -196,15 +196,17 @@ export type UserData = {
     ownerName?: string;
     umkmName?: string;
     businessName?: string;
-    photoUrl?: string;
+    // Common fields
+    photoUrl?: string; // Unified photo URL
     address?: string;
     phone?: string;
+    // UMKM Specific fields
     serviceFeeTier1?: number;
     serviceFeeTier2?: number;
     serviceFeeTier3?: number;
     // Employee fields
     name?: string;
-    photo_url?: string;
+    photo_url?: string; // Legacy from employee data
     [key: string]: any;
 };
 
@@ -483,7 +485,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
 
-      let userData: UserData | null = null;
+      let userData: Partial<UserData> | null = null;
       let userRole: 'UMKM' | 'Employee' | 'SuperAdmin' = 'Employee';
 
       const umkmDocRef = doc(db, 'dataUMKM', firebaseUser.uid);
@@ -492,7 +494,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (umkmDocSnap.exists()) {
         const data = umkmDocSnap.data();
         userRole = data.role || 'UMKM';
-        userData = { uid: firebaseUser.uid, ...data, role: userRole } as UserData;
+        userData = { uid: firebaseUser.uid, ...data, role: userRole };
 
       } else {
         const employeeQuery = query(collection(db, 'employees'), where('email', '==', email));
@@ -509,13 +511,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
           if (employeeData.uid === firebaseUser.uid) {
             userRole = 'Employee';
-            userData = { id: employeeDoc.id, ...employeeData, role: userRole } as UserData;
+            // Consolidate photo_url into photoUrl
+            userData = { id: employeeDoc.id, ...employeeData, role: userRole, photoUrl: employeeData.photo_url };
           }
         }
       }
 
       if (userData) {
-        setLocalUser(userData);
+        setLocalUser(userData as UserData);
         localStorage.setItem('sagara-user-data', JSON.stringify(userData));
         setIsAuthenticated(true);
         return true;
