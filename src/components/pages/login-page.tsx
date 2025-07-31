@@ -121,9 +121,14 @@ export default function LoginPage({ setView }: { setView: (view: AuthView) => vo
       <div className="mt-6 text-center">
         <p className="text-sm text-muted-foreground">
           {t('login.noAccount')}{' '}
-          <Button variant="link" className="p-0 h-auto" onClick={() => setView('signup')}>
+          <a
+            href="https://berez.id/signup"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-primary underline-offset-4 hover:underline"
+          >
             {t('login.signUpNow')}
-          </Button>
+          </a>
         </p>
       </div>
     </div>
