@@ -19,42 +19,36 @@ interface WelcomePageProps {
 
 const slides = [
   {
-    icon: Sparkles,
     title: "Kelola Transaksi dengan Mudah",
     description: "Catat setiap penjualan dengan cepat dan akurat menggunakan antarmuka yang intuitif.",
-    image: "/images/welcome/transactions.png",
+    image: "/images/welcome/transactions.jpeg",
     hint: "cashier point of sale"
   },
   {
-    icon: Truck,
     title: "Manajemen Stok Real-time",
     description: "Pantau persediaan produk Anda secara langsung untuk menghindari kehabisan stok.",
-    image: "/images/welcome/inventory.png",
+    image: "/images/welcome/inventory.jpeg",
     hint: "inventory management warehouse"
   },
   {
-    icon: Wallet,
     title: "Integrasi Stok & Keuangan",
     description: "Aplikasi kasir ini terintegrasi langsung dengan manajemen stok dan laporan keuangan Anda.",
     image: "/images/welcome/finance.png",
     hint: "finance integration stock"
   },
   {
-    icon: ShieldCheck,
     title: "Laporan Penjualan Lengkap",
     description: "Dapatkan laporan harian, mingguan, dan bulanan untuk analisis bisnis yang lebih baik.",
     image: "/images/welcome/reports.png",
     hint: "sales analytics chart"
   },
   {
-    icon: Tag,
     title: "Program Loyalitas Pelanggan",
     description: "Buat dan kelola promo atau diskon untuk meningkatkan loyalitas pelanggan setia Anda.",
     image: "/images/welcome/loyalty.png",
     hint: "customer loyalty program"
   },
   {
-    icon: Store,
     title: "Cocok untuk Berbagai Bisnis",
     description: "Sangat fleksibel untuk digunakan di toko retail, kafe, restoran, dan berbagai jenis usaha lainnya.",
     image: "/images/welcome/retail.png",
@@ -84,7 +78,6 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
               <CarouselItem key={index}>
                 <div className="p-1">
                     <div className="flex flex-col items-center justify-center gap-6 text-center">
-                        <slide.icon className="w-16 h-16 text-primary stroke-1"/>
                         <Image
                             src={slide.image}
                             alt={slide.title}
