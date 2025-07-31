@@ -632,71 +632,71 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     let transactionId = "";
 
     try {
+        // --- Pre-transaction data fetching ---
+        const itemsWithLots: { item: CartItem, lots: StockLot[] }[] = [];
+        const physicalItems = data.items.filter(item => item.productType === 'Barang');
+
+        for (const item of physicalItems) {
+            if (!item.id) {
+                throw new Error(`Item "${item.name || 'Unknown'}" memiliki ID yang tidak valid.`);
+            }
+            const lotsQuery = query(
+                collection(db, 'stockLots'),
+                where('idUMKM', '==', idUMKM),
+                where('warehouseId', '==', warehouseId),
+                where('productId', '==', item.id)
+            );
+            
+            const lotsSnap = await getDocs(lotsQuery);
+            const availableLots = lotsSnap.docs
+                .map(d => ({ id: d.id, ...d.data(), purchaseDate: (d.data().purchaseDate as Timestamp).toDate() } as StockLot))
+                .filter(lot => lot.remainingQuantity > 0)
+                .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
+            
+            const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+            if (totalStockForProduct < item.quantity) {
+                throw new Error(`Stok tidak mencukupi untuk ${item.name}.`);
+            }
+            itemsWithLots.push({ item, lots: availableLots });
+        }
+
+
         await runTransaction(db, async (transaction) => {
             const {
-                items: cartItems, total, subtotal,
-                discountAmount, taxAmount, isPkp,
-                paymentMethod,
-                salesAccountId, cogsAccountId, inventoryAccountId, paymentAccountId,
-                discountAccountId, taxAccountId,
+                total, subtotal, discountAmount, taxAmount, isPkp,
+                paymentMethod, salesAccountId, cogsAccountId, inventoryAccountId,
+                paymentAccountId, discountAccountId, taxAccountId,
                 customerId, customerName, serviceFee
             } = data;
             
-            const getPaymentAccount = (method: string): Account | undefined => {
-                const methodLower = method.toLowerCase();
-                let account = accounts.find(a => a.name.toLowerCase() === methodLower);
-                if (account) return account;
-                if (['qris', 'gopay', 'dana', 'ovo', 'transfer'].includes(methodLower)) {
-                    account = accounts.find(a => a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('kas digital'));
-                    if (account) return account;
-                }
-                return accounts.find(a => a.name.toLowerCase().includes('kas'));
-            };
-            const paymentAcc = paymentAccountId ? accounts.find(a => a.id === paymentAccountId) : getPaymentAccount(paymentMethod);
+            const paymentAcc = accounts.find(a => a.id === paymentAccountId);
             const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
 
             if (!paymentAcc) throw new Error(`Akun untuk metode pembayaran '${paymentMethod}' tidak ditemukan.`);
 
             let totalCogs = 0;
             const itemsForTransaction: SaleItem[] = [];
-            const physicalItems = cartItems.filter(item => item.productType === 'Barang');
             
-            for (const item of physicalItems) {
-                // Additional validation inside the loop
-                if (!item.id) {
-                    console.error("Error: Found an item in the cart with a missing ID.", item);
-                    throw new Error(`Item "${item.name || 'Unknown'}" memiliki ID yang tidak valid.`);
-                }
-                
-                const lotsQuery = query(
-                    collection(db, 'stockLots'),
-                    where('idUMKM', '==', idUMKM),
-                    where('warehouseId', '==', warehouseId),
-                    where('productId', '==', item.id)
-                );
-                
-                // Firestore transactions require reading documents via the transaction object.
-                const lotsSnapshot = await transaction.get(lotsQuery);
-                const availableLots = lotsSnapshot.docs
-                    .map(d => ({ id: d.id, ...d.data() } as StockLot))
-                    .filter(lot => lot.remainingQuantity > 0)
-                    .sort((a, b) => (a.purchaseDate as any).seconds - (b.purchaseDate as any).seconds);
-
+            for (const { item, lots } of itemsWithLots) {
                 let quantityToDeduct = item.quantity;
                 let itemCogs = 0;
                 
-                const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
-                if (totalStockForProduct < quantityToDeduct) throw new Error(`Stok tidak mencukupi untuk ${item.name}.`);
-                
-                for (const lot of availableLots) {
+                for (const lot of lots) {
                     if (quantityToDeduct <= 0) break;
-                    if (!lot.purchasePrice || lot.purchasePrice <= 0) throw new Error(`Lot stok ${lot.id} untuk produk ${item.name} tidak memiliki harga beli yang valid.`);
                     
                     const lotRef = doc(db, 'stockLots', lot.id);
-                    const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
-                    itemCogs += quantityFromThisLot * lot.purchasePrice;
+                    // Re-read the lot inside the transaction for consistency
+                    const freshLotSnap = await transaction.get(lotRef);
+                    if (!freshLotSnap.exists()) throw new Error(`Lot stok ${lot.id} tidak ditemukan.`);
+                    const freshLot = freshLotSnap.data() as StockLot;
+
+                    if (freshLot.remainingQuantity <= 0) continue;
+                    if (!freshLot.purchasePrice || freshLot.purchasePrice <= 0) throw new Error(`Lot stok ${freshLot.id} untuk produk ${item.name} tidak memiliki harga beli yang valid.`);
                     
-                    transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
+                    const quantityFromThisLot = Math.min(quantityToDeduct, freshLot.remainingQuantity);
+                    itemCogs += quantityFromThisLot * freshLot.purchasePrice;
+                    
+                    transaction.update(lotRef, { remainingQuantity: freshLot.remainingQuantity - quantityFromThisLot });
                     quantityToDeduct -= quantityFromThisLot;
                 }
                 
@@ -708,7 +708,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
 
             // Add service items (which don't have stock or COGS) to the list
-            cartItems.filter(item => item.productType === 'Jasa').forEach(item => {
+            data.items.filter(item => item.productType === 'Jasa').forEach(item => {
               itemsForTransaction.push({
                   productId: item.id, productName: item.name, productType: 'Jasa',
                   quantity: item.quantity, unitPrice: item.price, cogs: 0,
