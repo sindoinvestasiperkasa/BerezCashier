@@ -152,6 +152,10 @@ export default function CartPage({ setView }: CartPageProps) {
       return;
     }
     
+    if(!selectedBranchId) {
+      toast({ title: "Cabang Belum Dipilih", description: "Silakan pilih cabang default di halaman Akun.", variant: "destructive" });
+      return;
+    }
     if(!selectedWarehouseId) {
       toast({ title: "Gudang Belum Dipilih", description: "Silakan pilih gudang default di halaman Akun.", variant: "destructive" });
       return;
@@ -218,8 +222,8 @@ export default function CartPage({ setView }: CartPageProps) {
             paymentMethod,
             customerId: selectedCustomerId,
             customerName: customerName,
-            branchId: selectedBranchId,
-            warehouseId: selectedWarehouseId,
+            branchId: selectedBranchId!, // Pass the guaranteed non-null ID
+            warehouseId: selectedWarehouseId!, // Pass the guaranteed non-null ID
             isPkp,
             paymentAccountId: paymentAccountId!,
             salesAccountId: salesAccountId!,

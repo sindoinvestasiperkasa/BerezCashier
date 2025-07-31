@@ -149,8 +149,8 @@ export type NewTransactionClientData = {
     paymentMethod: string;
     customerId: string;
     customerName: string;
-    branchId?: string;
-    warehouseId?: string;
+    branchId: string;
+    warehouseId: string;
     salesAccountId: string;
     cogsAccountId: string;
     inventoryAccountId: string;
@@ -622,22 +622,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const { warehouseId, branchId } = data;
 
     // Strict validation before starting the transaction
-    if (!idUMKM) {
-        const msg = "ID UMKM tidak ditemukan. Tidak dapat melanjutkan transaksi.";
+    if (!idUMKM || !warehouseId || !branchId) {
+        const msg = `Data tidak lengkap untuk transaksi. UMKM: ${!!idUMKM}, Gudang: ${!!warehouseId}, Cabang: ${!!branchId}`;
         console.error(msg);
-        toast({ title: 'Gagal', description: msg, variant: 'destructive' });
-        throw new Error(msg);
-    }
-    if (!warehouseId) {
-        const msg = "Gudang tidak dipilih. Tidak dapat melanjutkan transaksi.";
-        console.error(msg);
-        toast({ title: 'Gagal', description: msg, variant: 'destructive' });
-        throw new Error(msg);
-    }
-    if (!branchId) {
-        const msg = "Cabang tidak dipilih. Tidak dapat melanjutkan transaksi.";
-        console.error(msg);
-        toast({ title: 'Gagal', description: msg, variant: 'destructive' });
+        toast({ title: 'Gagal', description: "Informasi UMKM, gudang, atau cabang tidak lengkap.", variant: 'destructive' });
         throw new Error(msg);
     }
 
@@ -687,6 +675,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     where('productId', '==', item.id)
                 );
                 
+                // Firestore transactions require reading documents via the transaction object.
                 const lotsSnapshot = await transaction.get(lotsQuery);
                 const availableLots = lotsSnapshot.docs
                     .map(d => ({ id: d.id, ...d.data() } as StockLot))
