@@ -322,5 +322,3 @@ export default function HomePage({ setView }: HomePageProps) {
     </div>
   );
 }
-
-    
