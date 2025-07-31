@@ -79,7 +79,7 @@ export default function PrivacyPage({ setView }: PrivacyPageProps) {
         <p>Kami dapat memperbarui Kebijakan Privasi kami dari waktu ke waktu. Kami akan memberitahu Anda tentang perubahan apa pun dengan memposting Kebijakan Privasi baru di halaman ini.</p>
 
         <h2>10. Hubungi Kami</h2>
-        <p>Jika Anda memiliki pertanyaan tentang Kebijakan Privasi ini, silakan hubungi kami di support@berez.id.</p>
+        <p>Jika Anda memiliki pertanyaan tentang Kebijakan Privasi ini, silakan hubungi kami di info@berez.id.</p>
       </div>
     </div>
   );

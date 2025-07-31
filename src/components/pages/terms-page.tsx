@@ -80,7 +80,7 @@ export default function TermsPage({ setView }: TermsPageProps) {
         <p>Kami berhak, atas kebijakan kami sendiri, untuk mengubah atau mengganti Syarat ini kapan saja. Jika revisi bersifat material, kami akan memberikan pemberitahuan setidaknya 30 hari sebelum syarat baru berlaku.</p>
 
         <h2>16. Hubungi Kami</h2>
-        <p>Jika Anda memiliki pertanyaan tentang Syarat ini, silakan hubungi kami di support@berez.id.</p>
+        <p>Jika Anda memiliki pertanyaan tentang Syarat ini, silakan hubungi kami di info@berez.id.</p>
       </div>
     </div>
   );
