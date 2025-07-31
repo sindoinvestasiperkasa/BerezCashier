@@ -77,14 +77,16 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
               <CarouselItem key={index}>
                 <div className="p-1">
                     <div className="flex flex-col items-center justify-center gap-6 text-center">
-                        <Image
-                            src={slide.image}
-                            alt={slide.title}
-                            width={300}
-                            height={200}
-                            className="object-cover w-full aspect-video rounded-xl shadow-lg"
-                            data-ai-hint={slide.hint}
-                        />
+                        <div className="p-2">
+                            <Image
+                                src={slide.image}
+                                alt={slide.title}
+                                width={300}
+                                height={200}
+                                className="object-cover w-full aspect-video rounded-xl shadow-lg"
+                                data-ai-hint={slide.hint}
+                            />
+                        </div>
                         <div className="space-y-2">
                             <h2 className="text-2xl font-bold">
                                 {slide.title}
