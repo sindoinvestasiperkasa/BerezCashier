@@ -77,7 +77,7 @@ export default function ProductCard({ product, onProductClick }: ProductCardProp
             alt={product.name}
             width={300}
             height={300}
-            className="object-contain w-full aspect-square"
+            className="object-cover w-full aspect-square"
           />
           <Button size="icon" variant="secondary" className="absolute top-2 right-2 h-8 w-8 rounded-full" onClick={handleWishlistToggle}>
             <Heart className={cn("h-4 w-4 text-muted-foreground", inWishlist && "fill-red-500 text-red-500")} />
