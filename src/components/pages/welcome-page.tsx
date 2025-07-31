@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -74,8 +75,8 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
           <CarouselContent>
             {slides.map((slide, index) => (
               <CarouselItem key={index}>
-                <div className="p-1">
-                    <div className="flex flex-col items-center justify-center gap-6 text-center w-10/12 mx-auto">
+                <div className="w-10/12 mx-auto">
+                    <div className="flex flex-col items-center justify-center gap-6 text-center">
                         <div className="p-2">
                             <Image
                                 src={slide.image}
@@ -101,12 +102,15 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
           </CarouselContent>
         </Carousel>
         <div className="space-y-4 mt-8">
-            <Button onClick={() => setView('signup')} className="w-full h-14 text-lg font-bold">
-                Buat Akun Baru
-            </Button>
-            <Button onClick={() => setView('login')} variant="outline" className="w-full h-14 text-lg font-bold">
+            <Button onClick={() => setView('login')} className="w-full h-14 text-lg font-bold">
                 Masuk
             </Button>
+            <p className="text-sm text-muted-foreground">
+                Belum punya akun?{' '}
+                <Button variant="link" className="p-0 h-auto" onClick={() => setView('signup')}>
+                    Daftar di sini
+                </Button>
+            </p>
         </div>
       </div>
     </div>
