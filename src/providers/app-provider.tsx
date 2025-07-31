@@ -17,7 +17,7 @@ export type Product = {
   id: string;
   name: string;
   productCode?: string;
-  productSubType: 'Produk Retail' | 'Produk Produksi' | 'Jasa (Layanan)' | 'Bahan Baku';
+  productSubType: 'Produk Retail' | 'Produk Produksi' | 'Jasa' | 'Bahan Baku';
   productType?: 'Barang' | 'Jasa';
   price: number;
   hpp?: number; // Harga Pokok Penjualan
@@ -417,7 +417,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 id: doc.id,
                 ...data,
                 imageUrls: data.imageUrls || [],
-                productType: data.productSubType === 'Jasa (Layanan)' ? 'Jasa' : 'Barang',
+                productType: data.productSubType === 'Jasa' ? 'Jasa' : 'Barang',
             } as Product;
         });
         setProducts(productsData);
@@ -495,11 +495,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         unsubWarehouses();
         unsubUnits();
     };
-  }, [user, db]);
+  }, [user, db, selectedWarehouseId]); // Added selectedWarehouseId dependency
 
   // Low Stock Notification Logic
   useEffect(() => {
-    const lowStockProducts = products.filter(p => p.productSubType !== 'Jasa (Layanan)' && typeof p.stock === 'number' && p.stock <= (p.lowStockThreshold || LOW_STOCK_THRESHOLD) && p.stock > 0);
+    const lowStockProducts = products.filter(p => p.productSubType !== 'Jasa' && typeof p.stock === 'number' && p.stock <= (p.lowStockThreshold || LOW_STOCK_THRESHOLD) && p.stock > 0);
     
     setNotifications(prevNotifs => {
         const newNotifs: Notification[] = [...prevNotifs.filter(n => n.type !== 'low_stock')];
