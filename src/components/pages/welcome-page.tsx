@@ -83,7 +83,7 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
                                 alt={slide.title}
                                 width={300}
                                 height={200}
-                                className="object-cover w-full aspect-video rounded-xl shadow-lg"
+                                className="object-cover w-full aspect-video rounded-xl shadow-xl"
                                 data-ai-hint={slide.hint}
                             />
                         </div>
