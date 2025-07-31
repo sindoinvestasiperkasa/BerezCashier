@@ -20,37 +20,37 @@ const slides = [
   {
     title: "Kelola Transaksi dengan Mudah",
     description: "Catat setiap penjualan dengan cepat dan akurat menggunakan antarmuka yang intuitif.",
-    image: "/images/welcome/transactions.jpeg",
+    image: "/images/welcome/transactions.png",
     hint: "cashier point of sale"
   },
   {
     title: "Manajemen Stok Real-time",
     description: "Pantau persediaan produk Anda secara langsung untuk menghindari kehabisan stok.",
-    image: "/images/welcome/inventory.jpeg",
+    image: "/images/welcome/inventory.png",
     hint: "inventory management warehouse"
   },
   {
     title: "Integrasi Stok & Keuangan",
     description: "Aplikasi kasir ini terintegrasi langsung dengan manajemen stok dan laporan keuangan Anda.",
-    image: "/images/welcome/finance.jpeg",
+    image: "/images/welcome/finance.png",
     hint: "finance integration stock"
   },
   {
     title: "Laporan Penjualan Lengkap",
     description: "Dapatkan laporan harian, mingguan, dan bulanan untuk analisis bisnis yang lebih baik.",
-    image: "/images/welcome/reports.jpeg",
+    image: "/images/welcome/reports.png",
     hint: "sales analytics chart"
   },
   {
     title: "Program Loyalitas Pelanggan",
     description: "Buat dan kelola promo atau diskon untuk meningkatkan loyalitas pelanggan setia Anda.",
-    image: "/images/welcome/loyalty.jpeg",
+    image: "/images/welcome/loyalty.png",
     hint: "customer loyalty program"
   },
   {
     title: "Cocok untuk Berbagai Bisnis",
     description: "Sangat fleksibel untuk digunakan di toko retail, kafe, restoran, dan berbagai jenis usaha lainnya.",
-    image: "/images/welcome/retail.jpeg",
+    image: "/images/welcome/retail.png",
     hint: "small business storefront"
   }
 ];
@@ -82,7 +82,7 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
                             alt={slide.title}
                             width={300}
                             height={200}
-                            className="rounded-xl object-contain aspect-video"
+                            className="object-contain aspect-video rounded-xl shadow-lg"
                             data-ai-hint={slide.hint}
                         />
                         <div className="space-y-2">
