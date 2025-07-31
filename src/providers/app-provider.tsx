@@ -495,7 +495,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         unsubWarehouses();
         unsubUnits();
     };
-  }, [user, db, selectedBranchId, selectedWarehouseId]);
+  }, [user, db]);
 
   // Low Stock Notification Logic
   useEffect(() => {
