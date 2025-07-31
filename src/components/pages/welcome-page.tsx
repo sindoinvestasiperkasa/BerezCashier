@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -83,6 +84,7 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
               <CarouselItem key={index}>
                 <div className="p-1">
                     <div className="flex flex-col items-center justify-center gap-6 text-center">
+                        <slide.icon className="w-16 h-16 text-primary stroke-1"/>
                         <Image
                             src={slide.image}
                             alt={slide.title}
@@ -92,8 +94,7 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
                             data-ai-hint={slide.hint}
                         />
                         <div className="space-y-2">
-                            <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
-                                <slide.icon className="w-7 h-7 text-primary"/>
+                            <h2 className="text-2xl font-bold">
                                 {slide.title}
                             </h2>
                             <p className="text-muted-foreground">
