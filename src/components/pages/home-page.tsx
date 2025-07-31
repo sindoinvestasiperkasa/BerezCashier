@@ -101,6 +101,12 @@ export default function HomePage({ setView }: HomePageProps) {
   }, [user?.address, t]);
 
   const availableProducts = useMemo(() => {
+    console.log("--- DEBUG: availableProducts Memo ---");
+    console.log("selectedBranchId:", selectedBranchId);
+    console.log("selectedWarehouseId:", selectedWarehouseId);
+    console.log("products mentah:", products);
+    console.log("stockLots mentah:", stockLots);
+
     const allProducts = products.filter(p => p.productSubType !== 'Bahan Baku');
 
     // Handle 'Barang' (Goods) based on warehouse stock
@@ -118,17 +124,25 @@ export default function HomePage({ setView }: HomePageProps) {
         };
       })
       .filter(product => (product.stock || 0) > 0);
+      
+    console.log("Produk Barang (Goods) yang difilter:", goodsProducts);
 
     // Handle 'Jasa' (Services) based on branch availability
     const serviceProducts = allProducts
-      .filter(p => p.productType === 'Jasa' && p.availableBranchIds?.includes(selectedBranchId || ''))
+      .filter(p => p.productType === 'Jasa' && Array.isArray(p.availableBranchIds) && p.availableBranchIds.includes(selectedBranchId || ''))
       .map(product => ({
         ...product,
         stock: Infinity, // Services don't have stock
         unitName: 'Layanan'
       }));
 
-    return [...goodsProducts, ...serviceProducts];
+    console.log("Produk Jasa (Services) yang difilter:", serviceProducts);
+    
+    const combined = [...goodsProducts, ...serviceProducts];
+    console.log("Hasil gabungan:", combined);
+    console.log("--- END DEBUG ---");
+
+    return combined;
   }, [products, stockLots, selectedWarehouseId, selectedBranchId, productUnits]);
 
   useEffect(() => {
@@ -319,3 +333,5 @@ export default function HomePage({ setView }: HomePageProps) {
     </div>
   );
 }
+
+    
