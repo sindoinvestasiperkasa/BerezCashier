@@ -33,6 +33,7 @@ export type Product = {
   categoryName?: string;
   unitName?: string;
   supplierName?: string;
+  availableBranchIds?: string[];
   createdAt?: Date;
   updatedAt?: Date;
   branchId?: string; // To associate product with a branch
@@ -617,26 +618,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addTransaction = useCallback(async (data: NewTransactionClientData): Promise<{ success: boolean; transactionId: string }> => {
-      if (!user) throw new Error("User not authenticated.");
-      const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
-      if (!idUMKM) throw new Error("UMKM ID not found.");
+    if (!user) throw new Error("User not authenticated.");
+    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+    if (!idUMKM) throw new Error("UMKM ID not found.");
 
-      let transactionId = "";
-  
-      try {
-          await runTransaction(db, async (transaction) => {
-              const {
-                  items: cartItems, total, subtotal,
-                  discountAmount, taxAmount, isPkp,
-                  paymentMethod,
-                  salesAccountId, cogsAccountId, inventoryAccountId, paymentAccountId,
-                  discountAccountId, taxAccountId,
-                  warehouseId, branchId, customerId, customerName, serviceFee
-              } = data;
-              
-              if (!warehouseId) throw new Error("Gudang tidak dipilih.");
+    let transactionId = "";
 
-              const getPaymentAccount = (method: string): Account | undefined => {
+    try {
+        await runTransaction(db, async (transaction) => {
+            const {
+                items: cartItems, total, subtotal,
+                discountAmount, taxAmount, isPkp,
+                paymentMethod,
+                salesAccountId, cogsAccountId, inventoryAccountId, paymentAccountId,
+                discountAccountId, taxAccountId,
+                warehouseId, branchId, customerId, customerName, serviceFee
+            } = data;
+            
+            if (!warehouseId) throw new Error("Gudang tidak dipilih.");
+
+            const getPaymentAccount = (method: string): Account | undefined => {
                 const methodLower = method.toLowerCase();
                 let account = accounts.find(a => a.name.toLowerCase() === methodLower);
                 if (account) return account;
@@ -645,117 +646,118 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     if (account) return account;
                 }
                 return accounts.find(a => a.name.toLowerCase().includes('kas'));
-              };
-              const paymentAcc = paymentAccountId ? accounts.find(a => a.id === paymentAccountId) : getPaymentAccount(paymentMethod);
-              const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
+            };
+            const paymentAcc = paymentAccountId ? accounts.find(a => a.id === paymentAccountId) : getPaymentAccount(paymentMethod);
+            const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
 
-              const missingAccounts = [];
-              if (!paymentAcc) missingAccounts.push(`Akun untuk metode pembayaran '${paymentMethod}'`);
-              if (!salesAccountId) missingAccounts.push("Akun Pendapatan Penjualan");
-              if (discountAmount > 0 && !discountAccountId) missingAccounts.push("Akun Potongan Penjualan");
-              if (!cogsAccountId) missingAccounts.push("Akun Harga Pokok Penjualan (HPP)");
-              if (!inventoryAccountId) missingAccounts.push("Akun Persediaan Barang");
-              if (isPkp && taxAmount > 0 && !taxAccountId) missingAccounts.push("Akun PPN Keluaran");
-              if (serviceFee && serviceFee > 0 && !serviceFeeAccount) missingAccounts.push("Akun Utang Layanan Berez");
+            if (!paymentAcc) throw new Error(`Akun untuk metode pembayaran '${paymentMethod}' tidak ditemukan.`);
 
-              if (missingAccounts.length > 0) throw new Error(`Harap pilih/buat akun berikut: ${missingAccounts.join(', ')}.`);
-  
-              let totalCogs = 0;
-              const itemsForTransaction: SaleItem[] = [];
+            let totalCogs = 0;
+            const itemsForTransaction: SaleItem[] = [];
+            const physicalItems = cartItems.filter(item => item.productType === 'Barang');
 
-              for (const item of cartItems) {
-                  // This is the crucial part: determine the product type for processing
-                  const productType = products.find(p => p.id === item.id)?.productType || (item.productSubType === 'Jasa (Layanan)' ? 'Jasa' : 'Barang');
+            for (const item of cartItems) {
+                if (item.productType === 'Jasa') {
+                    itemsForTransaction.push({
+                        productId: item.id, productName: item.name, productType: 'Jasa',
+                        quantity: item.quantity, unitPrice: item.price, cogs: 0,
+                    });
+                    continue;
+                }
 
-                  if (productType === 'Jasa') {
-                      itemsForTransaction.push({
-                          productId: item.id, productName: item.name, productType: 'Jasa',
-                          quantity: item.quantity, unitPrice: item.price, cogs: 0,
-                      });
-                      continue;
-                  }
-  
-                  // Process as 'Barang'
-                  const lotsQuery = query(
-                      collection(db, 'stockLots'),
-                      where('idUMKM', '==', idUMKM),
-                      where('warehouseId', '==', warehouseId),
-                      where('productId', '==', item.id)
-                  );
-  
-                  const lotsSnapshot = await getDocs(lotsQuery);
-                  const availableLots = lotsSnapshot.docs
-                      .map(d => ({ id: d.id, ...d.data() } as StockLot))
-                      .filter(lot => lot.remainingQuantity > 0)
-                      .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime()); // FIFO Sort
-  
-                  let quantityToDeduct = item.quantity;
-                  let itemCogs = 0;
-                  
-                  const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
-                  if (totalStockForProduct < quantityToDeduct) throw new Error(`Stok tidak mencukupi untuk ${item.name}.`);
-                  
-                  for (const lot of availableLots) {
-                      if (quantityToDeduct <= 0) break;
-                      if (!lot.purchasePrice || lot.purchasePrice <= 0) throw new Error(`Lot stok ${lot.id} untuk produk ${item.name} tidak memiliki harga beli yang valid.`);
-                      
-                      const lotRef = doc(db, 'stockLots', lot.id);
-                      const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
-                      itemCogs += quantityFromThisLot * lot.purchasePrice;
-                      
-                      transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
-                      quantityToDeduct -= quantityFromThisLot;
-                  }
-                  
-                  itemsForTransaction.push({
+                const lotsQuery = query(
+                    collection(db, 'stockLots'),
+                    where('idUMKM', '==', idUMKM),
+                    where('warehouseId', '==', warehouseId),
+                    where('productId', '==', item.id)
+                );
+
+                // Firestore transactions require all reads to be done before any writes.
+                // We cannot use getDocs inside transaction scope in web sdk, need to fetch outside or handle differently.
+                // For this client-side implementation, we rely on the pre-fetched stockLots state.
+                const availableLots = stockLots
+                    .filter(lot => lot.productId === item.id && lot.warehouseId === warehouseId && lot.remainingQuantity > 0)
+                    .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime()); // FIFO Sort
+
+                let quantityToDeduct = item.quantity;
+                let itemCogs = 0;
+                
+                const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+                if (totalStockForProduct < quantityToDeduct) throw new Error(`Stok tidak mencukupi untuk ${item.name}.`);
+                
+                for (const lot of availableLots) {
+                    if (quantityToDeduct <= 0) break;
+                    if (!lot.purchasePrice || lot.purchasePrice <= 0) throw new Error(`Lot stok ${lot.id} untuk produk ${item.name} tidak memiliki harga beli yang valid.`);
+                    
+                    const lotRef = doc(db, 'stockLots', lot.id);
+                    const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+                    itemCogs += quantityFromThisLot * lot.purchasePrice;
+                    
+                    transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
+                    quantityToDeduct -= quantityFromThisLot;
+                }
+                
+                itemsForTransaction.push({
                     productId: item.id, productName: item.name, productType: 'Barang',
                     quantity: item.quantity, unitPrice: item.price, cogs: itemCogs,
-                  });
-                  totalCogs += itemCogs;
-              }
-              
-              const transactionTimestamp = Timestamp.now();
-              const transactionNumber = `KSR-${Date.now()}`;
-              
-              const lines: any[] = [
-                  { accountId: paymentAcc!.id, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${paymentMethod}` },
-                  { accountId: salesAccountId, debit: 0, credit: subtotal, description: `Pendapatan Penjualan dari Kasir` },
-              ];
-              if (totalCogs > 0) {
-                  lines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
-                  lines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
-              }
-              if (discountAmount > 0 && discountAccountId) lines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
-              if (isPkp && taxAmount > 0 && taxAccountId) lines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
-              if (serviceFee && serviceFee > 0 && serviceFeeAccount) {
-                  lines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
-              }
-              
-              const txDocRef = doc(collection(db, 'transactions'));
-              const transactionData = {
-                  idUMKM, warehouseId, branchId, customerId, customerName,
-                  date: transactionTimestamp, description: `Penjualan Kasir - ${paymentMethod}`, type: 'Sale',
-                  status: 'Lunas', paymentStatus: 'Berhasil', transactionNumber,
-                  amount: total, paidAmount: total, total: total,
-                  subtotal: subtotal, discountAmount, taxAmount, items: itemsForTransaction,
-                  paymentMethod, lines, paymentAccountId: paymentAcc!.id, salesAccountId, cogsAccountId,
-                  discountAccountId: discountAccountId || null,
-                  inventoryAccountId, taxAccountId: taxAccountId || null,
-                  isPkp, serviceFee: serviceFee || 0,
-              };
-  
-              transaction.set(txDocRef, transactionData);
-              transactionId = txDocRef.id;
-          });
-          
-          return { success: true, transactionId };
-  
-      } catch (error: any) {
-          console.error("Payment processing error in AppProvider:", error);
-          toast({ title: 'Gagal Memproses Pembayaran', description: error.message || 'Terjadi kesalahan saat menyimpan data.', variant: 'destructive'});
-          throw error; // Re-throw to be caught by the caller if needed
-      }
-    }, [user, db, accounts, products]);
+                });
+                totalCogs += itemCogs;
+            }
+            
+            const transactionTimestamp = Timestamp.now();
+            const transactionNumber = `KSR-${Date.now()}`;
+            
+            const lines: any[] = [
+                { accountId: paymentAcc.id, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${paymentMethod}` },
+                { accountId: salesAccountId, debit: 0, credit: subtotal, description: `Pendapatan Penjualan dari Kasir` },
+            ];
+
+            if (totalCogs > 0) {
+                if (!cogsAccountId || !inventoryAccountId) throw new Error("Akun HPP atau Persediaan tidak diatur.");
+                lines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
+                lines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
+            }
+
+            if (discountAmount > 0) {
+                if (!discountAccountId) throw new Error("Akun Diskon Penjualan tidak diatur.");
+                lines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
+            }
+            
+            if (isPkp && taxAmount > 0) {
+                if (!taxAccountId) throw new Error("Akun PPN Keluaran tidak diatur.");
+                lines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
+            }
+
+            if (serviceFee && serviceFee > 0) {
+                if (!serviceFeeAccount) throw new Error("Akun Utang Biaya Layanan tidak ditemukan.");
+                lines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
+            }
+            
+            const txDocRef = doc(collection(db, 'transactions'));
+            const transactionData = {
+                idUMKM, warehouseId, branchId, customerId, customerName,
+                date: transactionTimestamp, description: `Penjualan Kasir - ${paymentMethod}`, type: 'Sale',
+                status: 'Lunas', paymentStatus: 'Berhasil', transactionNumber,
+                amount: total, paidAmount: total, total,
+                subtotal, discountAmount, taxAmount, items: itemsForTransaction,
+                paymentMethod, lines, paymentAccountId: paymentAcc.id, salesAccountId, cogsAccountId,
+                discountAccountId: discountAccountId || null,
+                inventoryAccountId, taxAccountId: taxAccountId || null,
+                isPkp, serviceFee: serviceFee || 0,
+            };
+
+            transaction.set(txDocRef, transactionData);
+            transactionId = txDocRef.id;
+        });
+        
+        return { success: true, transactionId };
+
+    } catch (error: any) {
+        console.error("Payment processing error in AppProvider:", error);
+        toast({ title: 'Gagal Memproses Pembayaran', description: error.message || 'Terjadi kesalahan saat menyimpan data.', variant: 'destructive'});
+        throw error;
+    }
+  }, [user, db, accounts, products, stockLots]);
 
   const clearCart = () => {
       setCart([]);

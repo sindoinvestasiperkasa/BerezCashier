@@ -58,8 +58,8 @@ export default function ProductCard({ product, onProductClick }: ProductCardProp
     }).format(amount);
   };
 
-  const stockInfo = product.productSubType === 'Jasa (Layanan)' 
-    ? 'Jasa' 
+  const stockInfo = product.productType === 'Jasa' 
+    ? 'Layanan' 
     : `Stok: ${product.stock || 0} ${product.unitName || ''}`;
 
   return (

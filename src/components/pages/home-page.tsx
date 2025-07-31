@@ -101,28 +101,38 @@ export default function HomePage({ setView }: HomePageProps) {
   }, [user?.address, t]);
 
   const availableProducts = useMemo(() => {
-    if (!selectedWarehouseId) return [];
-    
-    const stockMap = new Map<string, number>();
-    stockLots
-        .filter(lot => lot.warehouseId === selectedWarehouseId)
-        .forEach(lot => {
-            stockMap.set(lot.productId, (stockMap.get(lot.productId) || 0) + lot.remainingQuantity);
-        });
+    const allProducts = products.filter(p => p.productSubType !== 'Bahan Baku');
 
-    return products
-      .filter(p => p.productSubType !== 'Bahan Baku')
+    // Handle 'Barang' (Goods) based on warehouse stock
+    const goodsProducts = allProducts
+      .filter(p => p.productType === 'Barang')
+      .map(product => {
+        const stock = stockLots
+          .filter(lot => lot.productId === product.id && lot.warehouseId === selectedWarehouseId)
+          .reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+        
+        return {
+          ...product,
+          stock: stock,
+          unitName: productUnits.find(unit => unit.id === product.unitId)?.name || 'Unit'
+        };
+      })
+      .filter(product => (product.stock || 0) > 0);
+
+    // Handle 'Jasa' (Services) based on branch availability
+    const serviceProducts = allProducts
+      .filter(p => p.productType === 'Jasa')
+      .filter(product => 
+        product.availableBranchIds && product.availableBranchIds.includes(selectedBranchId || '')
+      )
       .map(product => ({
         ...product,
-        stock: stockMap.get(product.id) || 0,
-        unitName: productUnits.find(unit => unit.id === product.unitId)?.name || 'Unit'
-      }))
-      .filter(product => {
-        const isService = product.productSubType === 'Jasa (Layanan)';
-        const hasStock = (product.stock || 0) > 0;
-        return isService || hasStock;
-      });
-  }, [products, stockLots, selectedWarehouseId, productUnits]);
+        stock: Infinity, // Services don't have stock
+        unitName: 'Layanan'
+      }));
+
+    return [...goodsProducts, ...serviceProducts];
+  }, [products, stockLots, selectedWarehouseId, selectedBranchId, productUnits]);
 
   useEffect(() => {
     const fetchCategories = async () => {
