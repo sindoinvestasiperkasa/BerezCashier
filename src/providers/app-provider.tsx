@@ -617,9 +617,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const addTransaction = useCallback(async (data: NewTransactionClientData): Promise<{ success: boolean; transactionId: string }> => {
     if (!user) throw new Error("User not authenticated.");
-    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
-    if (!idUMKM) throw new Error("UMKM ID not found.");
     
+    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+    const { warehouseId, branchId } = data;
+
+    // Strict validation before starting the transaction
+    if (!idUMKM) {
+        const msg = "ID UMKM tidak ditemukan. Tidak dapat melanjutkan transaksi.";
+        console.error(msg);
+        toast({ title: 'Gagal', description: msg, variant: 'destructive' });
+        throw new Error(msg);
+    }
+    if (!warehouseId) {
+        const msg = "Gudang tidak dipilih. Tidak dapat melanjutkan transaksi.";
+        console.error(msg);
+        toast({ title: 'Gagal', description: msg, variant: 'destructive' });
+        throw new Error(msg);
+    }
+    if (!branchId) {
+        const msg = "Cabang tidak dipilih. Tidak dapat melanjutkan transaksi.";
+        console.error(msg);
+        toast({ title: 'Gagal', description: msg, variant: 'destructive' });
+        throw new Error(msg);
+    }
+
     let transactionId = "";
 
     try {
@@ -630,11 +651,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 paymentMethod,
                 salesAccountId, cogsAccountId, inventoryAccountId, paymentAccountId,
                 discountAccountId, taxAccountId,
-                warehouseId, branchId, customerId, customerName, serviceFee
+                customerId, customerName, serviceFee
             } = data;
             
-            if (!warehouseId) throw new Error("Gudang tidak dipilih.");
-
             const getPaymentAccount = (method: string): Account | undefined => {
                 const methodLower = method.toLowerCase();
                 let account = accounts.find(a => a.name.toLowerCase() === methodLower);
@@ -655,6 +674,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const physicalItems = cartItems.filter(item => item.productType === 'Barang');
             
             for (const item of physicalItems) {
+                // Additional validation inside the loop
+                if (!item.id) {
+                    console.error("Error: Found an item in the cart with a missing ID.", item);
+                    throw new Error(`Item "${item.name || 'Unknown'}" memiliki ID yang tidak valid.`);
+                }
+                
                 const lotsQuery = query(
                     collection(db, 'stockLots'),
                     where('idUMKM', '==', idUMKM),
@@ -662,7 +687,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     where('productId', '==', item.id)
                 );
                 
-                // Firestore transactions require reading documents via the transaction object.
                 const lotsSnapshot = await transaction.get(lotsQuery);
                 const availableLots = lotsSnapshot.docs
                     .map(d => ({ id: d.id, ...d.data() } as StockLot))
@@ -755,7 +779,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gagal Memproses Pembayaran', description: error.message || 'Terjadi kesalahan saat menyimpan data.', variant: 'destructive'});
         throw error;
     }
-  }, [user, db, accounts, products, stockLots]);
+  }, [user, db, accounts, toast]);
 
   const clearCart = () => {
       setCart([]);
