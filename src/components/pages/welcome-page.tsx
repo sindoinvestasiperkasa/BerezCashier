@@ -76,7 +76,7 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
             {slides.map((slide, index) => (
               <CarouselItem key={index}>
                 <div className="p-1">
-                    <div className="flex flex-col items-center justify-center gap-6 text-center">
+                    <div className="flex flex-col items-center justify-center gap-6 text-center w-10/12 mx-auto">
                         <div className="p-2">
                             <Image
                                 src={slide.image}
