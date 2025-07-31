@@ -129,7 +129,7 @@ export default function HomePage({ setView }: HomePageProps) {
 
     // Handle 'Jasa' (Services) based on branch availability
     const serviceProducts = allProducts
-      .filter(p => p.productType === 'Jasa' && Array.isArray(p.availableBranchIds) && p.availableBranchIds.includes(selectedBranchId || ''))
+      .filter(p => p.productSubType === 'Jasa (Layanan)' && Array.isArray(p.availableBranchIds) && p.availableBranchIds.includes(selectedBranchId || ''))
       .map(product => ({
         ...product,
         stock: Infinity, // Services don't have stock
@@ -333,5 +333,3 @@ export default function HomePage({ setView }: HomePageProps) {
     </div>
   );
 }
-
-    
