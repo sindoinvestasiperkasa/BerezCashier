@@ -117,7 +117,7 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
       <footer className="w-full text-center mt-auto flex-shrink-0 pb-4">
         <p className="text-xs text-muted-foreground">
           Dengan melanjutkan, Anda menyetujui <br />
-          <a href="#" className="underline">Syarat & Ketentuan</a> dan <a href="#" className="underline">Kebijakan Privasi</a> kami.
+          <Button variant="link" className="p-0 h-auto text-xs" onClick={() => setView('terms')}>Syarat & Ketentuan</Button> dan <Button variant="link" className="p-0 h-auto text-xs" onClick={() => setView('privacy')}>Kebijakan Privasi</Button> kami.
         </p>
       </footer>
     </div>
