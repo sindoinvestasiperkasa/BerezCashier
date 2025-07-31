@@ -417,7 +417,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 id: doc.id,
                 ...data,
                 imageUrls: data.imageUrls || [],
-                 // Ensure productType is set
                 productType: data.productSubType === 'Jasa (Layanan)' ? 'Jasa' : 'Barang',
             } as Product;
         });
@@ -431,7 +430,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             return {
                 id: doc.id,
                 ...data,
-                // Handle both createdAt and purchaseDate for FIFO
                 purchaseDate: (data.purchaseDate as Timestamp)?.toDate() || (data.createdAt as Timestamp)?.toDate(),
                 createdAt: (data.createdAt as Timestamp)?.toDate(),
                 expirationDate: (data.expirationDate as Timestamp)?.toDate(),
@@ -621,7 +619,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!user) throw new Error("User not authenticated.");
     const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
     if (!idUMKM) throw new Error("UMKM ID not found.");
-
+    
     let transactionId = "";
 
     try {
@@ -655,29 +653,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             let totalCogs = 0;
             const itemsForTransaction: SaleItem[] = [];
             const physicalItems = cartItems.filter(item => item.productType === 'Barang');
-
-            for (const item of cartItems) {
-                if (item.productType === 'Jasa') {
-                    itemsForTransaction.push({
-                        productId: item.id, productName: item.name, productType: 'Jasa',
-                        quantity: item.quantity, unitPrice: item.price, cogs: 0,
-                    });
-                    continue;
-                }
-
+            
+            for (const item of physicalItems) {
                 const lotsQuery = query(
                     collection(db, 'stockLots'),
                     where('idUMKM', '==', idUMKM),
                     where('warehouseId', '==', warehouseId),
                     where('productId', '==', item.id)
                 );
-
-                // Firestore transactions require all reads to be done before any writes.
-                // We cannot use getDocs inside transaction scope in web sdk, need to fetch outside or handle differently.
-                // For this client-side implementation, we rely on the pre-fetched stockLots state.
-                const availableLots = stockLots
-                    .filter(lot => lot.productId === item.id && lot.warehouseId === warehouseId && lot.remainingQuantity > 0)
-                    .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime()); // FIFO Sort
+                
+                // Firestore transactions require reading documents via the transaction object.
+                const lotsSnapshot = await transaction.get(lotsQuery);
+                const availableLots = lotsSnapshot.docs
+                    .map(d => ({ id: d.id, ...d.data() } as StockLot))
+                    .filter(lot => lot.remainingQuantity > 0)
+                    .sort((a, b) => (a.purchaseDate as any).seconds - (b.purchaseDate as any).seconds);
 
                 let quantityToDeduct = item.quantity;
                 let itemCogs = 0;
@@ -703,6 +693,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 });
                 totalCogs += itemCogs;
             }
+
+            // Add service items (which don't have stock or COGS) to the list
+            cartItems.filter(item => item.productType === 'Jasa').forEach(item => {
+              itemsForTransaction.push({
+                  productId: item.id, productName: item.name, productType: 'Jasa',
+                  quantity: item.quantity, unitPrice: item.price, cogs: 0,
+              });
+            });
             
             const transactionTimestamp = Timestamp.now();
             const transactionNumber = `KSR-${Date.now()}`;

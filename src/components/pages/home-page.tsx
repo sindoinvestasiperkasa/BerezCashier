@@ -121,10 +121,7 @@ export default function HomePage({ setView }: HomePageProps) {
 
     // Handle 'Jasa' (Services) based on branch availability
     const serviceProducts = allProducts
-      .filter(p => p.productType === 'Jasa')
-      .filter(product => 
-        product.availableBranchIds && product.availableBranchIds.includes(selectedBranchId || '')
-      )
+      .filter(p => p.productType === 'Jasa' && p.availableBranchIds?.includes(selectedBranchId || ''))
       .map(product => ({
         ...product,
         stock: Infinity, // Services don't have stock
