@@ -91,11 +91,14 @@ export default function HomePage({ setView }: HomePageProps) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             // Only fetch name if we get valid coordinates
-            fetchLocationName(position.coords.latitude, position.coords.longitude);
+            if (position.coords.latitude && position.coords.longitude) {
+              fetchLocationName(position.coords.latitude, position.coords.longitude);
+            } else {
+              setLocationName(user?.address || t('home.locationNotSet'));
+            }
           },
           (error) => {
             // This is expected if user denies permission or location service is off
-            console.error(`Error getting location: ${error.message}`);
             setLocationName(user?.address || t('home.locationNotSet'));
           }
         );
