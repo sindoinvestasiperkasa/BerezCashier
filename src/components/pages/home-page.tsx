@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -22,7 +23,7 @@ import { cn } from "@/lib/utils";
 import ProductDetail from "../product-detail";
 import { collection, getDocs, query, where, getFirestore, documentId } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
-import { Card, CardContent } from "../ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useApp } from "@/hooks/use-app";
 import { useToast } from "@/hooks/use-toast";
 import type { View } from "../app-shell";
@@ -90,7 +91,7 @@ export default function HomePage({ setView }: HomePageProps) {
           fetchLocation(position.coords.latitude, position.coords.longitude);
         },
         (error) => {
-          console.error("Error getting location:", error);
+          console.error(`Error getting location: ${error.message}`);
           setLocationName(user?.address || t('home.locationNotSet'));
         }
       );
@@ -318,3 +319,5 @@ export default function HomePage({ setView }: HomePageProps) {
     </div>
   );
 }
+
+    
