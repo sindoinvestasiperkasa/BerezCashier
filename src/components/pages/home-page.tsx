@@ -68,7 +68,7 @@ export default function HomePage({ setView }: HomePageProps) {
   };
 
   useEffect(() => {
-    const fetchLocation = async (latitude: number, longitude: number) => {
+    const fetchLocationName = async (latitude: number, longitude: number) => {
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
         const data = await response.json();
@@ -77,6 +77,7 @@ export default function HomePage({ setView }: HomePageProps) {
         if (city && country) {
           setLocationName(`${city}, ${country}`);
         } else {
+          // Fallback if city/country not found in response
           setLocationName(user?.address || t('home.locationNotSet'));
         }
       } catch (error) {
@@ -84,20 +85,27 @@ export default function HomePage({ setView }: HomePageProps) {
         setLocationName(user?.address || t('home.locationNotSet'));
       }
     };
-    
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          fetchLocation(position.coords.latitude, position.coords.longitude);
-        },
-        (error) => {
-          console.error(`Error getting location: ${error.message}`);
-          setLocationName(user?.address || t('home.locationNotSet'));
-        }
-      );
-    } else {
-      setLocationName(user?.address || t('home.locationNotSet'));
-    }
+  
+    const requestLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // Only fetch name if we get valid coordinates
+            fetchLocationName(position.coords.latitude, position.coords.longitude);
+          },
+          (error) => {
+            // This is expected if user denies permission or location service is off
+            console.error(`Error getting location: ${error.message}`);
+            setLocationName(user?.address || t('home.locationNotSet'));
+          }
+        );
+      } else {
+        // Geolocation not supported by the browser
+        setLocationName(user?.address || t('home.locationNotSet'));
+      }
+    };
+  
+    requestLocation();
   }, [user?.address, t]);
 
   const availableProducts = useMemo(() => {
@@ -319,5 +327,3 @@ export default function HomePage({ setView }: HomePageProps) {
     </div>
   );
 }
-
-    
