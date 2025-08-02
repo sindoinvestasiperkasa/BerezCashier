@@ -621,7 +621,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
     const { warehouseId, branchId } = data;
 
-    // Strict validation before starting the transaction
     if (!idUMKM || !warehouseId || !branchId) {
         const msg = `Data tidak lengkap untuk transaksi. UMKM: ${!!idUMKM}, Gudang: ${!!warehouseId}, Cabang: ${!!branchId}`;
         console.error(msg);
@@ -632,11 +631,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     let transactionId = "";
 
     try {
-        // --- Pre-transaction data fetching ---
-        const itemsWithLots: { item: CartItem, lots: StockLot[] }[] = [];
         const physicalItems = data.items.filter(item => item.productType === 'Barang');
 
-        for (const item of physicalItems) {
+        // --- Pre-transaction data fetching ---
+        const itemLotDetails = await Promise.all(physicalItems.map(async (item) => {
             if (!item.id) {
                 throw new Error(`Item "${item.name || 'Unknown'}" memiliki ID yang tidak valid.`);
             }
@@ -649,19 +647,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             
             const lotsSnap = await getDocs(lotsQuery);
             const availableLots = lotsSnap.docs
-                .map(d => ({ id: d.id, ...d.data(), purchaseDate: (d.data().purchaseDate as Timestamp).toDate() } as StockLot))
+                .map(d => ({ id: d.id, ...(d.data() as Omit<StockLot, 'id'>), purchaseDate: (d.data().purchaseDate as Timestamp).toDate() } as StockLot))
                 .filter(lot => lot.remainingQuantity > 0)
                 .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
-            
+
             const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
             if (totalStockForProduct < item.quantity) {
                 throw new Error(`Stok tidak mencukupi untuk ${item.name}.`);
             }
-            itemsWithLots.push({ item, lots: availableLots });
-        }
-
+            return { item, lots: availableLots };
+        }));
 
         await runTransaction(db, async (transaction) => {
+            // =================================================================
+            // PHASE 1: READS - Validate all lots within the transaction
+            // =================================================================
+            const validatedLotsByItem: { [itemId: string]: StockLot[] } = {};
+            for (const { item, lots } of itemLotDetails) {
+                const freshLots = [];
+                for (const lot of lots) {
+                    const lotRef = doc(db, 'stockLots', lot.id);
+                    const freshLotSnap = await transaction.get(lotRef);
+                    if (!freshLotSnap.exists()) throw new Error(`Lot stok ${lot.id} tidak ditemukan saat transaksi.`);
+                    freshLots.push({ id: freshLotSnap.id, ...freshLotSnap.data() } as StockLot);
+                }
+                validatedLotsByItem[item.id] = freshLots;
+            }
+
+            // =================================================================
+            // PHASE 2: WRITES - Perform calculations and updates
+            // =================================================================
             const {
                 total, subtotal, discountAmount, taxAmount, isPkp,
                 paymentMethod, salesAccountId, cogsAccountId, inventoryAccountId,
@@ -677,26 +692,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             let totalCogs = 0;
             const itemsForTransaction: SaleItem[] = [];
             
-            for (const { item, lots } of itemsWithLots) {
+            for (const { item } of itemLotDetails) {
                 let quantityToDeduct = item.quantity;
                 let itemCogs = 0;
+                const lotsToUse = validatedLotsByItem[item.id];
                 
-                for (const lot of lots) {
+                for (const lot of lotsToUse) {
                     if (quantityToDeduct <= 0) break;
                     
                     const lotRef = doc(db, 'stockLots', lot.id);
-                    // Re-read the lot inside the transaction for consistency
-                    const freshLotSnap = await transaction.get(lotRef);
-                    if (!freshLotSnap.exists()) throw new Error(`Lot stok ${lot.id} tidak ditemukan.`);
-                    const freshLot = freshLotSnap.data() as StockLot;
-
-                    if (freshLot.remainingQuantity <= 0) continue;
-                    if (!freshLot.purchasePrice || freshLot.purchasePrice <= 0) throw new Error(`Lot stok ${freshLot.id} untuk produk ${item.name} tidak memiliki harga beli yang valid.`);
+                    if (lot.remainingQuantity <= 0) continue;
+                    if (!lot.purchasePrice || lot.purchasePrice <= 0) throw new Error(`Lot stok ${lot.id} untuk produk ${item.name} tidak memiliki harga beli yang valid.`);
                     
-                    const quantityFromThisLot = Math.min(quantityToDeduct, freshLot.remainingQuantity);
-                    itemCogs += quantityFromThisLot * freshLot.purchasePrice;
+                    const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+                    itemCogs += quantityFromThisLot * lot.purchasePrice;
                     
-                    transaction.update(lotRef, { remainingQuantity: freshLot.remainingQuantity - quantityFromThisLot });
+                    transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
                     quantityToDeduct -= quantityFromThisLot;
                 }
                 
