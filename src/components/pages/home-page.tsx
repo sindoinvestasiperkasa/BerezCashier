@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -67,7 +68,11 @@ export default function HomePage({ setView }: HomePageProps) {
   };
 
   useEffect(() => {
-    const fetchLocationName = async (latitude: number, longitude: number) => {
+    const fetchLocationName = async (latitude?: number, longitude?: number) => {
+      if (!latitude || !longitude) {
+        setLocationName(user?.address || t('home.locationNotSet'));
+        return;
+      }
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
         const data = await response.json();
@@ -191,14 +196,28 @@ export default function HomePage({ setView }: HomePageProps) {
     return [allCategory, ...productCategories];
   }, [productCategories, t]);
 
-  const filteredProducts = productsWithCategoryNames.filter((product) => {
-    const matchesCategory =
-      selectedCategoryId === "All" || product.categoryId === selectedCategoryId;
-    const matchesSearch = product.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredProducts = useMemo(() => {
+    return productsWithCategoryNames
+      .filter((product) => {
+        const matchesCategory =
+          selectedCategoryId === "All" || product.categoryId === selectedCategoryId;
+        const matchesSearch = product.name
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      })
+      .sort((a, b) => {
+        // First, sort by category name
+        if (a.categoryName && b.categoryName) {
+            const categoryComparison = a.categoryName.localeCompare(b.categoryName);
+            if (categoryComparison !== 0) {
+                return categoryComparison;
+            }
+        }
+        // If categories are the same, sort by product name
+        return a.name.localeCompare(b.name);
+      });
+  }, [productsWithCategoryNames, selectedCategoryId, searchQuery]);
   
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
@@ -212,7 +231,7 @@ export default function HomePage({ setView }: HomePageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background">
+      <header className="p-4 md:p-6 bg-background">
         <div className="flex justify-between items-center mb-4">
           <div>
             <p className="text-muted-foreground text-sm flex items-center gap-1"><MapPin className="w-4 h-4"/> {t('home.yourLocation')}</p>
