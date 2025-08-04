@@ -70,18 +70,14 @@ export default function HomePage({ setView }: HomePageProps) {
   useEffect(() => {
     const fetchLocationName = async (latitude: number, longitude: number) => {
       try {
-        if (latitude && longitude) {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-            const data = await response.json();
-            const city = data.address.city || data.address.town || data.address.village;
-            const country = data.address.country;
-            if (city && country) {
-              setLocationName(`${city}, ${country}`);
-            } else {
-              setLocationName(user?.address || t('home.locationNotSet'));
-            }
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+        const data = await response.json();
+        const city = data.address.city || data.address.town || data.address.village;
+        const country = data.address.country;
+        if (city && country) {
+          setLocationName(`${city}, ${country}`);
         } else {
-            setLocationName(user?.address || t('home.locationNotSet'));
+          setLocationName(user?.address || t('home.locationNotSet'));
         }
       } catch (error) {
         console.error("Error fetching location name:", error);
@@ -93,7 +89,9 @@ export default function HomePage({ setView }: HomePageProps) {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            fetchLocationName(position.coords.latitude, position.coords.longitude);
+            if (position.coords.latitude && position.coords.longitude) {
+              fetchLocationName(position.coords.latitude, position.coords.longitude);
+            }
           },
           (error) => {
             // This is expected if user denies permission or location service is off
@@ -216,7 +214,7 @@ export default function HomePage({ setView }: HomePageProps) {
   const unreadNotifications = notifications.filter(n => !n.isRead).length;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-y-auto">
       <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background/95 sticky top-0 z-10 backdrop-blur-sm">
         <div className="flex justify-between items-center mb-4">
           <div>
@@ -245,7 +243,7 @@ export default function HomePage({ setView }: HomePageProps) {
         </div>
       </header>
       
-      <div className="overflow-y-auto">
+      <div>
         <section className="p-4 md:p-6">
           <h2 className="text-xl font-bold mb-3 text-foreground">{t('home.categories')}</h2>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
@@ -330,3 +328,5 @@ export default function HomePage({ setView }: HomePageProps) {
     </div>
   );
 }
+
+    
