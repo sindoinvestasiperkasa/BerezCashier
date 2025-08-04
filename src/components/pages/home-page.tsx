@@ -70,15 +70,18 @@ export default function HomePage({ setView }: HomePageProps) {
   useEffect(() => {
     const fetchLocationName = async (latitude: number, longitude: number) => {
       try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-        const data = await response.json();
-        const city = data.address.city || data.address.town || data.address.village;
-        const country = data.address.country;
-        if (city && country) {
-          setLocationName(`${city}, ${country}`);
+        if (latitude && longitude) {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+            const data = await response.json();
+            const city = data.address.city || data.address.town || data.address.village;
+            const country = data.address.country;
+            if (city && country) {
+              setLocationName(`${city}, ${country}`);
+            } else {
+              setLocationName(user?.address || t('home.locationNotSet'));
+            }
         } else {
-          // Fallback if city/country not found in response
-          setLocationName(user?.address || t('home.locationNotSet'));
+            setLocationName(user?.address || t('home.locationNotSet'));
         }
       } catch (error) {
         console.error("Error fetching location name:", error);
@@ -90,12 +93,7 @@ export default function HomePage({ setView }: HomePageProps) {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            // Only fetch name if we get valid coordinates
-            if (position.coords.latitude && position.coords.longitude) {
-              fetchLocationName(position.coords.latitude, position.coords.longitude);
-            } else {
-              setLocationName(user?.address || t('home.locationNotSet'));
-            }
+            fetchLocationName(position.coords.latitude, position.coords.longitude);
           },
           (error) => {
             // This is expected if user denies permission or location service is off
@@ -218,8 +216,8 @@ export default function HomePage({ setView }: HomePageProps) {
   const unreadNotifications = notifications.filter(n => !n.isRead).length;
 
   return (
-    <div className="flex flex-col">
-      <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background">
+    <div className="flex flex-col h-full">
+      <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background/95 sticky top-0 z-10 backdrop-blur-sm">
         <div className="flex justify-between items-center mb-4">
           <div>
             <p className="text-muted-foreground text-sm flex items-center gap-1"><MapPin className="w-4 h-4"/> {t('home.yourLocation')}</p>
@@ -246,81 +244,83 @@ export default function HomePage({ setView }: HomePageProps) {
           />
         </div>
       </header>
+      
+      <div className="overflow-y-auto">
+        <section className="p-4 md:p-6">
+          <h2 className="text-xl font-bold mb-3 text-foreground">{t('home.categories')}</h2>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
+            {isLoading && productCategories.length === 0 ? (
+               [...Array(5)].map((_, i) => <Skeleton key={i} className="w-20 h-20 rounded-lg flex-shrink-0" />)
+            ) : (
+              displayCategories.map((category) => {
+                const displayName = getCategoryDisplayName(category.name);
+                const Icon = iconMap[category.icon || "Default"] || iconMap["Default"];
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategoryId(category.id)}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-lg border transition-colors flex-shrink-0 shadow-md text-center",
+                      selectedCategoryId === category.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-foreground hover:bg-secondary"
+                    )}
+                  >
+                    {Icon && <Icon className="w-6 h-6" />}
+                    <span className="text-xs font-medium">{displayName}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </section>
 
-      <section className="p-4 md:p-6">
-        <h2 className="text-xl font-bold mb-3 text-foreground">{t('home.categories')}</h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
-          {isLoading && productCategories.length === 0 ? (
-             [...Array(5)].map((_, i) => <Skeleton key={i} className="w-20 h-20 rounded-lg flex-shrink-0" />)
+        <section className="p-4 md:p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-foreground">
+              {searchQuery ? t('home.searchResults') : t('home.availableServices')}
+            </h2>
+            <Button variant="link" className="text-primary p-0 h-auto">
+              {t('home.seeAll')}
+            </Button>
+          </div>
+          {isLoading && products.length === 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <Card key={i} className="shadow-md">
+                  <Skeleton className="w-full aspect-square" />
+                  <CardContent className="p-3 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <div className="flex justify-between items-center mt-3">
+                      <Skeleton className="h-5 w-1/3" />
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredProducts.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  onProductClick={handleProductClick} 
+                />
+              ))}
+            </div>
           ) : (
-            displayCategories.map((category) => {
-              const displayName = getCategoryDisplayName(category.name);
-              const Icon = iconMap[category.icon || "Default"] || iconMap["Default"];
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategoryId(category.id)}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-lg border transition-colors flex-shrink-0 shadow-md text-center",
-                    selectedCategoryId === category.id
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-foreground hover:bg-secondary"
-                  )}
-                >
-                  {Icon && <Icon className="w-6 h-6" />}
-                  <span className="text-xs font-medium">{displayName}</span>
-                </button>
-              );
-            })
+            <div className="text-center py-10 flex flex-col items-center gap-4">
+              <Frown className="w-16 h-16 text-muted-foreground" />
+              <h3 className="text-lg font-semibold">{t('home.noServicesFound.title')}</h3>
+              <p className="text-muted-foreground max-w-xs">
+                {t('home.noServicesFound.description')}
+              </p>
+            </div>
           )}
-        </div>
-      </section>
-
-      <section className="p-4 md:p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-foreground">
-            {searchQuery ? t('home.searchResults') : t('home.availableServices')}
-          </h2>
-          <Button variant="link" className="text-primary p-0 h-auto">
-            {t('home.seeAll')}
-          </Button>
-        </div>
-        {isLoading && products.length === 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[...Array(8)].map((_, i) => (
-              <Card key={i} className="shadow-md">
-                <Skeleton className="w-full aspect-square" />
-                <CardContent className="p-3 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                  <div className="flex justify-between items-center mt-3">
-                    <Skeleton className="h-5 w-1/3" />
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filteredProducts.map((product) => (
-              <ProductCard 
-                key={product.id} 
-                product={product} 
-                onProductClick={handleProductClick} 
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-10 flex flex-col items-center gap-4">
-            <Frown className="w-16 h-16 text-muted-foreground" />
-            <h3 className="text-lg font-semibold">{t('home.noServicesFound.title')}</h3>
-            <p className="text-muted-foreground max-w-xs">
-              {t('home.noServicesFound.description')}
-            </p>
-          </div>
-        )}
-      </section>
+        </section>
+      </div>
       
       <ProductDetail 
         product={selectedProduct}
