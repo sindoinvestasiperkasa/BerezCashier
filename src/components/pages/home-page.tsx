@@ -217,7 +217,7 @@ export default function HomePage({ setView }: HomePageProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background/95 sticky top-0 z-10 backdrop-blur-sm">
+      <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background border-b">
         <div className="flex justify-between items-center mb-4">
           <div>
             <p className="text-muted-foreground text-sm flex items-center gap-1"><MapPin className="w-4 h-4"/> {t('home.yourLocation')}</p>
@@ -245,7 +245,7 @@ export default function HomePage({ setView }: HomePageProps) {
         </div>
       </header>
       
-      <div className="overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto pb-20">
         <section className="p-4 md:p-6">
           <h2 className="text-xl font-bold mb-3 text-foreground">{t('home.categories')}</h2>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
