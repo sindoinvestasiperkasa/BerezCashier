@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -91,7 +90,7 @@ export default function HomePage({ setView }: HomePageProps) {
           (position) => {
             fetchLocationName(position.coords.latitude, position.coords.longitude);
           },
-          (error) => {
+          () => {
             // This is expected if user denies permission or location service is off
             setLocationName(user?.address || t('home.locationNotSet'));
           }
@@ -213,7 +212,7 @@ export default function HomePage({ setView }: HomePageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background border-b">
+      <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background">
         <div className="flex justify-between items-center mb-4">
           <div>
             <p className="text-muted-foreground text-sm flex items-center gap-1"><MapPin className="w-4 h-4"/> {t('home.yourLocation')}</p>
@@ -326,5 +325,3 @@ export default function HomePage({ setView }: HomePageProps) {
     </div>
   );
 }
-
-    
