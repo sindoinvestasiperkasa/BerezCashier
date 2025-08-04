@@ -60,7 +60,7 @@ export default function AppShell() {
 
   return (
     <div className="mx-auto max-w-md md:max-w-2xl lg:max-w-4xl bg-background min-h-screen flex flex-col shadow-2xl">
-      <main className="flex-grow pb-20 overflow-y-auto">
+      <main className="flex-grow overflow-y-auto">
         {renderContent()}
       </main>
       {isTabView(view) && <BottomNav activeTab={view} setActiveTab={setView} />}
