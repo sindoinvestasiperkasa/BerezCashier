@@ -89,11 +89,7 @@ export default function HomePage({ setView }: HomePageProps) {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            if (position.coords.latitude && position.coords.longitude) {
-              fetchLocationName(position.coords.latitude, position.coords.longitude);
-            } else {
-               setLocationName(user?.address || t('home.locationNotSet'));
-            }
+            fetchLocationName(position.coords.latitude, position.coords.longitude);
           },
           (error) => {
             // This is expected if user denies permission or location service is off
@@ -216,7 +212,7 @@ export default function HomePage({ setView }: HomePageProps) {
   const unreadNotifications = notifications.filter(n => !n.isRead).length;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
       <header className="p-4 md:p-6 bg-gradient-to-b from-primary/20 to-background border-b">
         <div className="flex justify-between items-center mb-4">
           <div>
@@ -245,7 +241,7 @@ export default function HomePage({ setView }: HomePageProps) {
         </div>
       </header>
       
-      <div className="flex-1 overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto">
         <section className="p-4 md:p-6">
           <h2 className="text-xl font-bold mb-3 text-foreground">{t('home.categories')}</h2>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6">
@@ -330,3 +326,5 @@ export default function HomePage({ setView }: HomePageProps) {
     </div>
   );
 }
+
+    
