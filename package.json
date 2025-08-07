@@ -11,15 +11,15 @@
     "export": "next export",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "build:android": "next build && next export && npx cap sync android",
+    "build:android": "next build && rm -rf www && cp -r .next/static www && npx cap sync android",
     "build:ios": "next build && next export && npx cap sync ios",
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@capacitor/android": "^7.4.0",
-    "@capacitor/cli": "^7.4.0",
-    "@capacitor/core": "^7.4.0",
+    "@capacitor/android": "^7.4.2",
+    "@capacitor/core": "^7.4.2",
     "@capacitor/ios": "^7.4.0",
+    "@capacitor/status-bar": "^7.0.2",
     "@genkit-ai/googleai": "^1.13.0",
     "@genkit-ai/next": "^1.13.0",
     "@hookform/resolvers": "^3.9.0",
@@ -71,6 +71,8 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.4.2",
+    "@types/next-pwa": "^5.6.9",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
