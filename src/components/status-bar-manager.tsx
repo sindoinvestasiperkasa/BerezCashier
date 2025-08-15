@@ -2,10 +2,13 @@
 
 import { useEffect } from 'react';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
+
 
 export default function StatusBarManager() {
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    // Jalankan kode Capacitor hanya jika platformnya native (bukan web)
+    if (Capacitor.isNativePlatform()) {
       // iOS only: tap on status bar to scroll to top
       window.addEventListener('statusTap', () => {
         console.log('Status bar tapped');
