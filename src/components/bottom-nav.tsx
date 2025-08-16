@@ -2,7 +2,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { Home, Heart, ShoppingCart, Receipt, User } from "lucide-react";
+import { Home, ClipboardList, ShoppingCart, Receipt, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tab } from "./app-shell";
 import { useApp } from "@/hooks/use-app";
@@ -13,11 +13,15 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
-  const { cart, t } = useApp();
+  const { cart, t, transactions } = useApp();
+
+  const pendingOrdersCount = transactions.filter(
+    tx => tx.status !== 'Lunas' || tx.paymentStatus !== 'Berhasil'
+  ).length;
 
   const navItems = [
     { id: "home", label: t('nav.home'), icon: Home },
-    { id: "wishlist", label: t('nav.wishlist'), icon: Heart },
+    { id: "orders", label: t('nav.orders'), icon: ClipboardList, badge: pendingOrdersCount },
     { id: "cart", label: t('nav.cart'), icon: ShoppingCart },
     { id: "transactions", label: t('nav.transactions'), icon: Receipt },
     { id: "account", label: t('nav.account'), icon: User },
@@ -67,6 +71,11 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
               >
                 <item.icon className="w-6 h-6 transition-transform group-hover:scale-110" />
                 <span className="text-xs font-medium">{item.label}</span>
+                {item.badge && item.badge > 0 && (
+                   <div className="absolute top-1 right-4 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center text-[10px] font-bold">
+                    {item.badge}
+                  </div>
+                )}
               </button>
             );
           })}

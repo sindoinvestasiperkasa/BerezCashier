@@ -4,7 +4,7 @@
 import { useState } from "react";
 import BottomNav from "./bottom-nav";
 import HomePage from "./pages/home-page";
-import WishlistPage from "./pages/wishlist-page";
+import OrdersPage from "./pages/orders-page";
 import CartPage from "./pages/cart-page";
 import TransactionsPage from "./pages/transactions-page";
 import AccountPage from "./pages/account-page";
@@ -17,7 +17,7 @@ import NotificationsPage from "./pages/notifications-page";
 import AccountSecurityPage from "./pages/account-security-page";
 import LanguagePage from "./pages/language-page";
 
-export type Tab = "home" | "wishlist" | "cart" | "transactions" | "account";
+export type Tab = "home" | "orders" | "cart" | "transactions" | "account";
 export type View = Tab | "checkout" | "payment" | "edit-profile" | "my-address" | "settings" | "notifications" | "account-security" | "language";
 
 export default function AppShell() {
@@ -27,8 +27,8 @@ export default function AppShell() {
     switch (view) {
       case "home":
         return <HomePage setView={setView} />;
-      case "wishlist":
-        return <WishlistPage />;
+      case "orders":
+        return <OrdersPage />;
       case "cart":
         return <CartPage setView={setView} />;
       case "transactions":
@@ -56,7 +56,7 @@ export default function AppShell() {
     }
   };
   
-  const isTabView = (v: View): v is Tab => ["home", "wishlist", "cart", "transactions", "account"].includes(v);
+  const isTabView = (v: View): v is Tab => ["home", "orders", "cart", "transactions", "account"].includes(v);
 
   return (
     <div className="mx-auto max-w-md md:max-w-2xl lg:max-w-4xl bg-background min-h-screen flex flex-col shadow-2xl">
