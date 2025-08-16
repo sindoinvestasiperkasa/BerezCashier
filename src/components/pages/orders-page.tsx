@@ -47,7 +47,10 @@ export default function OrdersPage() {
 
   const pendingTransactions = useMemo(() => {
     return transactions
-      .filter(trx => trx.status !== 'Lunas' || trx.paymentStatus !== 'Berhasil')
+      .filter(trx => 
+        (trx.status !== 'Lunas' || trx.paymentStatus !== 'Berhasil') &&
+        trx.transactionNumber?.startsWith('KSR')
+      )
       .sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [transactions]);
 
