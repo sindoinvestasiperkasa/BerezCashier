@@ -12,7 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Calendar, CreditCard, CheckCircle, Loader2 } from "lucide-react";
+import { Package, Calendar, CreditCard, CheckCircle, Loader2, User } from "lucide-react";
 import type { Transaction } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -88,12 +88,17 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                     {transaction.status}
                 </Badge>
             </SheetTitle>
-            <div className="text-left flex items-center gap-4 text-sm pt-1 text-muted-foreground">
+            <div className="text-left flex items-center gap-4 text-sm pt-1 text-muted-foreground flex-wrap">
                 <span className="font-mono">{transaction.transactionNumber || transaction.id}</span>
                 <span className="text-xs">•</span>
                 <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
                     <span>{formatDate(transaction.date)}</span>
+                </div>
+                <span className="text-xs">•</span>
+                <div className="flex items-center gap-1.5">
+                    <User className="w-4 h-4" />
+                    <span>{transaction.customerName || 'Pelanggan Umum'}</span>
                 </div>
             </div>
         </SheetHeader>

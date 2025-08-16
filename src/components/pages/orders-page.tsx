@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ClipboardList, CheckCircle, AlertCircle, Clock, Frown } from "lucide-react";
+import { ClipboardList, CheckCircle, AlertCircle, Clock, Frown, User } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/providers/app-provider";
@@ -106,6 +106,10 @@ export default function OrdersPage() {
                     <div>
                       <CardTitle className="text-base font-bold">{trx.transactionNumber}</CardTitle>
                       <CardDescription>{formatDate(trx.date)}</CardDescription>
+                      <CardDescription className="flex items-center gap-1.5 mt-1">
+                        <User className="w-3.5 h-3.5" />
+                        <span>{trx.customerName || 'Pelanggan Umum'}</span>
+                      </CardDescription>
                     </div>
                     <Badge variant={statusVariant[trx.status] || 'outline'} className={trx.status === 'Diproses' ? 'border-primary text-primary' : ''}>{trx.status}</Badge>
                   </div>
