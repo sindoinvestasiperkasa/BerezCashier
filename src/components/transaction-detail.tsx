@@ -145,9 +145,9 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                       <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
                   </div>
                   {discount > 0 && (
-                    <div className="flex justify-between text-muted-foreground">
-                      <span className="text-destructive">Diskon</span>
-                      <span className="font-medium text-destructive">- {formatCurrency(discount)}</span>
+                    <div className="flex justify-between text-destructive">
+                      <span>Diskon</span>
+                      <span className="font-medium">- {formatCurrency(discount)}</span>
                     </div>
                   )}
                   {shipping > 0 && <div className="flex justify-between text-muted-foreground">
