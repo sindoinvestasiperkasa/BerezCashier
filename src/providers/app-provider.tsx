@@ -245,6 +245,7 @@ interface AppContextType {
   isInWishlist: (productId: string) => boolean;
   addTransaction: (data: NewTransactionClientData) => Promise<{ success: boolean; transactionId: string }>;
   updateTransactionStatus: (transactionId: string) => Promise<boolean>;
+  updateTransactionDiscount: (transactionId: string, discountAmount: number, taxAmount: number, total: number) => Promise<boolean>;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
@@ -803,6 +804,64 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateTransactionDiscount = async (transactionId: string, discountAmount: number, taxAmount: number, total: number): Promise<boolean> => {
+    if (!user) {
+      toast({ title: "Anda harus login", variant: "destructive" });
+      return false;
+    }
+    const txDocRef = doc(db, 'transactions', transactionId);
+
+    try {
+      const txSnap = await getDoc(txDocRef);
+      if (!txSnap.exists()) {
+        throw new Error("Transaksi tidak ditemukan.");
+      }
+      const txData = txSnap.data() as Transaction;
+      
+      const newLines = [...(txData.lines || [])];
+
+      // Remove existing discount line
+      const filteredLines = newLines.filter(line => line.accountId !== txData.discountAccountId);
+      
+      // Add new discount line if discount > 0
+      if (discountAmount > 0 && txData.discountAccountId) {
+        filteredLines.push({ accountId: txData.discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
+      }
+
+      // Update payment line debit
+      const paymentLineIndex = filteredLines.findIndex(line => line.accountId === txData.paymentAccountId);
+      if (paymentLineIndex > -1) {
+        filteredLines[paymentLineIndex].debit = total;
+      }
+       // Update tax line credit
+      if (txData.taxAccountId) {
+        const taxLineIndex = filteredLines.findIndex(line => line.accountId === txData.taxAccountId);
+        if (taxLineIndex > -1) {
+          filteredLines[taxLineIndex].credit = taxAmount;
+        } else if (taxAmount > 0) {
+           filteredLines.push({ accountId: txData.taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
+        }
+      }
+
+      await updateDoc(txDocRef, {
+        discountAmount,
+        taxAmount,
+        total,
+        amount: total,
+        paidAmount: total, // Assuming it will be paid in full
+        lines: filteredLines
+      });
+
+      toast({ title: 'Sukses', description: 'Diskon berhasil diperbarui.' });
+      return true;
+
+    } catch (error) {
+      console.error("Error updating transaction discount:", error);
+      toast({ title: 'Gagal', description: 'Gagal memperbarui diskon.', variant: 'destructive' });
+      return false;
+    }
+  };
+
   const clearCart = () => {
       setCart([]);
   };
@@ -923,6 +982,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isInWishlist,
         addTransaction,
         updateTransactionStatus,
+        updateTransactionDiscount,
         clearCart,
         addCustomer,
         holdCart,

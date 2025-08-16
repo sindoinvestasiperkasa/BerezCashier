@@ -12,7 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Calendar, CreditCard, CheckCircle, Loader2, User } from "lucide-react";
+import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent } from "lucide-react";
 import type { Transaction } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,9 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { useApp } from "@/hooks/use-app";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 interface TransactionDetailProps {
   transaction: Transaction | null;
@@ -47,32 +49,64 @@ const formatDate = (date: Date) => {
 
 
 export default function TransactionDetail({ transaction, products, isOpen, onClose }: TransactionDetailProps) {
-  const { updateTransactionStatus } = useApp();
+  const { updateTransactionStatus, updateTransactionDiscount } = useApp();
   const [isLoading, setIsLoading] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState(0);
+
+  useEffect(() => {
+    if (transaction) {
+      const initialDiscountPercent = (transaction.discountAmount || 0) > 0 
+        ? ((transaction.discountAmount || 0) / (transaction.subtotal || 1)) * 100 
+        : 0;
+      setDiscountPercent(initialDiscountPercent);
+    }
+  }, [transaction]);
+
+  const subtotal = transaction?.subtotal || 0;
+  const serviceFee = transaction?.serviceFee || 0;
+  const taxRate = (transaction?.isPkp) ? 0.11 : 0;
+  
+  const calculatedDiscountAmount = useMemo(() => {
+    return (subtotal * discountPercent) / 100;
+  }, [subtotal, discountPercent]);
+
+  const subtotalAfterDiscount = subtotal - calculatedDiscountAmount;
+
+  const calculatedTaxAmount = useMemo(() => {
+     return subtotalAfterDiscount * taxRate;
+  }, [subtotalAfterDiscount, taxRate]);
+
+  const calculatedTotal = subtotalAfterDiscount + calculatedTaxAmount + serviceFee;
 
   if (!transaction) {
     return null;
   }
-
-  const handleMarkAsPaid = async () => {
+  
+  const handlePayAndSave = async () => {
     if (!transaction) return;
     setIsLoading(true);
+    
+    // Update discount first if it has changed
+    if (calculatedDiscountAmount !== (transaction.discountAmount || 0)) {
+        await updateTransactionDiscount(
+            transaction.id, 
+            calculatedDiscountAmount,
+            calculatedTaxAmount,
+            calculatedTotal
+        );
+    }
+    
+    // Then mark as paid
     const success = await updateTransactionStatus(transaction.id);
     setIsLoading(false);
     if (success) {
       onClose();
     }
-  }
+  };
 
   const isPaymentPending = transaction.paymentStatus === 'Pending' || transaction.paymentStatus === 'Gagal';
   const paymentConfig = paymentStatusConfig[transaction.paymentStatus];
   const PaymentIcon = paymentConfig?.icon || CreditCard;
-  
-  const subtotal = transaction.subtotal || 0;
-  const discount = transaction.discountAmount || 0;
-  const tax = transaction.taxAmount || 0;
-  const serviceFee = transaction.serviceFee || 0;
-  const total = transaction.total || 0;
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -140,15 +174,34 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                       <span>Subtotal</span>
                       <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
                   </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-destructive">
-                      <span>Diskon</span>
-                      <span className="font-medium">- {formatCurrency(discount)}</span>
+                  
+                  {isPaymentPending && (
+                     <div className="flex justify-between items-center">
+                        <Label htmlFor="discount-detail" className="text-muted-foreground">Diskon (%)</Label>
+                        <div className="relative w-24">
+                           <Input 
+                              id="discount-detail" 
+                              type="number" 
+                              value={discountPercent} 
+                              onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                              className="w-full h-9 pr-7" 
+                              placeholder='0'
+                              disabled={isLoading}
+                          />
+                          <Percent className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
                     </div>
                   )}
-                   {tax > 0 && <div className="flex justify-between text-muted-foreground">
+
+                  {calculatedDiscountAmount > 0 && (
+                    <div className="flex justify-between text-destructive">
+                      <span>Potongan Diskon</span>
+                      <span className="font-medium">- {formatCurrency(calculatedDiscountAmount)}</span>
+                    </div>
+                  )}
+                   {calculatedTaxAmount > 0 && <div className="flex justify-between text-muted-foreground">
                       <span>Pajak</span>
-                      <span className="font-medium text-foreground">{formatCurrency(tax)}</span>
+                      <span className="font-medium text-foreground">{formatCurrency(calculatedTaxAmount)}</span>
                   </div>}
                    {serviceFee > 0 && <div className="flex justify-between text-muted-foreground">
                       <span>Biaya Layanan</span>
@@ -157,7 +210,7 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                   <Separator/>
                   <div className="flex justify-between font-bold text-lg">
                       <span>Total</span>
-                      <span>{formatCurrency(total)}</span>
+                      <span>{formatCurrency(calculatedTotal)}</span>
                   </div>
               </CardContent>
             </Card>
@@ -183,9 +236,9 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
         
         {isPaymentPending && (
           <SheetFooter className="p-4 border-t bg-background">
-            <Button className="w-full h-12" onClick={handleMarkAsPaid} disabled={isLoading}>
+            <Button className="w-full h-12" onClick={handlePayAndSave} disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5" />}
-              {isLoading ? 'Memproses...' : 'Tandai Sudah Dibayar'}
+              {isLoading ? 'Menyimpan...' : 'Simpan & Lunasi'}
             </Button>
           </SheetFooter>
         )}
@@ -193,4 +246,3 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
     </Sheet>
   );
 }
-
