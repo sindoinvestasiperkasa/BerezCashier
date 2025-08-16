@@ -1,9 +1,10 @@
 
 "use client";
 
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, User, MapPin, Settings, LogOut, Building, Warehouse } from "lucide-react";
+import { ChevronRight, User, MapPin, Settings, LogOut, Building, Warehouse, QrCode } from "lucide-react";
 import type { View } from "../app-shell";
 import { useApp } from "@/hooks/use-app";
 import {
@@ -20,6 +21,8 @@ import {
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import QRCode from "qrcode.react";
 
 
 interface AccountPageProps {
@@ -31,7 +34,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
     logout, 
     user, 
     branches,
-    filteredWarehouses, // Use filtered warehouses
+    filteredWarehouses,
     selectedBranchId, 
     setSelectedBranchId, 
     selectedWarehouseId, 
@@ -50,9 +53,14 @@ export default function AccountPage({ setView }: AccountPageProps) {
   const userPhoto = user?.photoUrl;
   const nameFallback = userName ? userName.charAt(0).toUpperCase() : "U";
 
+  const idUMKM = user?.role === 'UMKM' ? user.uid : user?.idUMKM;
+  const canGenerateQr = idUMKM && selectedBranchId && selectedWarehouseId;
+  const qrUrl = canGenerateQr 
+    ? `https://user.berez.id/?idUMKM=${idUMKM}&branchId=${selectedBranchId}&warehouseId=${selectedWarehouseId}` 
+    : "";
 
   return (
-    <div className="bg-secondary/50 min-h-full">
+    <div className="bg-secondary/50 min-h-full pb-8">
       <div className="p-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-b-3xl">
         <div className="flex items-center gap-4 pt-8 pb-4">
           <Avatar className="h-20 w-20 border-4 border-primary-foreground/50">
@@ -118,6 +126,34 @@ export default function AccountPage({ setView }: AccountPageProps) {
                   </SelectContent>
                 </Select>
               </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="w-full" variant="outline" disabled={!canGenerateQr}>
+                  <QrCode className="mr-2 h-5 w-5" />
+                  Tampilkan QR Code Pemesanan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-xs">
+                <DialogHeader>
+                  <DialogTitle>Scan untuk Memesan</DialogTitle>
+                  <DialogDescription>
+                    Arahkan pelanggan untuk memindai kode ini untuk langsung membuka halaman pemesanan.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="p-4 flex items-center justify-center bg-white rounded-lg">
+                  {canGenerateQr && <QRCode value={qrUrl} size={256} />}
+                </div>
+                <p className="text-xs text-muted-foreground text-center break-words">{qrUrl}</p>
+              </DialogContent>
+            </Dialog>
+            {!canGenerateQr && (
+              <p className="text-xs text-muted-foreground mt-2 text-center">Pilih cabang dan gudang terlebih dahulu untuk membuat QR code.</p>
+            )}
           </CardContent>
         </Card>
 
