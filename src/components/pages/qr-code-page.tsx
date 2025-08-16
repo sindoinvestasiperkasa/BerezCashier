@@ -54,7 +54,7 @@ export default function QrCodePage({ setView }: QrCodePageProps) {
                         ],
                     });
                 } catch (error: any) {
-                    // This error is expected if the user cancels the share dialog.
+                    // This error is expected if the user cancels the share dialog (AbortError).
                     // We can safely ignore it to prevent console noise.
                     if (error.name !== 'AbortError') {
                       console.error("Gagal membagikan:", error);
