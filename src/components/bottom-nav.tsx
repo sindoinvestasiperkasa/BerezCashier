@@ -16,7 +16,9 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
   const { cart, t, transactions } = useApp();
 
   const pendingOrdersCount = transactions.filter(
-    tx => tx.status !== 'Lunas' || tx.paymentStatus !== 'Berhasil'
+    tx => 
+        (tx.status !== 'Lunas' || tx.paymentStatus !== 'Berhasil') &&
+        tx.transactionNumber?.startsWith('KSR')
   ).length;
 
   const navItems = [
