@@ -580,7 +580,7 @@ export default function CartPage({ setView }: CartPageProps) {
                             placeholder='0'
                         />
                     </div>
-                     <div className="flex justify-between items-center text-red-500">
+                     <div className="flex justify-between items-center text-destructive">
                         <span className="text-sm">Potongan Diskon</span>
                         <span className="font-medium">-{formatCurrency(discountAmount)}</span>
                     </div>
