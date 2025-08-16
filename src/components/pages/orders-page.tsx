@@ -84,7 +84,7 @@ export default function OrdersPage() {
       </header>
       
       <div className="flex-1 overflow-y-auto bg-secondary/30">
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-24">
           {pendingTransactions.length === 0 ? (
             <div className="text-center py-20 flex flex-col items-center gap-4">
               <Frown className="w-16 h-16 text-muted-foreground" />
