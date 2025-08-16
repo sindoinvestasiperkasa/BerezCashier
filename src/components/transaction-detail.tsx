@@ -150,10 +150,6 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                       <span className="font-medium">- {formatCurrency(discount)}</span>
                     </div>
                   )}
-                  {shipping > 0 && <div className="flex justify-between text-muted-foreground">
-                      <span>Ongkos Kirim</span>
-                      <span className="font-medium text-foreground">{formatCurrency(shipping)}</span>
-                  </div>}
                    {tax > 0 && <div className="flex justify-between text-muted-foreground">
                       <span>Pajak</span>
                       <span className="font-medium text-foreground">{formatCurrency(tax)}</span>
