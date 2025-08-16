@@ -182,7 +182,7 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                            <Input 
                               id="discount-detail" 
                               type="number" 
-                              value={discountPercent} 
+                              value={discountPercent || ''} 
                               onChange={(e) => setDiscountPercent(Number(e.target.value))}
                               className="w-full h-9 pr-7" 
                               placeholder='0'
