@@ -16,7 +16,7 @@ import { Package, Calendar, CreditCard, CheckCircle, Loader2, User } from "lucid
 import type { Transaction } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
-import { statusVariant, paymentStatusConfig } from "./pages/transactions-page";
+import { statusVariant, paymentStatusConfig } from "./pages/orders-page";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -144,12 +144,12 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                       <span>Subtotal</span>
                       <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
                   </div>
-                   {discount > 0 && (
+                  {discount > 0 && (
                     <div className="flex justify-between text-muted-foreground">
                       <span className="text-destructive">Diskon</span>
                       <span className="font-medium text-destructive">- {formatCurrency(discount)}</span>
                     </div>
-                   )}
+                  )}
                   {shipping > 0 && <div className="flex justify-between text-muted-foreground">
                       <span>Ongkos Kirim</span>
                       <span className="font-medium text-foreground">{formatCurrency(shipping)}</span>
