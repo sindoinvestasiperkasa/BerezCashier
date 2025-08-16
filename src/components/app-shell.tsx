@@ -16,9 +16,10 @@ import SettingsPage from "./pages/settings-page";
 import NotificationsPage from "./pages/notifications-page";
 import AccountSecurityPage from "./pages/account-security-page";
 import LanguagePage from "./pages/language-page";
+import QrCodePage from "./pages/qr-code-page";
 
 export type Tab = "home" | "orders" | "cart" | "transactions" | "account";
-export type View = Tab | "checkout" | "payment" | "edit-profile" | "my-address" | "settings" | "notifications" | "account-security" | "language";
+export type View = Tab | "checkout" | "payment" | "edit-profile" | "my-address" | "settings" | "notifications" | "account-security" | "language" | "qr-code";
 
 export default function AppShell() {
   const [view, setView] = useState<View>("home");
@@ -51,6 +52,8 @@ export default function AppShell() {
         return <AccountSecurityPage setView={setView} />;
       case "language":
         return <LanguagePage setView={setView} />;
+      case "qr-code":
+        return <QrCodePage setView={setView} />;
       default:
         return <HomePage setView={setView} />;
     }
