@@ -244,6 +244,7 @@ interface AppContextType {
   removeFromWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
   addTransaction: (data: NewTransactionClientData) => Promise<{ success: boolean; transactionId: string }>;
+  updateTransactionStatus: (transactionId: string) => Promise<boolean>;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
@@ -781,6 +782,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, db, accounts, toast]);
 
+  const updateTransactionStatus = async (transactionId: string): Promise<boolean> => {
+    if (!user) {
+        toast({ title: "Anda harus login", variant: "destructive" });
+        return false;
+    }
+    const txDocRef = doc(db, 'transactions', transactionId);
+    try {
+        await updateDoc(txDocRef, {
+            status: 'Lunas',
+            paymentStatus: 'Berhasil'
+        });
+        toast({ title: 'Sukses', description: 'Status transaksi berhasil diperbarui.' });
+        // The onSnapshot listener will automatically update the local state.
+        return true;
+    } catch (error) {
+        console.error("Error updating transaction status:", error);
+        toast({ title: 'Gagal', description: 'Gagal memperbarui status transaksi.', variant: 'destructive' });
+        return false;
+    }
+  };
+
   const clearCart = () => {
       setCart([]);
   };
@@ -900,6 +922,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         removeFromWishlist, 
         isInWishlist,
         addTransaction,
+        updateTransactionStatus,
         clearCart,
         addCustomer,
         holdCart,

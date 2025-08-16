@@ -7,17 +7,21 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetFooter
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Calendar, CreditCard } from "lucide-react";
+import { Package, Calendar, CreditCard, CheckCircle, Loader2 } from "lucide-react";
 import type { Transaction } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { statusVariant, paymentStatusConfig } from "./pages/transactions-page";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import { Button } from "./ui/button";
+import { useApp } from "@/hooks/use-app";
+import { useState } from "react";
 
 interface TransactionDetailProps {
   transaction: Transaction | null;
@@ -43,10 +47,24 @@ const formatDate = (date: Date) => {
 
 
 export default function TransactionDetail({ transaction, products, isOpen, onClose }: TransactionDetailProps) {
+  const { updateTransactionStatus } = useApp();
+  const [isLoading, setIsLoading] = useState(false);
+
   if (!transaction) {
     return null;
   }
 
+  const handleMarkAsPaid = async () => {
+    if (!transaction) return;
+    setIsLoading(true);
+    const success = await updateTransactionStatus(transaction.id);
+    setIsLoading(false);
+    if (success) {
+      onClose();
+    }
+  }
+
+  const isPaymentPending = transaction.paymentStatus === 'Pending' || transaction.paymentStatus === 'Gagal';
   const paymentConfig = paymentStatusConfig[transaction.paymentStatus];
   const PaymentIcon = paymentConfig?.icon || CreditCard;
   
@@ -144,9 +162,8 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                   </div>
               </CardContent>
             </Card>
-        </div>
-        <div className="p-4 border-t bg-background">
-            <Card>
+
+             <Card>
                 <CardContent className="p-4 space-y-3 text-sm">
                     <div className="flex justify-between items-center">
                         <p className="text-muted-foreground">Metode Pembayaran</p>
@@ -164,6 +181,15 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                 </CardContent>
             </Card>
         </div>
+        
+        {isPaymentPending && (
+          <SheetFooter className="p-4 border-t bg-background">
+            <Button className="w-full h-12" onClick={handleMarkAsPaid} disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5" />}
+              {isLoading ? 'Memproses...' : 'Tandai Sudah Dibayar'}
+            </Button>
+          </SheetFooter>
+        )}
       </SheetContent>
     </Sheet>
   );
