@@ -255,7 +255,7 @@ interface AppContextType {
   isInWishlist: (productId: string) => boolean;
   addTransaction: (data: NewTransactionClientData) => Promise<{ success: boolean; transactionId: string }>;
   updateTransactionStatus: (transactionId: string) => Promise<boolean>;
-  updateTransactionDiscount: (transactionId: string, discountAmount: number, taxAmount: number, total: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
+  updateTransactionDiscount: (transactionId: string, discountAmount: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
@@ -779,7 +779,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateTransactionDiscount = async (transactionId: string, discountAmount: number, taxAmount: number, total: number, accountInfo: UpdatedAccountInfo): Promise<boolean> => {
+  const updateTransactionDiscount = async (transactionId: string, discountAmount: number, accountInfo: UpdatedAccountInfo): Promise<boolean> => {
     if (!user) {
       toast({ title: "Anda harus login", variant: "destructive" });
       return false;
@@ -802,20 +802,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const subtotal = txData.subtotal || 0;
         const totalCogs = txData.items?.reduce((sum, item) => sum + (item.cogs || 0), 0) || 0;
         const serviceFee = txData.serviceFee || 0;
-        const paymentMethod = txData.paymentMethod;
         
-        const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
+        // Recalculate tax and total based on new discount
+        const subtotalAfterDiscount = subtotal - discountAmount;
+        const taxAmount = (isPkp ?? false) ? subtotalAfterDiscount * 0.11 : 0;
+        const total = subtotalAfterDiscount + taxAmount + serviceFee;
   
         // --- Reconstruct journal lines from scratch, exactly like the reference logic ---
         const newLines: any[] = [];
+        const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
   
         // 4 Core entries
-        if (paymentAccountId) newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${paymentMethod}` });
+        if (paymentAccountId) newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` });
         if (salesAccountId) newLines.push({ accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' });
         if (totalCogs > 0 && cogsAccountId) newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
         if (totalCogs > 0 && inventoryAccountId) newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
 
-        // Conditional entries
+        // Conditional entries based on the new, correct values
         if (discountAmount > 0 && discountAccountId) {
             newLines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
         }

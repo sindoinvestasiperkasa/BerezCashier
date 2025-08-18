@@ -125,8 +125,6 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
     await updateTransactionDiscount(
         transaction.id, 
         calculatedDiscountAmount,
-        calculatedTaxAmount,
-        calculatedTotal,
         accountInfo // Pass the complete account info object
     );
     
