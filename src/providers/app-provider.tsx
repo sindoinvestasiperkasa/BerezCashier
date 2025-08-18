@@ -846,8 +846,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         const missing = requiredPairs.filter(([, v]) => !v).map(([k]) => k);
         if (missing.length) {
-            toast({ title: 'Gagal', description: `Akun wajib belum lengkap: ${missing.join(', ')}. Perbarui mapping akun terlebih dahulu.`, variant: 'destructive', duration: 9000 });
-            return; // Stop the transaction gracefully
+             toast({ title: 'Gagal', description: `Akun wajib belum lengkap: ${missing.join(', ')}. Perbarui mapping akun terlebih dahulu.`, variant: 'destructive', duration: 9000 });
+             return;
         }
         
         const asNumber = (n: any) => (typeof n === 'number' && !Number.isNaN(n)) ? n : 0;
@@ -901,7 +901,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         };
         
         const dataToUpdate = removeUndefinedDeep(dataToUpdateRaw);
-
         transaction.update(txDocRef, dataToUpdate);
       });
   
@@ -1057,5 +1056,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    

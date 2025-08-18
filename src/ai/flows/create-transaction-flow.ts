@@ -69,7 +69,7 @@ export const createTransactionFlow = ai.defineFlow(
     // Gunakan transaksi Firestore untuk memastikan semua operasi berhasil atau gagal bersamaan
     return await db.runTransaction(async (transaction) => {
         const transactionRef = db.collection('transactions').doc();
-        const transactionTimestamp = Timestamp.now();
+        const transactionTimestamp = FieldValue.serverTimestamp(); // Use server timestamp for reliability
         
         // --- START READ PHASE ---
 
