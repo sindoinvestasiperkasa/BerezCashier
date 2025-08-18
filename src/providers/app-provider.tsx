@@ -804,7 +804,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           inventoryAccountId: accountInfo.inventoryAccountId ?? txData.inventoryAccountId,
           taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
         };
-
+        
         const { paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId } = finalAccountInfo;
         
         const subtotal = txData.subtotal || 0;
@@ -815,17 +815,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const taxAmount = (finalAccountInfo.isPkp) ? subtotalAfterDiscount * 0.11 : 0;
         const total = subtotalAfterDiscount + taxAmount + serviceFee;
   
-        const newLines: any[] = [];
+        // Logic from your correct code
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
         const { discountAccountId, taxAccountId } = finalAccountInfo;
 
-        newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` });
-        newLines.push({ accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' });
+        const newLines: any[] = [
+            { accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` },
+            { accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' },
+        ];
+
         if (totalCogs > 0) {
             newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
             newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
         }
-
+        
         if (discountAmount > 0 && discountAccountId) {
             newLines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
         }
@@ -845,13 +848,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           amount: total,
           paidAmount: total,
           lines: newLines,
-          isPkp: finalAccountInfo.isPkp || false,
-          paymentAccountId: paymentAccountId || null,
-          salesAccountId: salesAccountId || null,
-          discountAccountId: discountAmount > 0 ? (discountAccountId || null) : null,
-          cogsAccountId: cogsAccountId || null,
-          inventoryAccountId: inventoryAccountId || null,
-          taxAccountId: finalAccountInfo.isPkp && taxAmount > 0 ? (taxAccountId || null) : null,
+          isPkp: finalAccountInfo.isPkp,
+          paymentAccountId: finalAccountInfo.paymentAccountId || null,
+          salesAccountId: finalAccountInfo.salesAccountId || null,
+          discountAccountId: finalAccountInfo.discountAccountId || null,
+          cogsAccountId: finalAccountInfo.cogsAccountId || null,
+          inventoryAccountId: finalAccountInfo.inventoryAccountId || null,
+          taxAccountId: finalAccountInfo.taxAccountId || null,
         };
         
         transaction.update(txDocRef, dataToUpdate);
@@ -1011,5 +1014,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 
+
+    
 
     
