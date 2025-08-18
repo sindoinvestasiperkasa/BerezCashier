@@ -17,7 +17,7 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
 
   const pendingOrdersCount = transactions.filter(
     tx => 
-        (tx.status !== 'Lunas' || tx.paymentStatus !== 'Berhasil') &&
+        (tx.status !== 'Lunas' && tx.paymentStatus !== 'Berhasil') &&
         tx.transactionNumber?.startsWith('KSR')
   ).length;
 
