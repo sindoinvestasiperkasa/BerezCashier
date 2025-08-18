@@ -283,7 +283,12 @@ const LOW_STOCK_THRESHOLD = 5;
 const locales = { en, id };
 
 const removeUndefinedDeep = (val: any): any => {
-    if (Array.isArray(val)) return val.map(removeUndefinedDeep).filter(v => v !== undefined);
+    if (val instanceof Date) {
+        return val;
+    }
+    if (Array.isArray(val)) {
+        return val.map(removeUndefinedDeep).filter(v => v !== undefined);
+    }
     if (val !== null && typeof val === 'object') {
         return Object.fromEntries(
             Object.entries(val)
@@ -757,7 +762,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const transactionTimestamp = new Date();
             // --- Save Transaction Document ---
             const txDocRef = doc(collection(db, 'transactions'));
-            const transactionData = removeUndefinedDeep({
+            const transactionData = {
                 idUMKM, warehouseId, branchId, customerId, customerName,
                 date: transactionTimestamp, 
                 description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
@@ -768,9 +773,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 discountAccountId: discountAccountId || null,
                 inventoryAccountId, taxAccountId: taxAccountId || null,
                 isPkp, serviceFee: serviceFee || 0,
-            });
+            };
 
-            transaction.set(txDocRef, transactionData);
+            transaction.set(txDocRef, removeUndefinedDeep(transactionData));
             transactionId = txDocRef.id;
         });
         
@@ -836,6 +841,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             inventoryAccountId: accountInfo.inventoryAccountId ?? txData.inventoryAccountId,
             taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
         };
+
+        const requiredPairs: Array<[string, string | undefined]> = [
+            ['paymentAccountId', finalAccountInfo.paymentAccountId],
+            ['salesAccountId', finalAccountInfo.salesAccountId],
+            ['cogsAccountId', finalAccountInfo.cogsAccountId],
+            ['inventoryAccountId', finalAccountInfo.inventoryAccountId],
+        ];
+
+        const missing = requiredPairs.filter(([, v]) => !v).map(([k]) => k);
+        if (missing.length) {
+            throw new Error(`Akun wajib belum lengkap: ${missing.join(', ')}. Perbarui mapping akun terlebih dahulu.`);
+        }
         
         const asNumber = (n: any) => (typeof n === 'number' && !Number.isNaN(n)) ? n : 0;
         
@@ -1043,5 +1060,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    
 
     
