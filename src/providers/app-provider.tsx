@@ -817,10 +817,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
   
         const txData = txSnap.data() as Transaction;
+  
+        const findDefaultPaymentAccount = () => {
+            const cashAccount = accounts.find(a => a.name.toLowerCase().includes('kas'));
+            if (cashAccount) return cashAccount.id;
+            const bankAccount = accounts.find(a => a.name.toLowerCase().includes('bank'));
+            return bankAccount?.id;
+        }
 
         const finalAccountInfo = {
             isPkp: accountInfo.isPkp ?? txData.isPkp,
-            paymentAccountId: accountInfo.paymentAccountId ?? txData.paymentAccountId,
+            paymentAccountId: accountInfo.paymentAccountId ?? txData.paymentAccountId ?? findDefaultPaymentAccount(),
             salesAccountId: accountInfo.salesAccountId ?? txData.salesAccountId,
             discountAccountId: accountInfo.discountAccountId ?? txData.discountAccountId,
             cogsAccountId: accountInfo.cogsAccountId ?? txData.cogsAccountId,
@@ -830,18 +837,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         const { paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId } = finalAccountInfo;
 
-        const requiredPairs: Array<[string, string | undefined]> = [
-            ['paymentAccountId', paymentAccountId],
-            ['salesAccountId', salesAccountId],
-            ['cogsAccountId', cogsAccountId],
-            ['inventoryAccountId', inventoryAccountId],
-        ];
-
-        const missing = requiredPairs.filter(([, v]) => !v).map(([k]) => k);
-        if (missing.length) {
-            throw new Error(`Akun wajib belum lengkap: ${missing.join(', ')}. Perbarui mapping akun terlebih dahulu.`);
-        }
-        
         const asNumber = (n: any) => (typeof n === 'number' && !Number.isNaN(n)) ? n : 0;
         
         const subtotal = asNumber(txData.subtotal);
@@ -854,11 +849,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
         
+        if (!paymentAccountId || !salesAccountId || !cogsAccountId || !inventoryAccountId) {
+            // This path should be less likely to be hit due to the fallback, but kept as a safeguard.
+            console.error("Missing core accounts after fallback:", { finalAccountInfo });
+            toast({ title: 'Gagal', description: 'Akun inti (pembayaran, penjualan, hpp, persediaan) tidak dapat ditemukan. Harap periksa pengaturan akun Anda.', variant: 'destructive', duration: 9000 });
+            return;
+        }
+
         const coreLines = [
-          { accountId: finalAccountInfo.paymentAccountId!,  debit: asNumber(total),     credit: 0,                description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` },
-          { accountId: finalAccountInfo.salesAccountId!,    debit: 0,                   credit: asNumber(subtotal), description: 'Pendapatan Penjualan dari Kasir' },
-          { accountId: finalAccountInfo.cogsAccountId!,     debit: asNumber(totalCogs), credit: 0,                description: 'HPP Penjualan dari Kasir' },
-          { accountId: finalAccountInfo.inventoryAccountId!,debit: 0,                   credit: asNumber(totalCogs), description: 'Pengurangan Persediaan dari Kasir' },
+          { accountId: paymentAccountId,  debit: asNumber(total),     credit: 0,                description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` },
+          { accountId: salesAccountId,    debit: 0,                   credit: asNumber(subtotal), description: 'Pendapatan Penjualan dari Kasir' },
+          { accountId: cogsAccountId,     debit: asNumber(totalCogs), credit: 0,                description: 'HPP Penjualan dari Kasir' },
+          { accountId: inventoryAccountId,debit: 0,                   credit: asNumber(totalCogs), description: 'Pengurangan Persediaan dari Kasir' },
         ];
         
         const extraLines: any[] = [];
@@ -888,8 +890,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           salesAccountId: finalAccountInfo.salesAccountId,
           cogsAccountId: finalAccountInfo.cogsAccountId,
           inventoryAccountId: finalAccountInfo.inventoryAccountId,
-          discountAccountId: finalAccountInfo.discountAccountId ?? null,
-          taxAccountId: finalAccountInfo.taxAccountId ?? null,
+          discountAccountId: finalAccountInfo.discountAccountId,
+          taxAccountId: finalAccountInfo.taxAccountId,
         };
 
         const dataToUpdate = removeUndefinedDeep(dataToUpdateRaw);
