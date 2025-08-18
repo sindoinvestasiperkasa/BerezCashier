@@ -849,18 +849,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
         
-        if (!paymentAccountId || !salesAccountId || !cogsAccountId || !inventoryAccountId) {
-            // This path should be less likely to be hit due to the fallback, but kept as a safeguard.
-            console.error("Missing core accounts after fallback:", { finalAccountInfo });
-            toast({ title: 'Gagal', description: 'Akun inti (pembayaran, penjualan, hpp, persediaan) tidak dapat ditemukan. Harap periksa pengaturan akun Anda.', variant: 'destructive', duration: 9000 });
-            return;
-        }
+        // This check is now more of a safeguard due to the fallback logic.
+        const requiredPairs: Array<[string, string | undefined]> = [
+            ['paymentAccountId', finalAccountInfo.paymentAccountId],
+            ['salesAccountId', finalAccountInfo.salesAccountId],
+            ['cogsAccountId', finalAccountInfo.cogsAccountId],
+            ['inventoryAccountId', finalAccountInfo.inventoryAccountId],
+        ];
 
+        const missing = requiredPairs.filter(([, v]) => !v).map(([k]) => k);
+        if (missing.length) {
+            toast({ title: 'Gagal', description: `Akun wajib belum lengkap: ${missing.join(', ')}. Perbarui mapping akun terlebih dahulu.`, variant: 'destructive', duration: 9000 });
+            return; // Stop the transaction gracefully
+        }
+        
         const coreLines = [
-          { accountId: paymentAccountId,  debit: asNumber(total),     credit: 0,                description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` },
-          { accountId: salesAccountId,    debit: 0,                   credit: asNumber(subtotal), description: 'Pendapatan Penjualan dari Kasir' },
-          { accountId: cogsAccountId,     debit: asNumber(totalCogs), credit: 0,                description: 'HPP Penjualan dari Kasir' },
-          { accountId: inventoryAccountId,debit: 0,                   credit: asNumber(totalCogs), description: 'Pengurangan Persediaan dari Kasir' },
+          { accountId: finalAccountInfo.paymentAccountId!,  debit: asNumber(total),     credit: 0,                description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` },
+          { accountId: finalAccountInfo.salesAccountId!,    debit: 0,                   credit: asNumber(subtotal), description: 'Pendapatan Penjualan dari Kasir' },
+          { accountId: finalAccountInfo.cogsAccountId!,     debit: asNumber(totalCogs), credit: 0,                description: 'HPP Penjualan dari Kasir' },
+          { accountId: finalAccountInfo.inventoryAccountId!,debit: 0,                   credit: asNumber(totalCogs), description: 'Pengurangan Persediaan dari Kasir' },
         ];
         
         const extraLines: any[] = [];
