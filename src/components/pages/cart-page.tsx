@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent, Building, Warehouse, HandCoins } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent, Building, Warehouse, HandCoins, Calendar } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, isSameDay } from 'date-fns';
+import { id } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import type { Transaction, CartItem as AppCartItem, UserData, Product } from "@/providers/app-provider"; // Using types from provider
 import { cn } from '@/lib/utils';
@@ -767,9 +768,13 @@ export default function CartPage({ setView }: CartPageProps) {
                       <span>Total</span>
                       <span>{formatCurrency(total)}</span>
                   </div>
-                  <div className="flex justify-between font-semibold text-base mt-2">
+                   <div className="flex justify-between font-semibold text-base mt-2">
                       <span>Metode Pembayaran</span>
                       <span>{paymentMethod}</span>
+                  </div>
+                   <div className="flex justify-between font-semibold text-base mt-1">
+                      <span className="flex items-center gap-2"><Calendar className="w-4 h-4"/> Tanggal Transaksi</span>
+                      <span>{format(new Date(), "d MMMM yyyy HH:mm")}</span>
                   </div>
                   {paymentMethod === 'Cash' && (
                     <>
