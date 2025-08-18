@@ -815,42 +815,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
   
-        // --- Recalculate all lines from scratch for consistency ---
+        // --- Reconstruct journal lines from scratch, exactly like the reference logic ---
         const newLines: any[] = [];
   
-        // Debit: Payment Account
         if (paymentAccountId) {
             newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${paymentMethod}` });
         }
-  
-        // Debit: COGS
-        if (totalCogs > 0 && cogsAccountId) {
-          newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
-        }
-  
-        // Debit: Discount
-        if (discountAmount > 0 && discountAccountId) {
-          newLines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
-        }
-  
-        // Credit: Sales Revenue
         if (salesAccountId) {
             newLines.push({ accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' });
         }
-        
-        // Credit: Tax
-        if (isPkp && taxAmount > 0 && taxAccountId) {
-          newLines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
+        if (totalCogs > 0 && cogsAccountId) {
+            newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
         }
-        
-        // Credit: Inventory
         if (totalCogs > 0 && inventoryAccountId) {
-          newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
+            newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
         }
-        
-        // Credit: Service Fee Liability
+        if (discountAmount > 0 && discountAccountId) {
+            newLines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
+        }
+        if (isPkp && taxAmount > 0 && taxAccountId) {
+            newLines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
+        }
         if (serviceFee > 0 && serviceFeeAccount) {
-          newLines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
+            newLines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
         }
   
         const dataToUpdate = {

@@ -109,7 +109,6 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
     if (!transaction) return;
     setIsLoading(true);
     
-    // THE FIX IS HERE: We now pass all account IDs from the state to the update function.
     await updateTransactionDiscount(
         transaction.id, 
         calculatedDiscountAmount,
