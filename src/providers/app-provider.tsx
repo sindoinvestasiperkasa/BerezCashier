@@ -876,7 +876,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       newLines = updateOrAddLine(newLines, updatedAccountIds.discountAccountId, discountAmount, 0, 'Potongan Penjualan Kasir (Diperbarui)');
       newLines = updateOrAddLine(newLines, updatedAccountIds.taxAccountId, 0, taxAmount, 'PPN Keluaran dari Penjualan Kasir (Diperbarui)');
       
-      await updateDoc(txDocRef, {
+      const dataToUpdate = {
         discountAmount,
         taxAmount,
         total,
@@ -884,8 +884,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         paidAmount: total, // Assuming it will be paid in full
         lines: newLines,
         isPkp: isPkp,
-        ...updatedAccountIds
-      });
+        paymentAccountId: updatedAccountIds.paymentAccountId || null,
+        salesAccountId: updatedAccountIds.salesAccountId || null,
+        discountAccountId: updatedAccountIds.discountAccountId || null,
+        cogsAccountId: updatedAccountIds.cogsAccountId || null,
+        inventoryAccountId: updatedAccountIds.inventoryAccountId || null,
+        taxAccountId: updatedAccountIds.taxAccountId || null,
+      };
+      
+      await updateDoc(txDocRef, dataToUpdate);
 
       toast({ title: 'Sukses', description: 'Transaksi berhasil diperbarui.' });
       return true;
@@ -1039,5 +1046,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    
