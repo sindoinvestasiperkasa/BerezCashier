@@ -758,7 +758,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const txDocRef = doc(collection(db, 'transactions'));
             const transactionData = removeUndefinedDeep({
                 idUMKM, warehouseId, branchId, customerId, customerName,
-                date: Timestamp.now(), description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
+                date: Timestamp.fromDate(new Date()), description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
                 status: 'Lunas', paymentStatus: 'Berhasil', transactionNumber: `KSR-${Date.now()}`,
                 amount: total, paidAmount: total, total,
                 subtotal, discountAmount, taxAmount, items: itemsForTransaction,
@@ -827,27 +827,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         const finalAccountInfo = {
             isPkp: accountInfo.isPkp ?? txData.isPkp,
-            paymentAccountId: accountInfo.paymentAccountId || txData.paymentAccountId || findDefaultPaymentAccount(),
-            salesAccountId: accountInfo.salesAccountId || txData.salesAccountId,
-            discountAccountId: accountInfo.discountAccountId || txData.discountAccountId,
-            cogsAccountId: accountInfo.cogsAccountId || txData.cogsAccountId,
-            inventoryAccountId: accountInfo.inventoryAccountId || txData.inventoryAccountId,
-            taxAccountId: accountInfo.taxAccountId || txData.taxAccountId,
+            paymentAccountId: accountInfo.paymentAccountId ?? txData.paymentAccountId ?? findDefaultPaymentAccount(),
+            salesAccountId: accountInfo.salesAccountId ?? txData.salesAccountId,
+            discountAccountId: accountInfo.discountAccountId ?? txData.discountAccountId,
+            cogsAccountId: accountInfo.cogsAccountId ?? txData.cogsAccountId,
+            inventoryAccountId: accountInfo.inventoryAccountId ?? txData.inventoryAccountId,
+            taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
         };
         
         const { paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId } = finalAccountInfo;
-
-        const asNumber = (n: any) => (typeof n === 'number' && !Number.isNaN(n)) ? n : 0;
-        
-        const subtotal = asNumber(txData.subtotal);
-        const totalCogs = asNumber(txData.items?.reduce((sum, item) => sum + asNumber(item.cogs), 0));
-        const serviceFee = asNumber(txData.serviceFee);
-        
-        const subtotalAfterDiscount = subtotal - asNumber(discountAmount);
-        const taxAmount = finalAccountInfo.isPkp ? subtotalAfterDiscount * 0.11 : 0;
-        const total = subtotalAfterDiscount + taxAmount + serviceFee;
-  
-        const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
         
         const requiredPairs: Array<[string, string | undefined]> = [
             ['paymentAccountId', finalAccountInfo.paymentAccountId],
@@ -861,6 +849,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             toast({ title: 'Gagal', description: `Akun wajib belum lengkap: ${missing.join(', ')}. Perbarui mapping akun terlebih dahulu.`, variant: 'destructive', duration: 9000 });
             return; // Stop the transaction gracefully
         }
+        
+        const asNumber = (n: any) => (typeof n === 'number' && !Number.isNaN(n)) ? n : 0;
+        
+        const subtotal = asNumber(txData.subtotal);
+        const totalCogs = asNumber(txData.items?.reduce((sum, item) => sum + asNumber(item.cogs), 0));
+        const serviceFee = asNumber(txData.serviceFee);
+        
+        const subtotalAfterDiscount = subtotal - asNumber(discountAmount);
+        const taxAmount = finalAccountInfo.isPkp ? subtotalAfterDiscount * 0.11 : 0;
+        const total = subtotalAfterDiscount + taxAmount + serviceFee;
+  
+        const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
         
         const coreLines = [
           { accountId: finalAccountInfo.paymentAccountId!,  debit: asNumber(total),     credit: 0,                description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` },
@@ -899,8 +899,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           discountAccountId: finalAccountInfo.discountAccountId,
           taxAccountId: finalAccountInfo.taxAccountId,
         };
-
+        
         const dataToUpdate = removeUndefinedDeep(dataToUpdateRaw);
+
         transaction.update(txDocRef, dataToUpdate);
       });
   
