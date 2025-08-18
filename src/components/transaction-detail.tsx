@@ -12,7 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent } from "lucide-react";
+import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, HandCoins, FileCog } from "lucide-react";
 import type { Transaction } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,8 @@ import { useApp } from "@/hooks/use-app";
 import { useState, useEffect, useMemo } from "react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Switch } from "./ui/switch";
 
 interface TransactionDetailProps {
   transaction: Transaction | null;
@@ -49,22 +51,39 @@ const formatDate = (date: Date) => {
 
 
 export default function TransactionDetail({ transaction, products, isOpen, onClose }: TransactionDetailProps) {
-  const { updateTransactionStatus, updateTransactionDiscount } = useApp();
+  const { updateTransactionStatus, updateTransactionDiscount, accounts } = useApp();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // State for editable fields
   const [discountPercent, setDiscountPercent] = useState(0);
-
+  const [isPkp, setIsPkp] = useState(false);
+  const [paymentAccountId, setPaymentAccountId] = useState<string | undefined>();
+  const [salesAccountId, setSalesAccountId] = useState<string | undefined>();
+  const [discountAccountId, setDiscountAccountId] = useState<string | undefined>();
+  const [cogsAccountId, setCogsAccountId] = useState<string | undefined>();
+  const [inventoryAccountId, setInventoryAccountId] = useState<string | undefined>();
+  const [taxAccountId, setTaxAccountId] = useState<string | undefined>();
+  
+  // Populate state when transaction changes
   useEffect(() => {
     if (transaction) {
       const initialDiscountPercent = (transaction.discountAmount || 0) > 0 
         ? ((transaction.discountAmount || 0) / (transaction.subtotal || 1)) * 100 
         : 0;
       setDiscountPercent(initialDiscountPercent);
+      setIsPkp(transaction.isPkp || false);
+      setPaymentAccountId(transaction.paymentAccountId);
+      setSalesAccountId(transaction.salesAccountId);
+      setDiscountAccountId(transaction.discountAccountId);
+      setCogsAccountId(transaction.cogsAccountId);
+      setInventoryAccountId(transaction.inventoryAccountId);
+      setTaxAccountId(transaction.taxAccountId);
     }
   }, [transaction]);
 
   const subtotal = transaction?.subtotal || 0;
   const serviceFee = transaction?.serviceFee || 0;
-  const taxRate = (transaction?.isPkp) ? 0.11 : 0;
+  const taxRate = isPkp ? 0.11 : 0;
   
   const calculatedDiscountAmount = useMemo(() => {
     return (subtotal * discountPercent) / 100;
@@ -77,6 +96,10 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
   }, [subtotalAfterDiscount, taxRate]);
 
   const calculatedTotal = subtotalAfterDiscount + calculatedTaxAmount + serviceFee;
+  
+  const utangBiayaLayananAccount = useMemo(() => {
+      return accounts.find(a => a.name.toLowerCase().includes('utang biaya layanan berez'))
+  }, [accounts]);
 
   if (!transaction) {
     return null;
@@ -86,15 +109,21 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
     if (!transaction) return;
     setIsLoading(true);
     
-    // Update discount first if it has changed
-    if (calculatedDiscountAmount !== (transaction.discountAmount || 0)) {
-        await updateTransactionDiscount(
-            transaction.id, 
-            calculatedDiscountAmount,
-            calculatedTaxAmount,
-            calculatedTotal
-        );
-    }
+    await updateTransactionDiscount(
+        transaction.id, 
+        calculatedDiscountAmount,
+        calculatedTaxAmount,
+        calculatedTotal,
+        {
+          isPkp,
+          paymentAccountId,
+          salesAccountId,
+          discountAccountId,
+          cogsAccountId,
+          inventoryAccountId,
+          taxAccountId
+        }
+    );
     
     // Then mark as paid
     const success = await updateTransactionStatus(transaction.id);
@@ -200,11 +229,11 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                     </div>
                   )}
                    {calculatedTaxAmount > 0 && <div className="flex justify-between text-muted-foreground">
-                      <span>Pajak</span>
+                      <span>Pajak (PPN 11%)</span>
                       <span className="font-medium text-foreground">{formatCurrency(calculatedTaxAmount)}</span>
                   </div>}
                    {serviceFee > 0 && <div className="flex justify-between text-muted-foreground">
-                      <span>Biaya Layanan</span>
+                      <span className="flex items-center gap-1.5"><HandCoins className="w-4 h-4"/> Biaya Layanan</span>
                       <span className="font-medium text-foreground">{formatCurrency(serviceFee)}</span>
                   </div>}
                   <Separator/>
@@ -214,6 +243,90 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                   </div>
               </CardContent>
             </Card>
+            
+            {isPaymentPending && (
+              <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <FileCog className="w-5 h-5 text-primary" />
+                        <span>Pengaturan Akun Jurnal</span>
+                    </CardTitle>
+                </CardHeader>
+                  <CardContent className="p-4 pt-0 space-y-3">
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className='space-y-1'>
+                              <Label>Akun Pendapatan</Label>
+                               <Select value={salesAccountId} onValueChange={setSalesAccountId} disabled={isLoading}>
+                                  <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
+                                  <SelectContent>
+                                      {accounts.filter(a => a.category === 'Pendapatan').map(acc => (
+                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                          <div className='space-y-1'>
+                              <Label>Akun Potongan</Label>
+                               <Select value={discountAccountId} onValueChange={setDiscountAccountId} disabled={isLoading}>
+                                  <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
+                                  <SelectContent>
+                                      {accounts.filter(a => a.category === 'Pendapatan' || a.category === 'Beban').map(acc => (
+                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                               </Select>
+                          </div>
+                          <div className='space-y-1'>
+                              <Label>Akun HPP</Label>
+                               <Select value={cogsAccountId} onValueChange={setCogsAccountId} disabled={isLoading}>
+                                  <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
+                                  <SelectContent>
+                                      {accounts.filter(a => a.category === 'Beban').map(acc => (
+                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                          <div className='space-y-1'>
+                              <Label>Akun Persediaan</Label>
+                               <Select value={inventoryAccountId} onValueChange={setInventoryAccountId} disabled={isLoading}>
+                                  <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
+                                  <SelectContent>
+                                       {accounts.filter(a => a.category === 'Aset').map(acc => (
+                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                           <div className='space-y-1'>
+                              <Label className="text-muted-foreground">Utang Biaya Layanan</Label>
+                              <Input
+                                  value={utangBiayaLayananAccount ? `${utangBiayaLayananAccount.name} (${utangBiayaLayananAccount.id})` : 'Otomatis'}
+                                  disabled
+                                  className="bg-muted/50"
+                              />
+                          </div>
+                          {isPkp && (
+                               <div className='space-y-1'>
+                                  <Label>Akun PPN Keluaran</Label>
+                                  <Select value={taxAccountId} onValueChange={setTaxAccountId} disabled={isLoading}>
+                                      <SelectTrigger><SelectValue placeholder="Pilih akun PPN..."/></SelectTrigger>
+                                      <SelectContent>
+                                          {accounts.filter(a => a.category === 'Liabilitas').map(acc => (
+                                              <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                          ))}
+                                      </SelectContent>
+                                  </Select>
+                              </div>
+                          )}
+                      </div>
+                      <div className="flex items-center space-x-2 mt-4">
+                          <Switch id="pkp-detail" checked={isPkp} onCheckedChange={setIsPkp} disabled={isLoading}/>
+                          <Label htmlFor="pkp-detail">Perusahaan Kena Pajak (PKP)</Label>
+                      </div>
+                  </CardContent>
+              </Card>
+            )}
 
              <Card>
                 <CardContent className="p-4 space-y-3 text-sm">

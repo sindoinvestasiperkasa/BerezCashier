@@ -161,6 +161,16 @@ export type NewTransactionClientData = {
     serviceFee?: number;
 };
 
+export type UpdatedAccountInfo = {
+  isPkp?: boolean;
+  paymentAccountId?: string;
+  salesAccountId?: string;
+  discountAccountId?: string;
+  cogsAccountId?: string;
+  inventoryAccountId?: string;
+  taxAccountId?: string;
+};
+
 export type Customer = {
   id: string;
   name: string;
@@ -245,7 +255,7 @@ interface AppContextType {
   isInWishlist: (productId: string) => boolean;
   addTransaction: (data: NewTransactionClientData) => Promise<{ success: boolean; transactionId: string }>;
   updateTransactionStatus: (transactionId: string) => Promise<boolean>;
-  updateTransactionDiscount: (transactionId: string, discountAmount: number, taxAmount: number, total: number) => Promise<boolean>;
+  updateTransactionDiscount: (transactionId: string, discountAmount: number, taxAmount: number, total: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
@@ -739,7 +749,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             if (totalCogs > 0) {
                 if (!cogsAccountId || !inventoryAccountId) throw new Error("Akun HPP atau Persediaan tidak diatur.");
                 lines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
-                lines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
+                lines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
             }
 
             if (discountAmount > 0) {
@@ -804,7 +814,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateTransactionDiscount = async (transactionId: string, discountAmount: number, taxAmount: number, total: number): Promise<boolean> => {
+  const updateTransactionDiscount = async (transactionId: string, discountAmount: number, taxAmount: number, total: number, accountInfo: UpdatedAccountInfo): Promise<boolean> => {
     if (!user) {
       toast({ title: "Anda harus login", variant: "destructive" });
       return false;
@@ -816,48 +826,73 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (!txSnap.exists()) {
         throw new Error("Transaksi tidak ditemukan.");
       }
+      
+      const { 
+        isPkp, paymentAccountId, salesAccountId, discountAccountId, 
+        cogsAccountId, inventoryAccountId, taxAccountId 
+      } = accountInfo;
+
       const txData = txSnap.data() as Transaction;
       
-      const newLines = [...(txData.lines || [])];
+      let newLines = [...(txData.lines || [])];
 
-      // Remove existing discount line
-      const filteredLines = newLines.filter(line => line.accountId !== txData.discountAccountId);
+      // Update core account IDs
+      const updatedAccountIds = {
+          paymentAccountId: paymentAccountId || txData.paymentAccountId,
+          salesAccountId: salesAccountId || txData.salesAccountId,
+          discountAccountId: discountAccountId || txData.discountAccountId,
+          cogsAccountId: cogsAccountId || txData.cogsAccountId,
+          inventoryAccountId: inventoryAccountId || txData.inventoryAccountId,
+          taxAccountId: taxAccountId || txData.taxAccountId,
+      };
+
+      // Helper to update or add a line
+      const updateOrAddLine = (
+        lines: any[], 
+        accountId: string | undefined | null, 
+        debit: number, 
+        credit: number, 
+        description: string, 
+        removeIfZero: boolean = true
+      ) => {
+          if (!accountId) return lines;
+          let existingIndex = lines.findIndex(line => line.accountId === accountId);
+          
+          if (debit === 0 && credit === 0 && removeIfZero) {
+              if (existingIndex > -1) {
+                  lines.splice(existingIndex, 1);
+              }
+          } else {
+              if (existingIndex > -1) {
+                  lines[existingIndex] = { accountId, debit, credit, description };
+              } else {
+                  lines.push({ accountId, debit, credit, description });
+              }
+          }
+          return lines;
+      };
+
+      newLines = updateOrAddLine(newLines, updatedAccountIds.paymentAccountId, total, 0, txData.lines?.find(l=>l.accountId === updatedAccountIds.paymentAccountId)?.description || "Penerimaan Penjualan", false);
+      newLines = updateOrAddLine(newLines, updatedAccountIds.discountAccountId, discountAmount, 0, 'Potongan Penjualan Kasir (Diperbarui)');
+      newLines = updateOrAddLine(newLines, updatedAccountIds.taxAccountId, 0, taxAmount, 'PPN Keluaran dari Penjualan Kasir (Diperbarui)');
       
-      // Add new discount line if discount > 0
-      if (discountAmount > 0 && txData.discountAccountId) {
-        filteredLines.push({ accountId: txData.discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
-      }
-
-      // Update payment line debit
-      const paymentLineIndex = filteredLines.findIndex(line => line.accountId === txData.paymentAccountId);
-      if (paymentLineIndex > -1) {
-        filteredLines[paymentLineIndex].debit = total;
-      }
-       // Update tax line credit
-      if (txData.taxAccountId) {
-        const taxLineIndex = filteredLines.findIndex(line => line.accountId === txData.taxAccountId);
-        if (taxLineIndex > -1) {
-          filteredLines[taxLineIndex].credit = taxAmount;
-        } else if (taxAmount > 0) {
-           filteredLines.push({ accountId: txData.taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
-        }
-      }
-
       await updateDoc(txDocRef, {
         discountAmount,
         taxAmount,
         total,
         amount: total,
         paidAmount: total, // Assuming it will be paid in full
-        lines: filteredLines
+        lines: newLines,
+        isPkp: isPkp,
+        ...updatedAccountIds
       });
 
-      toast({ title: 'Sukses', description: 'Diskon berhasil diperbarui.' });
+      toast({ title: 'Sukses', description: 'Transaksi berhasil diperbarui.' });
       return true;
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating transaction discount:", error);
-      toast({ title: 'Gagal', description: 'Gagal memperbarui diskon.', variant: 'destructive' });
+      toast({ title: 'Gagal', description: error.message || 'Gagal memperbarui transaksi.', variant: 'destructive' });
       return false;
     }
   };
