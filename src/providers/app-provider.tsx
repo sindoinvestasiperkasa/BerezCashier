@@ -888,7 +888,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           amount: total,
           paidAmount: total,
           lines: newLines,
-          isPkp,
+          isPkp: isPkp || false,
           paymentAccountId: paymentAccountId || null,
           salesAccountId: salesAccountId || null,
           discountAccountId: discountAmount > 0 ? (discountAccountId || null) : null,
