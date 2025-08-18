@@ -4,7 +4,7 @@
 import React, { createContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch, runTransaction } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 
@@ -758,7 +758,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const txDocRef = doc(collection(db, 'transactions'));
             const transactionData = removeUndefinedDeep({
                 idUMKM, warehouseId, branchId, customerId, customerName,
-                date: Timestamp.fromDate(new Date()), description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
+                date: serverTimestamp(), description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
                 status: 'Lunas', paymentStatus: 'Berhasil', transactionNumber: `KSR-${Date.now()}`,
                 amount: total, paidAmount: total, total,
                 subtotal, discountAmount, taxAmount, items: itemsForTransaction,
@@ -835,21 +835,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
         };
         
-        const { paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId } = finalAccountInfo;
-        
-        const requiredPairs: Array<[string, string | undefined]> = [
-            ['paymentAccountId', finalAccountInfo.paymentAccountId],
-            ['salesAccountId', finalAccountInfo.salesAccountId],
-            ['cogsAccountId', finalAccountInfo.cogsAccountId],
-            ['inventoryAccountId', finalAccountInfo.inventoryAccountId],
-        ];
-
-        const missing = requiredPairs.filter(([, v]) => !v).map(([k]) => k);
-        if (missing.length) {
-             toast({ title: 'Gagal', description: `Akun wajib belum lengkap: ${missing.join(', ')}. Perbarui mapping akun terlebih dahulu.`, variant: 'destructive', duration: 9000 });
-             return;
-        }
-        
         const asNumber = (n: any) => (typeof n === 'number' && !Number.isNaN(n)) ? n : 0;
         
         const subtotal = asNumber(txData.subtotal);
@@ -892,12 +877,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           paidAmount: total,
           lines,
           isPkp: finalAccountInfo.isPkp,
-          paymentAccountId: finalAccountInfo.paymentAccountId,
-          salesAccountId: finalAccountInfo.salesAccountId,
-          cogsAccountId: finalAccountInfo.cogsAccountId,
-          inventoryAccountId: finalAccountInfo.inventoryAccountId,
-          discountAccountId: finalAccountInfo.discountAccountId,
-          taxAccountId: finalAccountInfo.taxAccountId,
+          paymentAccountId: finalAccountInfo.paymentAccountId || null,
+          salesAccountId: finalAccountInfo.salesAccountId || null,
+          cogsAccountId: finalAccountInfo.cogsAccountId || null,
+          inventoryAccountId: finalAccountInfo.inventoryAccountId || null,
+          discountAccountId: finalAccountInfo.discountAccountId || null,
+          taxAccountId: finalAccountInfo.taxAccountId || null,
         };
         
         const dataToUpdate = removeUndefinedDeep(dataToUpdateRaw);

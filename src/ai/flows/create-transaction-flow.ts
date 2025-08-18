@@ -191,7 +191,7 @@ export const createTransactionFlow = ai.defineFlow(
           branchId: input.branchId || null,
           warehouseId: input.warehouseId || null,
           date: transactionTimestamp,
-          description: `Penjualan Kasir - Transaksi #${transactionRef.id.substring(0, 5)}`,
+          description: `Penjualan Kasir - Atas Nama: ${input.customerName}`,
           type: 'Sale',
           status: 'Lunas',
           paymentStatus: 'Berhasil', 
