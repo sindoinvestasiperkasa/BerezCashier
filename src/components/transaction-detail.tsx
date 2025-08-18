@@ -109,20 +109,23 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
     if (!transaction) return;
     setIsLoading(true);
     
+    // Collect all account IDs from state
+    const accountInfo: UpdatedAccountInfo = {
+        isPkp,
+        paymentAccountId,
+        salesAccountId,
+        discountAccountId,
+        cogsAccountId,
+        inventoryAccountId,
+        taxAccountId,
+    };
+    
     await updateTransactionDiscount(
         transaction.id, 
         calculatedDiscountAmount,
         calculatedTaxAmount,
         calculatedTotal,
-        {
-          isPkp,
-          paymentAccountId,
-          salesAccountId,
-          discountAccountId,
-          cogsAccountId,
-          inventoryAccountId,
-          taxAccountId
-        }
+        accountInfo // Pass the complete account info object
     );
     
     setIsLoading(false);
