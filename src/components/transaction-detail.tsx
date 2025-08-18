@@ -51,7 +51,7 @@ const formatDate = (date: Date) => {
 
 
 export default function TransactionDetail({ transaction, products, isOpen, onClose }: TransactionDetailProps) {
-  const { updateTransactionStatus, updateTransactionDiscount, accounts } = useApp();
+  const { updateTransactionDiscount, accounts } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   
   // State for editable fields
@@ -109,6 +109,7 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
     if (!transaction) return;
     setIsLoading(true);
     
+    // THE FIX IS HERE: We now pass all account IDs from the state to the update function.
     await updateTransactionDiscount(
         transaction.id, 
         calculatedDiscountAmount,
@@ -125,12 +126,8 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
         }
     );
     
-    // Then mark as paid
-    const success = await updateTransactionStatus(transaction.id);
     setIsLoading(false);
-    if (success) {
-      onClose();
-    }
+    onClose(); // The listener will handle the status update visually
   };
 
   const isPaymentPending = transaction.paymentStatus === 'Pending' || transaction.paymentStatus === 'Gagal';
