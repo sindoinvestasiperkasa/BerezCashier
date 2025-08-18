@@ -162,9 +162,10 @@ export const createTransactionFlow = ai.defineFlow(
         });
 
 
-        // 5. Buat Entri Jurnal (`lines`)
+        // 5. Buat Entri Jurnal (`lines`) - LOGIKA YANG DIPERBAIKI TOTAL
         const journalLines = [];
         
+        // --- DEBIT ---
         // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
         journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
         
@@ -178,6 +179,7 @@ export const createTransactionFlow = ai.defineFlow(
           journalLines.push({ accountId: input.discountAccountId, debit: input.discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
         }
 
+        // --- KREDIT ---
         // Credit: Pendapatan Penjualan sejumlah subtotal
         journalLines.push({ accountId: input.salesAccountId, debit: 0, credit: input.subtotal, description: 'Pendapatan Penjualan dari Kasir' });
         
@@ -219,7 +221,7 @@ export const createTransactionFlow = ai.defineFlow(
           customerName: input.customerName,
           paymentMethod: input.paymentMethod,
           isPkp: input.isPkp,
-          lines: journalLines,
+          lines: journalLines, // Gunakan lines yang sudah lengkap dan seimbang
           paymentAccountId: input.paymentAccountId,
           salesAccountId: input.salesAccountId,
           cogsAccountId: input.cogsAccountId,
