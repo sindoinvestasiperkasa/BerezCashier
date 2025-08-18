@@ -754,11 +754,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 newLines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
             }
             
+            const transactionTimestamp = new Date();
             // --- Save Transaction Document ---
             const txDocRef = doc(collection(db, 'transactions'));
             const transactionData = removeUndefinedDeep({
                 idUMKM, warehouseId, branchId, customerId, customerName,
-                date: new Date(), description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
+                date: transactionTimestamp, 
+                description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
                 status: 'Lunas', paymentStatus: 'Berhasil', transactionNumber: `KSR-${Date.now()}`,
                 amount: total, paidAmount: total, total,
                 subtotal, discountAmount, taxAmount, items: itemsForTransaction,
@@ -877,12 +879,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           paidAmount: total,
           lines,
           isPkp: finalAccountInfo.isPkp,
-          paymentAccountId: finalAccountInfo.paymentAccountId || null,
-          salesAccountId: finalAccountInfo.salesAccountId || null,
-          cogsAccountId: finalAccountInfo.cogsAccountId || null,
-          inventoryAccountId: finalAccountInfo.inventoryAccountId || null,
-          discountAccountId: finalAccountInfo.discountAccountId || null,
-          taxAccountId: finalAccountInfo.taxAccountId || null,
+          paymentAccountId: finalAccountInfo.paymentAccountId,
+          salesAccountId: finalAccountInfo.salesAccountId,
+          cogsAccountId: finalAccountInfo.cogsAccountId,
+          inventoryAccountId: finalAccountInfo.inventoryAccountId,
+          discountAccountId: finalAccountInfo.discountAccountId,
+          taxAccountId: finalAccountInfo.taxAccountId,
         };
         
         const dataToUpdate = removeUndefinedDeep(dataToUpdateRaw);
@@ -1041,3 +1043,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    
