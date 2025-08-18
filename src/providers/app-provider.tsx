@@ -807,7 +807,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         };
 
         const { paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId } = finalAccountInfo;
-
+        
         const subtotal = txData.subtotal || 0;
         const totalCogs = txData.items?.reduce((sum, item) => sum + (item.cogs || 0), 0) || 0;
         const serviceFee = txData.serviceFee || 0;
@@ -837,7 +837,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             newLines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
         }
   
-        const dataToUpdate = {
+        const dataToUpdate: {[key: string]: any} = {
           discountAmount,
           taxAmount,
           total,
@@ -847,13 +847,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           paidAmount: total,
           lines: newLines,
           isPkp: finalAccountInfo.isPkp,
-          paymentAccountId: finalAccountInfo.paymentAccountId || null,
-          salesAccountId: finalAccountInfo.salesAccountId || null,
-          cogsAccountId: finalAccountInfo.cogsAccountId || null,
-          inventoryAccountId: finalAccountInfo.inventoryAccountId || null,
-          discountAccountId: finalAccountInfo.discountAccountId || null,
-          taxAccountId: finalAccountInfo.taxAccountId || null,
+          paymentAccountId: finalAccountInfo.paymentAccountId,
+          salesAccountId: finalAccountInfo.salesAccountId,
+          cogsAccountId: finalAccountInfo.cogsAccountId,
+          inventoryAccountId: finalAccountInfo.inventoryAccountId,
+          discountAccountId: finalAccountInfo.discountAccountId,
+          taxAccountId: finalAccountInfo.taxAccountId,
         };
+
+        // Explicitly remove any keys with undefined values
+        Object.keys(dataToUpdate).forEach(key => {
+            if (dataToUpdate[key] === undefined) {
+                delete dataToUpdate[key];
+            }
+        });
         
         transaction.update(txDocRef, dataToUpdate);
       });
