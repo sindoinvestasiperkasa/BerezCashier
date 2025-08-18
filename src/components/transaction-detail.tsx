@@ -370,4 +370,3 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
     </Sheet>
   );
 }
-
