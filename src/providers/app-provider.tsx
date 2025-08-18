@@ -799,6 +799,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           cogsAccountId, inventoryAccountId, taxAccountId 
         } = accountInfo;
   
+        // Key values from original transaction
         const subtotal = txData.subtotal || 0;
         const totalCogs = txData.items?.reduce((sum, item) => sum + (item.cogs || 0), 0) || 0;
         const serviceFee = txData.serviceFee || 0;
@@ -812,11 +813,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const newLines: any[] = [];
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
   
+        if (!paymentAccountId || !salesAccountId || !cogsAccountId || !inventoryAccountId) {
+            throw new Error("Akun inti (pembayaran, penjualan, hpp, persediaan) tidak boleh kosong.");
+        }
+
         // 4 Core entries
-        if (paymentAccountId) newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` });
-        if (salesAccountId) newLines.push({ accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' });
-        if (totalCogs > 0 && cogsAccountId) newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
-        if (totalCogs > 0 && inventoryAccountId) newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
+        newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` });
+        newLines.push({ accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' });
+        if (totalCogs > 0) {
+            newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
+            newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
+        }
 
         // Conditional entries based on the new, correct values
         if (discountAmount > 0 && discountAccountId) {
