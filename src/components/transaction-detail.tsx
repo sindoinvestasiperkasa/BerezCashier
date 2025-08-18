@@ -12,7 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, HandCoins, FileCog } from "lucide-react";
+import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, HandCoins, FileCog, Banknote } from "lucide-react";
 import type { Transaction } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -254,6 +254,17 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
                 </CardHeader>
                   <CardContent className="p-4 pt-0 space-y-3">
                       <div className="grid grid-cols-2 gap-4">
+                           <div className='space-y-1 col-span-2'>
+                              <Label>Akun Pembayaran ({transaction.paymentMethod})</Label>
+                              <Select value={paymentAccountId} onValueChange={setPaymentAccountId} disabled={isLoading}>
+                                  <SelectTrigger><SelectValue placeholder="Pilih akun pembayaran..." /></SelectTrigger>
+                                  <SelectContent>
+                                      {accounts.filter(a => a.category === 'Aset' && (a.name.toLowerCase().includes('kas') || a.name.toLowerCase().includes('bank'))).map(acc => (
+                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
                           <div className='space-y-1'>
                               <Label>Akun Pendapatan</Label>
                                <Select value={salesAccountId} onValueChange={setSalesAccountId} disabled={isLoading}>
@@ -359,3 +370,4 @@ export default function TransactionDetail({ transaction, products, isOpen, onClo
     </Sheet>
   );
 }
+
