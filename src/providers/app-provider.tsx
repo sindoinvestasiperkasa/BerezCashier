@@ -758,13 +758,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const txDocRef = doc(collection(db, 'transactions'));
             const transactionData = removeUndefinedDeep({
                 idUMKM, warehouseId, branchId, customerId, customerName,
-                date: Timestamp.now(), description: `Penjualan Kasir - ${paymentMethod}`, type: 'Sale',
+                date: Timestamp.now(), description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
                 status: 'Lunas', paymentStatus: 'Berhasil', transactionNumber: `KSR-${Date.now()}`,
                 amount: total, paidAmount: total, total,
                 subtotal, discountAmount, taxAmount, items: itemsForTransaction,
                 paymentMethod, lines: newLines, paymentAccountId, salesAccountId, cogsAccountId,
-                discountAccountId: discountAccountId ?? null,
-                inventoryAccountId, taxAccountId: taxAccountId ?? null,
+                discountAccountId: discountAccountId || null,
+                inventoryAccountId, taxAccountId: taxAccountId || null,
                 isPkp, serviceFee: serviceFee || 0,
             });
 
@@ -827,12 +827,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         const finalAccountInfo = {
             isPkp: accountInfo.isPkp ?? txData.isPkp,
-            paymentAccountId: accountInfo.paymentAccountId ?? txData.paymentAccountId ?? findDefaultPaymentAccount(),
-            salesAccountId: accountInfo.salesAccountId ?? txData.salesAccountId,
-            discountAccountId: accountInfo.discountAccountId ?? txData.discountAccountId,
-            cogsAccountId: accountInfo.cogsAccountId ?? txData.cogsAccountId,
-            inventoryAccountId: accountInfo.inventoryAccountId ?? txData.inventoryAccountId,
-            taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
+            paymentAccountId: accountInfo.paymentAccountId || txData.paymentAccountId || findDefaultPaymentAccount(),
+            salesAccountId: accountInfo.salesAccountId || txData.salesAccountId,
+            discountAccountId: accountInfo.discountAccountId || txData.discountAccountId,
+            cogsAccountId: accountInfo.cogsAccountId || txData.cogsAccountId,
+            inventoryAccountId: accountInfo.inventoryAccountId || txData.inventoryAccountId,
+            taxAccountId: accountInfo.taxAccountId || txData.taxAccountId,
         };
         
         const { paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId } = finalAccountInfo;
@@ -849,7 +849,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
         
-        // This check is now more of a safeguard due to the fallback logic.
         const requiredPairs: Array<[string, string | undefined]> = [
             ['paymentAccountId', finalAccountInfo.paymentAccountId],
             ['salesAccountId', finalAccountInfo.salesAccountId],
@@ -1057,3 +1056,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    
