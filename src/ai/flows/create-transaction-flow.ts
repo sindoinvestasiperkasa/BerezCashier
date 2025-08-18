@@ -162,42 +162,28 @@ export const createTransactionFlow = ai.defineFlow(
         });
 
 
-        // 5. Buat Entri Jurnal (`lines`) - LOGIKA YANG DIPERBAIKI TOTAL
-        const journalLines = [];
+        // 5. Buat Entri Jurnal (`lines`) - MENGIKUTI LOGIKA YANG BENAR
+        const journalLines: any[] = [
+            // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
+            { accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` },
+            // Kredit: Pendapatan Penjualan sejumlah subtotal
+            { accountId: input.salesAccountId, debit: 0, credit: input.subtotal, description: 'Pendapatan Penjualan dari Kasir' },
+            // Debit: HPP
+            { accountId: input.cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' },
+            // Kredit: Persediaan
+            { accountId: input.inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' },
+        ];
         
-        // --- DEBIT ---
-        // Debit: Akun Pembayaran (Kas/Bank) sejumlah total yang dibayar
-        journalLines.push({ accountId: input.paymentAccountId, debit: input.total, credit: 0, description: `Penerimaan Penjualan Kasir via ${input.paymentMethod}` });
-        
-        // Debit: HPP
-        if (totalCogs > 0) {
-          journalLines.push({ accountId: input.cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
-        }
-        
-        // Debit: Diskon Penjualan (jika ada)
+        // Entri Jurnal Kondisional
         if (input.discountAmount > 0 && input.discountAccountId) {
-          journalLines.push({ accountId: input.discountAccountId, debit: input.discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
+            journalLines.push({ accountId: input.discountAccountId, debit: input.discountAmount, credit: 0, description: 'Potongan Penjualan Kasir' });
         }
-
-        // --- KREDIT ---
-        // Credit: Pendapatan Penjualan sejumlah subtotal
-        journalLines.push({ accountId: input.salesAccountId, debit: 0, credit: input.subtotal, description: 'Pendapatan Penjualan dari Kasir' });
-        
-        // Credit: PPN Keluaran (jika ada)
-        if (input.taxAmount > 0 && input.taxAccountId) {
-          journalLines.push({ accountId: input.taxAccountId, debit: 0, credit: input.taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
+        if (input.isPkp && input.taxAmount > 0 && input.taxAccountId) {
+            journalLines.push({ accountId: input.taxAccountId, debit: 0, credit: input.taxAmount, description: 'PPN Keluaran dari Penjualan Kasir' });
         }
-        
-        // Credit: Persediaan
-        if (totalCogs > 0) {
-            journalLines.push({ accountId: input.inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
-        }
-        
-        // Credit: Utang Biaya Layanan (jika ada dan ditemukan)
-        if (serviceFeeAccountId && input.serviceFee > 0) {
+        if (input.serviceFee > 0 && serviceFeeAccountId) {
             journalLines.push({ accountId: serviceFeeAccountId, debit: 0, credit: input.serviceFee, description: 'Biaya layanan aplikasi' });
         }
-
 
         // 6. Siapkan data transaksi untuk disimpan
         const transactionData = {
@@ -259,5 +245,3 @@ export const createTransactionFlow = ai.defineFlow(
     });
   }
 );
-
-    
