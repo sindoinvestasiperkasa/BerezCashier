@@ -758,7 +758,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const txDocRef = doc(collection(db, 'transactions'));
             const transactionData = removeUndefinedDeep({
                 idUMKM, warehouseId, branchId, customerId, customerName,
-                date: serverTimestamp(), description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
+                date: new Date(), description: `Penjualan Kasir - Atas Nama: ${data.customerName}`, type: 'Sale',
                 status: 'Lunas', paymentStatus: 'Berhasil', transactionNumber: `KSR-${Date.now()}`,
                 amount: total, paidAmount: total, total,
                 subtotal, discountAmount, taxAmount, items: itemsForTransaction,
