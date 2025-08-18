@@ -794,11 +794,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
   
         const txData = txSnap.data() as Transaction;
-        const { 
-          isPkp, paymentAccountId, salesAccountId, discountAccountId, 
-          cogsAccountId, inventoryAccountId, taxAccountId 
-        } = accountInfo;
-  
+        
+        // Use new accounts from UI, but fallback to original transaction accounts if not provided
+        const finalAccountInfo = {
+          isPkp: accountInfo.isPkp ?? txData.isPkp,
+          paymentAccountId: accountInfo.paymentAccountId ?? txData.paymentAccountId,
+          salesAccountId: accountInfo.salesAccountId ?? txData.salesAccountId,
+          discountAccountId: accountInfo.discountAccountId ?? txData.discountAccountId,
+          cogsAccountId: accountInfo.cogsAccountId ?? txData.cogsAccountId,
+          inventoryAccountId: accountInfo.inventoryAccountId ?? txData.inventoryAccountId,
+          taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
+        };
+
         // Key values from original transaction
         const subtotal = txData.subtotal || 0;
         const totalCogs = txData.items?.reduce((sum, item) => sum + (item.cogs || 0), 0) || 0;
@@ -806,17 +813,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         // Recalculate tax and total based on new discount
         const subtotalAfterDiscount = subtotal - discountAmount;
-        const taxAmount = (isPkp ?? false) ? subtotalAfterDiscount * 0.11 : 0;
+        const taxAmount = (finalAccountInfo.isPkp) ? subtotalAfterDiscount * 0.11 : 0;
         const total = subtotalAfterDiscount + taxAmount + serviceFee;
   
-        // --- Reconstruct journal lines from scratch, exactly like the reference logic ---
+        // --- Reconstruct journal lines from scratch ---
         const newLines: any[] = [];
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
   
-        if (!paymentAccountId || !salesAccountId || !cogsAccountId || !inventoryAccountId) {
-            throw new Error("Akun inti (pembayaran, penjualan, hpp, persediaan) tidak boleh kosong.");
-        }
+        // Use the validated final account IDs
+        const { paymentAccountId, salesAccountId, discountAccountId, cogsAccountId, inventoryAccountId, taxAccountId } = finalAccountInfo;
 
+        if (!paymentAccountId || !salesAccountId || !cogsAccountId || !inventoryAccountId) {
+            // This should ideally not be hit due to the fallback, but as a safeguard.
+            throw new Error("Akun inti (pembayaran, penjualan, hpp, persediaan) tidak dapat ditemukan.");
+        }
+  
         // 4 Core entries
         newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` });
         newLines.push({ accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' });
@@ -829,7 +840,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (discountAmount > 0 && discountAccountId) {
             newLines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
         }
-        if (isPkp && taxAmount > 0 && taxAccountId) {
+        if (finalAccountInfo.isPkp && taxAmount > 0 && taxAccountId) {
             newLines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
         }
         if (serviceFee > 0 && serviceFeeAccount) {
@@ -845,13 +856,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           amount: total,
           paidAmount: total,
           lines: newLines,
-          isPkp: isPkp || false,
+          isPkp: finalAccountInfo.isPkp || false,
           paymentAccountId: paymentAccountId || null,
           salesAccountId: salesAccountId || null,
           discountAccountId: discountAmount > 0 ? (discountAccountId || null) : null,
           cogsAccountId: cogsAccountId || null,
           inventoryAccountId: inventoryAccountId || null,
-          taxAccountId: isPkp && taxAmount > 0 ? (taxAccountId || null) : null,
+          taxAccountId: finalAccountInfo.isPkp && taxAmount > 0 ? (taxAccountId || null) : null,
         };
         
         transaction.update(txDocRef, dataToUpdate);
