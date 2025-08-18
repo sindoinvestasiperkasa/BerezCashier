@@ -822,85 +822,89 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const txDocRef = doc(db, 'transactions', transactionId);
   
     try {
-      const txSnap = await getDoc(txDocRef);
-      if (!txSnap.exists()) {
-        throw new Error("Transaksi tidak ditemukan.");
-      }
-      
-      const { 
-        isPkp, paymentAccountId, salesAccountId, discountAccountId, 
-        cogsAccountId, inventoryAccountId, taxAccountId 
-      } = accountInfo;
+      await runTransaction(db, async (transaction) => {
+        const txSnap = await transaction.get(txDocRef);
+        if (!txSnap.exists()) {
+          throw new Error("Transaksi tidak ditemukan.");
+        }
   
-      const txData = txSnap.data() as Transaction;
-      const subtotal = txData.subtotal || 0;
-      const totalCogs = txData.items.reduce((sum, item) => sum + (item.cogs || 0), 0);
-      const serviceFee = txData.serviceFee || 0;
-      const paymentMethod = txData.paymentMethod;
-      
-      const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
+        const txData = txSnap.data() as Transaction;
+        const { 
+          isPkp, paymentAccountId, salesAccountId, discountAccountId, 
+          cogsAccountId, inventoryAccountId, taxAccountId 
+        } = accountInfo;
   
-      // --- Recalculate all lines from scratch for consistency ---
-      const newLines: any[] = [];
+        const subtotal = txData.subtotal || 0;
+        const totalCogs = txData.items?.reduce((sum, item) => sum + (item.cogs || 0), 0) || 0;
+        const serviceFee = txData.serviceFee || 0;
+        const paymentMethod = txData.paymentMethod;
+        
+        const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
   
-      // Debit: Payment Account
-      if (paymentAccountId) {
-          newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${paymentMethod}` });
-      }
+        // --- Recalculate all lines from scratch for consistency ---
+        const newLines: any[] = [];
   
-      // Debit: COGS
-      if (totalCogs > 0 && cogsAccountId) {
-        newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
-      }
+        // Debit: Payment Account
+        if (paymentAccountId) {
+            newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${paymentMethod}` });
+        }
   
-      // Debit: Discount
-      if (discountAmount > 0 && discountAccountId) {
-        newLines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
-      }
+        // Debit: COGS
+        if (totalCogs > 0 && cogsAccountId) {
+          newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
+        }
   
-      // Credit: Sales Revenue
-      if (salesAccountId) {
-          newLines.push({ accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' });
-      }
-      
-      // Credit: Tax
-      if (isPkp && taxAmount > 0 && taxAccountId) {
-        newLines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
-      }
-      
-      // Credit: Inventory
-      if (totalCogs > 0 && inventoryAccountId) {
-        newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Penjualan Kasir' });
-      }
-      
-      // Credit: Service Fee Liability
-      if (serviceFee > 0 && serviceFeeAccount) {
-        newLines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
-      }
+        // Debit: Discount
+        if (discountAmount > 0 && discountAccountId) {
+          newLines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
+        }
   
-      const dataToUpdate = {
-        discountAmount,
-        taxAmount,
-        total,
-        amount: total,
-        paidAmount: total, // Assuming it will be paid in full
-        lines: newLines,
-        isPkp,
-        paymentAccountId: paymentAccountId || null,
-        salesAccountId: salesAccountId || null,
-        discountAccountId: discountAmount > 0 ? (discountAccountId || null) : null,
-        cogsAccountId: cogsAccountId || null,
-        inventoryAccountId: inventoryAccountId || null,
-        taxAccountId: isPkp && taxAmount > 0 ? (taxAccountId || null) : null,
-      };
-      
-      await updateDoc(txDocRef, dataToUpdate);
+        // Credit: Sales Revenue
+        if (salesAccountId) {
+            newLines.push({ accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' });
+        }
+        
+        // Credit: Tax
+        if (isPkp && taxAmount > 0 && taxAccountId) {
+          newLines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
+        }
+        
+        // Credit: Inventory
+        if (totalCogs > 0 && inventoryAccountId) {
+          newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
+        }
+        
+        // Credit: Service Fee Liability
+        if (serviceFee > 0 && serviceFeeAccount) {
+          newLines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
+        }
   
-      toast({ title: 'Sukses', description: 'Transaksi berhasil diperbarui.' });
+        const dataToUpdate = {
+          discountAmount,
+          taxAmount,
+          total,
+          status: 'Lunas',
+          paymentStatus: 'Berhasil',
+          amount: total,
+          paidAmount: total,
+          lines: newLines,
+          isPkp,
+          paymentAccountId: paymentAccountId || null,
+          salesAccountId: salesAccountId || null,
+          discountAccountId: discountAmount > 0 ? (discountAccountId || null) : null,
+          cogsAccountId: cogsAccountId || null,
+          inventoryAccountId: inventoryAccountId || null,
+          taxAccountId: isPkp && taxAmount > 0 ? (taxAccountId || null) : null,
+        };
+        
+        transaction.update(txDocRef, dataToUpdate);
+      });
+  
+      toast({ title: 'Sukses', description: 'Transaksi berhasil dilunasi dan diperbarui.' });
       return true;
   
     } catch (error: any) {
-      console.error("Error updating transaction discount:", error);
+      console.error("Error updating transaction:", error);
       toast({ title: 'Gagal', description: error.message || 'Gagal memperbarui transaksi.', variant: 'destructive' });
       return false;
     }
@@ -1048,4 +1052,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
