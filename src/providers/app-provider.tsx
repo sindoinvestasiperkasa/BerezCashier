@@ -795,7 +795,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
         const txData = txSnap.data() as Transaction;
         
-        const finalAccountInfo = {
+        const { isPkp, paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId, discountAccountId, taxAccountId } = {
           isPkp: accountInfo.isPkp ?? txData.isPkp,
           paymentAccountId: accountInfo.paymentAccountId ?? txData.paymentAccountId,
           salesAccountId: accountInfo.salesAccountId ?? txData.salesAccountId,
@@ -805,26 +805,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
         };
         
-        const { paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId } = finalAccountInfo;
-        
         const subtotal = txData.subtotal || 0;
         const totalCogs = txData.items?.reduce((sum, item) => sum + (item.cogs || 0), 0) || 0;
         const serviceFee = txData.serviceFee || 0;
         
         const subtotalAfterDiscount = subtotal - discountAmount;
-        const taxAmount = (finalAccountInfo.isPkp) ? subtotalAfterDiscount * 0.11 : 0;
+        const taxAmount = isPkp ? subtotalAfterDiscount * 0.11 : 0;
         const total = subtotalAfterDiscount + taxAmount + serviceFee;
   
-        // Logic from your correct code
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
-        const { discountAccountId, taxAccountId } = finalAccountInfo;
-
+        
         const newLines: any[] = [
             { accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` },
             { accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' },
         ];
 
-        if (totalCogs > 0) {
+        if (totalCogs > 0 && cogsAccountId && inventoryAccountId) {
             newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
             newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
         }
@@ -832,7 +828,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (discountAmount > 0 && discountAccountId) {
             newLines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
         }
-        if (finalAccountInfo.isPkp && taxAmount > 0 && taxAccountId) {
+        if (isPkp && taxAmount > 0 && taxAccountId) {
             newLines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
         }
         if (serviceFee > 0 && serviceFeeAccount) {
@@ -848,13 +844,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           amount: total,
           paidAmount: total,
           lines: newLines,
-          isPkp: finalAccountInfo.isPkp,
-          paymentAccountId: finalAccountInfo.paymentAccountId || null,
-          salesAccountId: finalAccountInfo.salesAccountId || null,
-          discountAccountId: finalAccountInfo.discountAccountId || null,
-          cogsAccountId: finalAccountInfo.cogsAccountId || null,
-          inventoryAccountId: finalAccountInfo.inventoryAccountId || null,
-          taxAccountId: finalAccountInfo.taxAccountId || null,
+          isPkp: isPkp,
+          paymentAccountId: paymentAccountId || null,
+          salesAccountId: salesAccountId || null,
+          cogsAccountId: cogsAccountId || null,
+          inventoryAccountId: inventoryAccountId || null,
+          discountAccountId: discountAccountId || null,
+          taxAccountId: taxAccountId || null,
         };
         
         transaction.update(txDocRef, dataToUpdate);
@@ -1014,6 +1010,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 
+
+    
 
     
 
