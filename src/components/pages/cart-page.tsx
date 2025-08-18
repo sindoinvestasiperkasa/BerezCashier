@@ -107,7 +107,7 @@ export default function CartPage({ setView }: CartPageProps) {
         let account = accounts.find(a => a.name.toLowerCase() === methodLower);
         if (account) return account.id;
         if (['qris', 'gopay', 'dana', 'ovo', 'transfer'].includes(methodLower)) {
-            account = accounts.find(a => a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('kas digital'));
+            account = accounts.find(a => a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('kas bank'));
             if (account) return account.id;
         }
         return accounts.find(a => a.name.toLowerCase().includes('kas'))?.id;
@@ -973,3 +973,5 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
+
+    
