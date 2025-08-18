@@ -823,11 +823,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         // Use the validated final account IDs
         const { paymentAccountId, salesAccountId, discountAccountId, cogsAccountId, inventoryAccountId, taxAccountId } = finalAccountInfo;
 
-        if (!paymentAccountId || !salesAccountId || !cogsAccountId || !inventoryAccountId) {
-            // This should ideally not be hit due to the fallback, but as a safeguard.
-            throw new Error("Akun inti (pembayaran, penjualan, hpp, persediaan) tidak dapat ditemukan.");
-        }
-  
         // 4 Core entries
         newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` });
         newLines.push({ accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' });
@@ -1020,3 +1015,4 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
