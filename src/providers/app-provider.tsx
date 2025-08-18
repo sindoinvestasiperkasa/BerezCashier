@@ -794,42 +794,44 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
   
         const txData = txSnap.data() as Transaction;
-        
-        const { isPkp, paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId, discountAccountId, taxAccountId } = {
-          isPkp: accountInfo.isPkp ?? txData.isPkp,
-          paymentAccountId: accountInfo.paymentAccountId ?? txData.paymentAccountId,
-          salesAccountId: accountInfo.salesAccountId ?? txData.salesAccountId,
-          discountAccountId: accountInfo.discountAccountId ?? txData.discountAccountId,
-          cogsAccountId: accountInfo.cogsAccountId ?? txData.cogsAccountId,
-          inventoryAccountId: accountInfo.inventoryAccountId ?? txData.inventoryAccountId,
-          taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
+
+        // Use new account info if provided, otherwise fallback to original transaction data
+        const finalAccountInfo = {
+            isPkp: accountInfo.isPkp ?? txData.isPkp,
+            paymentAccountId: accountInfo.paymentAccountId ?? txData.paymentAccountId,
+            salesAccountId: accountInfo.salesAccountId ?? txData.salesAccountId,
+            discountAccountId: accountInfo.discountAccountId ?? txData.discountAccountId,
+            cogsAccountId: accountInfo.cogsAccountId ?? txData.cogsAccountId,
+            inventoryAccountId: accountInfo.inventoryAccountId ?? txData.inventoryAccountId,
+            taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
         };
-        
+
+        const { paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId } = finalAccountInfo;
+
         const subtotal = txData.subtotal || 0;
         const totalCogs = txData.items?.reduce((sum, item) => sum + (item.cogs || 0), 0) || 0;
         const serviceFee = txData.serviceFee || 0;
         
         const subtotalAfterDiscount = subtotal - discountAmount;
-        const taxAmount = isPkp ? subtotalAfterDiscount * 0.11 : 0;
+        const taxAmount = finalAccountInfo.isPkp ? subtotalAfterDiscount * 0.11 : 0;
         const total = subtotalAfterDiscount + taxAmount + serviceFee;
   
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
         
+        // 4 Core entries
         const newLines: any[] = [
             { accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` },
             { accountId: salesAccountId, debit: 0, credit: subtotal, description: 'Pendapatan Penjualan dari Kasir' },
+            { accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' },
+            { accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' },
         ];
-
-        if (totalCogs > 0 && cogsAccountId && inventoryAccountId) {
-            newLines.push({ accountId: cogsAccountId, debit: totalCogs, credit: 0, description: 'HPP Penjualan dari Kasir' });
-            newLines.push({ accountId: inventoryAccountId, debit: 0, credit: totalCogs, description: 'Pengurangan Persediaan dari Kasir' });
-        }
         
-        if (discountAmount > 0 && discountAccountId) {
-            newLines.push({ accountId: discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
+        // Conditional entries
+        if (discountAmount > 0 && finalAccountInfo.discountAccountId) {
+            newLines.push({ accountId: finalAccountInfo.discountAccountId, debit: discountAmount, credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' });
         }
-        if (isPkp && taxAmount > 0 && taxAccountId) {
-            newLines.push({ accountId: taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
+        if (finalAccountInfo.isPkp && taxAmount > 0 && finalAccountInfo.taxAccountId) {
+            newLines.push({ accountId: finalAccountInfo.taxAccountId, debit: 0, credit: taxAmount, description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' });
         }
         if (serviceFee > 0 && serviceFeeAccount) {
             newLines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: serviceFee, description: 'Utang Biaya Layanan Aplikasi' });
@@ -844,13 +846,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           amount: total,
           paidAmount: total,
           lines: newLines,
-          isPkp: isPkp,
-          paymentAccountId: paymentAccountId || null,
-          salesAccountId: salesAccountId || null,
-          cogsAccountId: cogsAccountId || null,
-          inventoryAccountId: inventoryAccountId || null,
-          discountAccountId: discountAccountId || null,
-          taxAccountId: taxAccountId || null,
+          isPkp: finalAccountInfo.isPkp,
+          paymentAccountId: finalAccountInfo.paymentAccountId || null,
+          salesAccountId: finalAccountInfo.salesAccountId || null,
+          cogsAccountId: finalAccountInfo.cogsAccountId || null,
+          inventoryAccountId: finalAccountInfo.inventoryAccountId || null,
+          discountAccountId: finalAccountInfo.discountAccountId || null,
+          taxAccountId: finalAccountInfo.taxAccountId || null,
         };
         
         transaction.update(txDocRef, dataToUpdate);
@@ -1010,6 +1012,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 
+
+    
 
     
 
