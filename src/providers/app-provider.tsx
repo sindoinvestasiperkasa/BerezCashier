@@ -806,6 +806,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           taxAccountId: accountInfo.taxAccountId ?? txData.taxAccountId,
         };
 
+        const { paymentAccountId, salesAccountId, cogsAccountId, inventoryAccountId } = finalAccountInfo;
+        
         // Key values from original transaction
         const subtotal = txData.subtotal || 0;
         const totalCogs = txData.items?.reduce((sum, item) => sum + (item.cogs || 0), 0) || 0;
@@ -821,7 +823,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
   
         // Use the validated final account IDs
-        const { paymentAccountId, salesAccountId, discountAccountId, cogsAccountId, inventoryAccountId, taxAccountId } = finalAccountInfo;
+        const { discountAccountId, taxAccountId } = finalAccountInfo;
 
         // 4 Core entries
         newLines.push({ accountId: paymentAccountId, debit: total, credit: 0, description: `Penerimaan Penjualan Kasir via ${txData.paymentMethod}` });
