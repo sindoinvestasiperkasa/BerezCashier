@@ -26,6 +26,8 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Switch } from "./ui/switch";
+import type { UpdatedAccountInfo } from "@/providers/app-provider";
+
 
 interface TransactionDetailProps {
   transaction: Transaction | null;
