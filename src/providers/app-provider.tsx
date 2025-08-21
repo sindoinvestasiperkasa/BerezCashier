@@ -4,7 +4,7 @@
 import React, { createContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch, runTransaction, serverTimestamp, documentId } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch, runTransaction, serverTimestamp, documentId, orderBy } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 
@@ -817,14 +817,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const warehouseId = originalTx.warehouseId;
         if (!warehouseId) throw new Error("Gudang asal transaksi tidak ditemukan.");
         
-        // 1. Calculate deltas for each product
+        // 1. Calculate deltas for each product (ONLY for goods)
         const itemDeltas = new Map<string, number>();
-        originalTx.items.forEach(item => {
-            itemDeltas.set(item.productId, (itemDeltas.get(item.productId) || 0) - item.quantity);
-        });
-        editedTransaction.items.forEach(item => {
-            itemDeltas.set(item.productId, (itemDeltas.get(item.productId) || 0) + item.quantity);
-        });
+        originalTx.items
+            .filter(item => item.productType === 'Barang')
+            .forEach(item => {
+                itemDeltas.set(item.productId, (itemDeltas.get(item.productId) || 0) - item.quantity);
+            });
+        editedTransaction.items
+            .filter(item => item.productType === 'Barang')
+            .forEach(item => {
+                itemDeltas.set(item.productId, (itemDeltas.get(item.productId) || 0) + item.quantity);
+            });
 
         const batch = writeBatch(db);
 
@@ -861,9 +865,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           if (delta >= 0) continue;
           
           let quantityToReturn = Math.abs(delta);
-          // Simplified return logic: add to the newest lot. 
-          // For full accuracy, it should return to the lots it was taken from, but that's much more complex.
-          // This simplified version keeps total stock count correct.
           const lotsQuery = query(collection(db, "stockLots"), where("productId", "==", productId), where("warehouseId", "==", warehouseId), orderBy("purchaseDate", "desc"));
           const lotsSnap = await getDocs(lotsQuery);
           if (!lotsSnap.empty) {
@@ -875,16 +876,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
-        // 4. Recalculate COGS and totals (this part is complex without FIFO simulation, we will approximate)
+        // 4. Recalculate totals
         const subtotal = editedTransaction.items?.reduce((sum, item) => sum + asNumber(item.unitPrice) * asNumber(item.quantity), 0);
         const serviceFee = asNumber(editedTransaction.serviceFee);
         const subtotalAfterDiscount = subtotal - asNumber(discountAmount);
         const taxAmount = settings.isPkp ? subtotalAfterDiscount * 0.11 : 0;
         const total = subtotalAfterDiscount + taxAmount + serviceFee;
         
-        // Note: Recalculating COGS accurately here requires simulating the entire FIFO logic again,
-        // which is complex outside a transaction. We will update items but leave COGS as is for now,
-        // which might lead to reporting inaccuracies but keeps stock correct.
         const dataToUpdate = {
             items: editedTransaction.items,
             subtotal, discountAmount, taxAmount, total,
@@ -930,7 +928,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 originalItemQuantities.set(item.productId, item.quantity);
             });
 
-            // --- Recalculate COGS and Update Stock for the new item set ---
+            // --- Recalculate COGS and Update Stock for the new item set (only for goods) ---
             let totalCogs = 0;
             const itemsForTransaction: SaleItem[] = [];
 
@@ -956,7 +954,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     throw new Error(`Stok tidak mencukupi untuk ${item.productName}. Sisa stok: ${totalStockForProduct - (originalItemQuantities.get(item.productId) || 0)}.`);
                 }
                 
-                // --- Deduct Stock ---
                 let quantityToDeduct = item.quantity;
                 let itemCogs = 0;
                 
@@ -977,9 +974,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     const lotRef = doc(db, 'stockLots', lot.id);
                     const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
                     itemCogs += quantityFromThisLot * (lot.purchasePrice || 0);
-
-                    const actualLot = availableLots.find(l => l.id === lot.id)!;
-                    const finalNewQuantity = actualLot.remainingQuantity - quantityFromThisLot + (originalItemQuantities.get(item.productId) || 0);
                     
                     transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
                     quantityToDeduct -= quantityFromThisLot;
