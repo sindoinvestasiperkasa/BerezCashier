@@ -12,7 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, HandCoins, FileCog, Banknote, PlusCircle, Trash2, Minus, Plus, Search } from "lucide-react";
+import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, HandCoins, FileCog, Banknote, PlusCircle, Trash2, Minus, Plus, Search, Save } from "lucide-react";
 import type { Transaction, SaleItem } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -56,9 +56,10 @@ const formatDate = (date: Date) => {
 
 
 export default function TransactionDetail({ transaction: initialTransaction, products, isOpen, onClose }: TransactionDetailProps) {
-  const { updateTransactionAndPay, accounts, products: allProducts, productCategories } = useApp();
+  const { updateTransactionAndPay, accounts, products: allProducts, productCategories, updateTransactionOnly } = useApp();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   
   // Local state for the transaction being edited
@@ -204,6 +205,16 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     await updateTransactionAndPay(transaction, calculatedDiscountAmount, accountInfo);
     
     setIsLoading(false);
+    onClose();
+  };
+
+  const handleSaveChanges = async () => {
+    if (!transaction) return;
+    setIsSaving(true);
+    
+    await updateTransactionOnly(transaction, calculatedDiscountAmount, { isPkp });
+    
+    setIsSaving(false);
     onClose();
   };
 
@@ -450,10 +461,16 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
         
         {isPaymentPending && (
           <SheetFooter className="p-4 border-t bg-background">
-            <Button className="w-full h-12" onClick={handlePayAndSave} disabled={isLoading}>
-              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5" />}
-              {isLoading ? 'Menyimpan...' : 'Simpan & Lunasi'}
-            </Button>
+            <div className="flex gap-4 w-full">
+              <Button variant="outline" className="w-full h-12" onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+                {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
+                {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </Button>
+              <Button className="w-full h-12" onClick={handlePayAndSave} disabled={isLoading || isSaving}>
+                {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5" />}
+                {isLoading ? 'Melunasi...' : 'Simpan & Lunasi'}
+              </Button>
+            </div>
           </SheetFooter>
         )}
       </SheetContent>
@@ -517,5 +534,6 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
+
 
 
