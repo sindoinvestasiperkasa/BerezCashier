@@ -349,32 +349,46 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return locales[locale][key] || key;
   }, [locale]);
 
-  // Load cart from localStorage on initial render
+  // Load cart & held carts from localStorage on initial render
   useEffect(() => {
     try {
-        const savedCart = localStorage.getItem('activeCart');
-        if (savedCart) {
-            setCart(JSON.parse(savedCart));
-        }
+      const savedCart = localStorage.getItem('activeCart');
+      if (savedCart) {
+        setCart(JSON.parse(savedCart));
+      }
+      const savedHeldCarts = localStorage.getItem('heldCarts');
+      if (savedHeldCarts) {
+        // We need to parse dates correctly from string
+        const parsedHeldCarts = JSON.parse(savedHeldCarts).map((c: any) => ({
+            ...c,
+            heldAt: new Date(c.heldAt)
+        }));
+        setHeldCarts(parsedHeldCarts);
+      }
     } catch (error) {
-        console.error("Failed to parse cart from localStorage", error);
-        localStorage.removeItem('activeCart');
+      console.error("Failed to parse data from localStorage", error);
+      localStorage.removeItem('activeCart');
+      localStorage.removeItem('heldCarts');
     }
   }, []);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
-      try {
-          if (cart.length > 0) {
-              localStorage.setItem('activeCart', JSON.stringify(cart));
-          } else {
-              // If cart is empty, remove it from storage to keep it clean
-              localStorage.removeItem('activeCart');
-          }
-      } catch (error) {
-          console.error("Failed to save cart to localStorage", error);
-      }
+    try {
+      localStorage.setItem('activeCart', JSON.stringify(cart));
+    } catch (error) {
+      console.error("Failed to save cart to localStorage", error);
+    }
   }, [cart]);
+
+  // Save held carts to localStorage whenever it changes
+  useEffect(() => {
+      try {
+          localStorage.setItem('heldCarts', JSON.stringify(heldCarts));
+      } catch (error) {
+          console.error("Failed to save held carts to localStorage", error);
+      }
+  }, [heldCarts]);
 
 
   useEffect(() => {
@@ -1478,4 +1492,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     
 
     
+
 
