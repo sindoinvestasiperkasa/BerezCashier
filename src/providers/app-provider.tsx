@@ -723,7 +723,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await runTransaction(db, async (transaction) => {
             const physicalItems = data.items.filter(item => item.productType === 'Barang');
             
-            // --- Calculate COGS and prepare items for transaction ---
             let totalCogs = 0;
             const itemsForTransaction: SaleItem[] = [];
 
@@ -731,17 +730,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 if (!item.id) {
                     throw new Error(`Item "${item.name || 'Unknown'}" memiliki ID yang tidak valid.`);
                 }
-                const lotsQuery = query(
-                    collection(db, 'stockLots'),
-                    where('idUMKM', '==', idUMKM),
-                    where('warehouseId', '==', warehouseId),
-                    where('productId', '==', item.id)
-                );
                 
-                const lotsSnap = await getDocs(lotsQuery);
-                const availableLots = lotsSnap.docs
-                    .map(d => ({ id: d.id, ...d.data(), purchaseDate: (d.data().purchaseDate as Timestamp).toDate() } as StockLot))
-                    .filter(lot => lot.remainingQuantity > 0)
+                // Use local state instead of getDocs for offline capability
+                const availableLots = stockLots
+                    .filter(lot => lot.productId === item.id && lot.warehouseId === warehouseId && lot.remainingQuantity > 0)
                     .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
 
                 const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
@@ -749,7 +741,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     throw new Error(`Stok tidak mencukupi untuk ${item.name}.`);
                 }
 
-                // --- Deduct stock and calculate COGS within the same loop ---
                 let quantityToDeduct = item.quantity;
                 let itemCogs = 0;
                 for (const lot of availableLots) {
@@ -762,7 +753,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
                     itemCogs += quantityFromThisLot * lot.purchasePrice;
                     
-                    // Firestore transaction update
                     transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
                     quantityToDeduct -= quantityFromThisLot;
                 }
@@ -819,7 +809,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
             
             const transactionTimestamp = new Date();
-            // --- Save Transaction Document ---
             const txDocRef = doc(collection(db, 'transactions'));
             const transactionData = {
                 idUMKM, warehouseId, branchId, customerId, customerName,
@@ -845,7 +834,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gagal Memproses Pembayaran', description: error.message || 'Terjadi kesalahan saat menyimpan data.', variant: 'destructive'});
         throw error;
     }
-  }, [user, db, accounts, toast]);
+  }, [user, db, accounts, toast, stockLots]);
 
   const saveCartAsPendingTransaction = useCallback(async (data: PendingTransactionClientData): Promise<{ success: boolean; transactionId: string }> => {
     if (!user) {
@@ -862,11 +851,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const itemsForTransaction: SaleItem[] = [];
             for (const item of data.items) {
                  if (item.productType === 'Barang') {
-                     const lotsQuery = query(collection(db, 'stockLots'), where('idUMKM', '==', idUMKM), where('warehouseId', '==', data.warehouseId), where('productId', '==', item.id));
-                     const lotsSnap = await getDocs(lotsQuery);
-                     const availableLots = lotsSnap.docs
-                         .map(d => ({ id: d.id, ...d.data() } as StockLot))
-                         .filter(lot => lot.remainingQuantity > 0);
+                     // Use local state instead of getDocs for offline capability
+                     const availableLots = stockLots
+                        .filter(lot => lot.productId === item.id && lot.warehouseId === data.warehouseId && lot.remainingQuantity > 0)
+                        .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
 
                     const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
                     if (totalStockForProduct < item.quantity) {
@@ -882,7 +870,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                         quantityToDeduct -= quantityFromThisLot;
                     }
                  }
-                // We don't calculate COGS here, as it's a pending transaction
+                
                 itemsForTransaction.push({
                     productId: item.id, productName: item.name, productType: item.productType,
                     quantity: item.quantity, unitPrice: item.price, cogs: 0,
@@ -897,12 +885,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 date: new Date(),
                 description: `Pesanan Kasir (Tertunda) - Atas Nama: ${data.customerName}`,
                 type: 'Sale',
-                status: 'Diproses', // Pending status
-                paymentStatus: 'Pending', // Pending status
+                status: 'Diproses',
+                paymentStatus: 'Pending',
                 transactionNumber: `KSR-${Date.now()}`,
                 items: itemsForTransaction,
-                paymentMethod: 'Belum Dipilih', // Default value
-                // No lines, no payment account details yet
+                paymentMethod: 'Belum Dipilih',
             };
             transaction.set(txDocRef, removeUndefinedDeep(transactionData));
             transactionId = txDocRef.id;
@@ -914,7 +901,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gagal Menyimpan', description: error.message || 'Terjadi kesalahan.', variant: 'destructive'});
         throw error;
     }
-  }, [user, db, toast]);
+  }, [user, db, toast, stockLots]);
 
 
   const updateTransactionOnly = async (editedTransaction: Transaction, discountAmount: number, settings: { isPkp?: boolean }): Promise<boolean> => {
@@ -944,11 +931,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         for (const [productId, delta] of stockDeltas.entries()) {
             if (delta === 0) continue;
             
-            const lotsQuery = query(collection(db, "stockLots"), where("productId", "==", productId), where("warehouseId", "==", warehouseId));
-            const lotsSnap = await getDocs(lotsQuery);
-            const availableLots = lotsSnap.docs
-                .map(d => ({ id: d.id, ...d.data() } as StockLot))
-                .sort((a, b) => (a.purchaseDate as any).seconds - (b.purchaseDate as any).seconds);
+            const availableLots = stockLots
+                .filter(lot => lot.productId === productId && lot.warehouseId === warehouseId)
+                .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
 
             let amountToChange = Math.abs(delta);
             
@@ -966,7 +951,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     amountToChange -= quantityFromThisLot;
                 }
             } else { // Return stock
-                const lotsToReturnTo = availableLots.sort((a, b) => (b.purchaseDate as any).seconds - (a.purchaseDate as any).seconds); // LIFO for returns
+                const lotsToReturnTo = availableLots.sort((a, b) => b.purchaseDate.getTime() - a.purchaseDate.getTime()); // LIFO for returns
                 for (const lot of lotsToReturnTo) {
                     if (amountToChange <= 0) break;
                     const lotRef = doc(db, 'stockLots', lot.id);
@@ -1041,12 +1026,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
             for (const productId of allProductIds) {
                 if (!productId) continue;
-                const lotsQuery = query(collection(db, 'stockLots'), where('idUMKM', '==', idUMKM), where('warehouseId', '==', warehouseId), where('productId', '==', productId));
-                const lotsSnap = await getDocs(lotsQuery);
-                let currentStock = 0;
-                lotsSnap.forEach(d => {
-                    currentStock += d.data().remainingQuantity;
-                });
+                
+                let currentStock = stockLots
+                    .filter(lot => lot.productId === productId && lot.warehouseId === warehouseId)
+                    .reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+
                 stockAvailability.set(productId, currentStock + (originalItemQuantities.get(productId) || 0));
             }
 
@@ -1056,14 +1040,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 if (availableStock < item.quantity) {
                     throw new Error(`Stok tidak mencukupi untuk ${item.productName}. Stok tersedia: ${availableStock}.`);
                 }
-                 const lotsQuery = query(
-                    collection(db, 'stockLots'), where('idUMKM', '==', idUMKM),
-                    where('warehouseId', '==', warehouseId), where('productId', '==', item.productId)
-                );
-                
-                const lotsSnap = await getDocs(lotsQuery);
-                const availableLots = lotsSnap.docs
-                    .map(d => ({ id: d.id, ...d.data(), purchaseDate: (d.data().purchaseDate as Timestamp).toDate() } as StockLot))
+                 const availableLots = stockLots
+                    .filter(lot => lot.productId === item.productId && lot.warehouseId === warehouseId)
                     .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
                 
                 const tempLots = JSON.parse(JSON.stringify(availableLots));
@@ -1100,13 +1078,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 if (delta === 0) continue;
                 let amountToChange = Math.abs(delta);
                 const sortOrder = delta > 0 ? "asc" : "desc"; // Deduct from oldest, return to newest
-                const lotsQuery = query(collection(db, "stockLots"), where("productId", "==", productId), where("warehouseId", "==", warehouseId), orderBy("purchaseDate", sortOrder));
-                const lotsSnap = await getDocs(lotsQuery);
+                
+                const lotsToUpdate = stockLots
+                    .filter(lot => lot.productId === productId && lot.warehouseId === warehouseId)
+                    .sort((a,b) => sortOrder === 'asc' ? a.purchaseDate.getTime() - b.purchaseDate.getTime() : b.purchaseDate.getTime() - a.purchaseDate.getTime());
 
-                for (const lotDoc of lotsSnap.docs) {
+
+                for (const lotData of lotsToUpdate) {
                     if (amountToChange <= 0) break;
-                    const lotData = lotDoc.data() as StockLot;
-                    const lotRef = doc(db, 'stockLots', lotDoc.id);
+                    const lotRef = doc(db, 'stockLots', lotData.id);
 
                     if (delta > 0) { // Deduct stock
                         const canTake = Math.min(amountToChange, lotData.remainingQuantity);
@@ -1494,3 +1474,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     
 
 
+
+
+    
