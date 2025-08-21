@@ -31,6 +31,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ScrollArea } from "./ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 
 interface TransactionDetailProps {
@@ -63,6 +64,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
   
   // Local state for the transaction being edited
   const [transaction, setTransaction] = useState<Transaction | null>(initialTransaction);
@@ -238,24 +240,25 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     <>
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="flex flex-col p-0 max-h-[90vh] w-full" side="bottom">
-        <SheetHeader className="p-6 pb-2 border-b flex-row items-center justify-between">
-            <div>
-              <SheetTitle className="text-xl font-bold text-left flex items-center gap-3">
-                  <span>Detail Transaksi</span>
-                  <Badge variant={statusVariant[transaction.status] || 'outline'} className={cn("text-sm", transaction.status === 'Diproses' ? 'border-primary text-primary' : '')}>
-                      {transaction.status}
-                  </Badge>
-              </SheetTitle>
-              <div className="text-left flex items-center gap-4 text-sm pt-1 text-muted-foreground flex-wrap">
-                  <span className="font-mono">{transaction.transactionNumber || transaction.id}</span>
-                  <span className="text-xs">•</span>
+        <SheetHeader className="p-4 md:p-6 pb-2 border-b flex-row items-start justify-between">
+            <div className="flex-grow space-y-1">
+              <div className="flex items-center gap-2">
+                <SheetTitle className="text-xl font-bold text-left">
+                    Detail Transaksi
+                </SheetTitle>
+                <Badge variant={statusVariant[transaction.status] || 'outline'} className={cn("text-xs", transaction.status === 'Diproses' ? 'border-primary text-primary' : '')}>
+                    {transaction.status}
+                </Badge>
+              </div>
+              <p className="font-mono text-xs text-muted-foreground">{transaction.transactionNumber || transaction.id}</p>
+              <div className="text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center sm:gap-2">
                   <div className="flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4" />
+                      <Calendar className="w-3.5 h-3.5" />
                       <span>{formatDate(transaction.date)}</span>
                   </div>
-                  <span className="text-xs">•</span>
+                  <span className="hidden sm:inline">•</span>
                   <div className="flex items-center gap-1.5">
-                      <User className="w-4 h-4" />
+                      <User className="w-3.5 h-3.5" />
                       <span>{transaction.customerName || 'Pelanggan Umum'}</span>
                   </div>
               </div>
@@ -263,8 +266,8 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
             {isPaymentPending && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="icon" disabled={isDeleting}>
-                      {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                  <Button variant="destructive" size="icon" className="h-9 w-9 flex-shrink-0" disabled={isDeleting}>
+                      {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 className="w-4 h-4" />}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -285,7 +288,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
 
         <div className="p-4 space-y-4 flex-grow overflow-y-auto bg-secondary/30">
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between p-4">
                     <CardTitle className="flex items-center gap-2 text-lg">
                         <Package className="w-5 h-5 text-primary" />
                         <span>Ringkasan Pesanan</span>
@@ -297,7 +300,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
                         </Button>
                     )}
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 p-4 pt-0">
                     {Array.isArray(transaction.items) && transaction.items.map((item, index) => {
                       const productInfo = products.find(p => p.id === item.productId);
                       const imageUrl = item.imageUrl || productInfo?.imageUrls?.[0] || 'https://placehold.co/64x64.png';
@@ -318,14 +321,13 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
                               <p className="text-sm text-muted-foreground">{formatCurrency(item.unitPrice)}</p>
                           </div>
                            {isPaymentPending ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 sm:gap-2">
                               <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleItemQuantityChange(item.productId, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
-                              <Input value={item.quantity} className="w-12 h-7 text-center" onChange={(e) => handleItemQuantityChange(item.productId, parseInt(e.target.value) || 0)} />
+                              <Input value={item.quantity} className="w-10 h-7 text-center" onChange={(e) => handleItemQuantityChange(item.productId, parseInt(e.target.value) || 0)} />
                               <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleItemQuantityChange(item.productId, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleItemQuantityChange(item.productId, 0)}><Trash2 className="h-4 w-4" /></Button>
                             </div>
                            ) : (
-                            <p className="font-semibold">{item.quantity} x {formatCurrency(item.unitPrice)}</p>
+                            <p className="font-semibold">{item.quantity} x</p>
                            )}
                       </div>
                       )
@@ -382,15 +384,15 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
             
             {isPaymentPending && (
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4">
                     <CardTitle className="flex items-center gap-2 text-lg">
                         <FileCog className="w-5 h-5 text-primary" />
                         <span>Pengaturan Akun Jurnal</span>
                     </CardTitle>
                 </CardHeader>
                   <CardContent className="p-4 pt-0 space-y-3">
-                      <div className="grid grid-cols-2 gap-4">
-                           <div className='space-y-1 col-span-2'>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <div className='space-y-1 col-span-1 md:col-span-2'>
                               <Label>Akun Pembayaran ({transaction.paymentMethod})</Label>
                               <Select value={paymentAccountId} onValueChange={setPaymentAccountId} disabled={isLoading}>
                                   <SelectTrigger><SelectValue placeholder="Pilih akun pembayaran..." /></SelectTrigger>
@@ -496,14 +498,20 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
         
         {isPaymentPending && (
           <SheetFooter className="p-4 border-t bg-background">
-            <div className="flex gap-4 w-full">
+            <div className="flex gap-2 w-full">
               <Button variant="outline" className="w-full h-12" onClick={handleSaveChanges} disabled={isSaving || isLoading}>
-                {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-                {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                <span className={cn(isMobile && "hidden")}>
+                  {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </span>
+                 <span className={cn(!isMobile && "hidden")}>Simpan</span>
               </Button>
               <Button className="w-full h-12" onClick={handlePayAndSave} disabled={isLoading || isSaving}>
-                {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5" />}
-                {isLoading ? 'Melunasi...' : 'Simpan & Lunasi'}
+                {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                <span className={cn(isMobile && "hidden")}>
+                  {isLoading ? 'Melunasi...' : 'Simpan & Lunasi'}
+                </span>
+                <span className={cn(!isMobile && "hidden")}>Lunasi</span>
               </Button>
             </div>
           </SheetFooter>
@@ -532,7 +540,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
                     {Object.keys(filteredProductsForDialog).length > 0 ? (
                         Object.entries(filteredProductsForDialog).map(([categoryName, productsInCategory]) => (
                             <div key={categoryName}>
-                                <h3 className="font-semibold text-md mb-2 sticky top-0 bg-content p-1 -mx-1">{categoryName}</h3>
+                                <h3 className="font-semibold text-md mb-2 sticky top-0 bg-background py-1 -mx-1 px-1">{categoryName}</h3>
                                 <div className="space-y-2">
                                     {productsInCategory.map(product => (
                                         <div 
@@ -569,6 +577,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
+
 
 
 
