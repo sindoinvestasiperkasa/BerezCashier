@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
@@ -254,7 +253,7 @@ interface AppContextType {
   removeFromWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
   addTransaction: (data: NewTransactionClientData) => Promise<{ success: boolean; transactionId: string }>;
-  updateTransactionStatus: (transactionId: string) => Promise<boolean>;
+  updateTransactionAndPay: (transaction: Transaction, discountAmount: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
   updateTransactionDiscount: (transactionId: string, discountAmount: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
@@ -788,26 +787,123 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, db, accounts, toast]);
 
-  const updateTransactionStatus = async (transactionId: string): Promise<boolean> => {
+  const updateTransactionAndPay = async (editedTransaction: Transaction, discountAmount: number, accountInfo: UpdatedAccountInfo): Promise<boolean> => {
     if (!user) {
         toast({ title: "Anda harus login", variant: "destructive" });
         return false;
     }
-    const txDocRef = doc(db, 'transactions', transactionId);
+    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+    const txDocRef = doc(db, 'transactions', editedTransaction.id);
+
     try {
-        await updateDoc(txDocRef, {
-            status: 'Lunas',
-            paymentStatus: 'Berhasil'
+        await runTransaction(db, async (transaction) => {
+            const txSnap = await transaction.get(txDocRef);
+            if (!txSnap.exists()) throw new Error("Transaksi tidak ditemukan.");
+
+            const originalTxData = txSnap.data() as Transaction;
+            const warehouseId = originalTxData.warehouseId;
+            if (!warehouseId) throw new Error("Gudang asal transaksi tidak ditemukan.");
+            
+            const physicalItems = editedTransaction.items.filter(item => item.productType === 'Barang');
+
+            // --- Recalculate COGS and Update Stock for the new item set ---
+            let totalCogs = 0;
+            const itemsForTransaction: SaleItem[] = [];
+
+            for (const item of physicalItems) {
+                const lotsQuery = query(
+                    collection(db, 'stockLots'), where('idUMKM', '==', idUMKM),
+                    where('warehouseId', '==', warehouseId), where('productId', '==', item.productId)
+                );
+                
+                const lotsSnap = await getDocs(lotsQuery); // Use getDocs, not transaction.get
+                const availableLots = lotsSnap.docs
+                    .map(d => ({ id: d.id, ...d.data(), purchaseDate: (d.data().purchaseDate as Timestamp).toDate() } as StockLot))
+                    .filter(lot => lot.remainingQuantity > 0)
+                    .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
+
+                const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+                if (totalStockForProduct < item.quantity) throw new Error(`Stok tidak mencukupi untuk ${item.productName}.`);
+
+                let quantityToDeduct = item.quantity;
+                let itemCogs = 0;
+                for (const lot of availableLots) {
+                    if (quantityToDeduct <= 0) break;
+                    
+                    const lotRef = doc(db, 'stockLots', lot.id);
+                    if (lot.remainingQuantity <= 0) continue;
+                    if (!lot.purchasePrice || lot.purchasePrice <= 0) throw new Error(`Lot stok ${lot.id} untuk produk ${item.productName} tidak memiliki harga beli yang valid.`);
+                    
+                    const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+                    itemCogs += quantityFromThisLot * lot.purchasePrice;
+                    
+                    transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
+                    quantityToDeduct -= quantityFromThisLot;
+                }
+                itemsForTransaction.push({ ...item, cogs: itemCogs });
+                totalCogs += itemCogs;
+            }
+            
+            editedTransaction.items.filter(item => item.productType === 'Jasa').forEach(item => {
+                itemsForTransaction.push({ ...item, cogs: 0 });
+            });
+
+
+            // --- Rebuild the transaction document with updated values ---
+            const findDefaultPaymentAccount = () => accounts.find(a => a.name.toLowerCase().includes('kas') || a.name.toLowerCase().includes('bank'))?.id;
+
+            const finalAccountInfo = {
+                isPkp: accountInfo.isPkp ?? originalTxData.isPkp,
+                paymentAccountId: accountInfo.paymentAccountId ?? originalTxData.paymentAccountId ?? findDefaultPaymentAccount(),
+                salesAccountId: accountInfo.salesAccountId ?? originalTxData.salesAccountId,
+                discountAccountId: accountInfo.discountAccountId ?? originalTxData.discountAccountId,
+                cogsAccountId: accountInfo.cogsAccountId ?? originalTxData.cogsAccountId,
+                inventoryAccountId: accountInfo.inventoryAccountId ?? originalTxData.inventoryAccountId,
+                taxAccountId: accountInfo.taxAccountId ?? originalTxData.taxAccountId,
+            };
+
+            const asNumber = (n: any) => (typeof n === 'number' && !Number.isNaN(n)) ? n : 0;
+            
+            const subtotal = asNumber(editedTransaction.items?.reduce((sum, item) => sum + asNumber(item.unitPrice) * asNumber(item.quantity), 0));
+            const serviceFee = asNumber(originalTxData.serviceFee);
+            
+            const subtotalAfterDiscount = subtotal - asNumber(discountAmount);
+            const taxAmount = finalAccountInfo.isPkp ? subtotalAfterDiscount * 0.11 : 0;
+            const total = subtotalAfterDiscount + taxAmount + serviceFee;
+    
+            const serviceFeeAccount = accounts.find(a => a.category === 'Liabilitas' && a.name.toLowerCase().includes('utang biaya layanan berez'));
+            
+            const lines = [
+              { accountId: finalAccountInfo.paymentAccountId!,  debit: asNumber(total),     credit: 0,                description: `Penerimaan Penjualan Kasir via ${originalTxData.paymentMethod}` },
+              { accountId: finalAccountInfo.salesAccountId!,    debit: 0,                   credit: asNumber(subtotal), description: 'Pendapatan Penjualan dari Kasir' },
+              { accountId: finalAccountInfo.cogsAccountId!,     debit: asNumber(totalCogs), credit: 0,                description: 'HPP Penjualan dari Kasir' },
+              { accountId: finalAccountInfo.inventoryAccountId!,debit: 0,                   credit: asNumber(totalCogs), description: 'Pengurangan Persediaan dari Kasir' },
+            ];
+            
+            if (asNumber(discountAmount) > 0 && finalAccountInfo.discountAccountId) { lines.push({ accountId: finalAccountInfo.discountAccountId, debit: asNumber(discountAmount), credit: 0, description: 'Potongan Penjualan Kasir (Diperbarui)' }); }
+            if (finalAccountInfo.isPkp && taxAmount > 0 && finalAccountInfo.taxAccountId) { lines.push({ accountId: finalAccountInfo.taxAccountId, debit: 0, credit: asNumber(taxAmount), description: 'PPN Keluaran dari Penjualan Kasir (Diperbarui)' }); }
+            if (serviceFee > 0 && serviceFeeAccount) { lines.push({ accountId: serviceFeeAccount.id, debit: 0, credit: asNumber(serviceFee), description: 'Utang Biaya Layanan Aplikasi' }); }
+
+            const dataToUpdateRaw = {
+              ...finalAccountInfo,
+              items: itemsForTransaction,
+              subtotal, discountAmount, taxAmount, total,
+              status: 'Lunas', paymentStatus: 'Berhasil', amount: total, paidAmount: total,
+              lines,
+            };
+            
+            transaction.update(txDocRef, removeUndefinedDeep(dataToUpdateRaw));
         });
-        toast({ title: 'Sukses', description: 'Status transaksi berhasil diperbarui.' });
-        // The onSnapshot listener will automatically update the local state.
+
+        toast({ title: 'Sukses', description: 'Transaksi berhasil dilunasi dan diperbarui.' });
         return true;
-    } catch (error) {
-        console.error("Error updating transaction status:", error);
-        toast({ title: 'Gagal', description: 'Gagal memperbarui status transaksi.', variant: 'destructive' });
+    } catch (error: any) {
+        console.error("Error updating transaction:", error);
+        toast({ title: 'Gagal', description: error.message || 'Gagal memperbarui transaksi.', variant: 'destructive' });
         return false;
     }
   };
+
 
   const updateTransactionDiscount = async (transactionId: string, discountAmount: number, accountInfo: UpdatedAccountInfo): Promise<boolean> => {
     if (!user) {
@@ -1037,7 +1133,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         removeFromWishlist, 
         isInWishlist,
         addTransaction,
-        updateTransactionStatus,
+        updateTransactionAndPay,
         updateTransactionDiscount,
         clearCart,
         addCustomer,
@@ -1060,7 +1156,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    
-
-    
