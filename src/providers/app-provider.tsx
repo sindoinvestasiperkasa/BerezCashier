@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
@@ -241,6 +242,7 @@ interface AppContextType {
   branches: Branch[];
   warehouses: Warehouse[];
   productUnits: ProductUnit[];
+  productCategories?: ProductCategory[];
   filteredWarehouses: Warehouse[];
   selectedBranchId?: string;
   setSelectedBranchId: (id: string) => void;
@@ -312,6 +314,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
+  const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
   
@@ -425,6 +428,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setBranches([]);
         setWarehouses([]);
         setProductUnits([]);
+        setProductCategories([]);
         setStockLots([]);
         return;
     };
@@ -512,6 +516,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const unitsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProductUnit));
       setProductUnits(unitsData);
     });
+    
+    const categoriesQuery = query(collection(db, "productCategories"), where("idUMKM", "==", idUMKM));
+    const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
+        const categoriesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProductCategory));
+        setProductCategories(categoriesData);
+    });
 
 
     return () => {
@@ -523,6 +533,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         unsubBranches();
         unsubWarehouses();
         unsubUnits();
+        unsubCategories();
     };
   }, [user, db, selectedWarehouseId]); // Added selectedWarehouseId dependency
 
@@ -801,10 +812,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             if (!txSnap.exists()) throw new Error("Transaksi tidak ditemukan.");
 
             const originalTxData = txSnap.data() as Transaction;
+            const originalItems = originalTxData.items.filter(item => item.productType === 'Barang');
             const warehouseId = originalTxData.warehouseId;
             if (!warehouseId) throw new Error("Gudang asal transaksi tidak ditemukan.");
             
+            // --- Step 1: Temporarily "return" the stock from the original transaction items ---
+            // This is a conceptual step. We will calculate the *net change* in stock.
+            const originalItemQuantities = new Map<string, number>();
+            originalItems.forEach(item => {
+                originalItemQuantities.set(item.productId, item.quantity);
+            });
+
+            // --- Step 2: Calculate net change and validate new stock requirements ---
+            const netStockChanges = new Map<string, number>();
             const physicalItems = editedTransaction.items.filter(item => item.productType === 'Barang');
+
+            physicalItems.forEach(item => {
+                const originalQty = originalItemQuantities.get(item.productId) || 0;
+                const change = item.quantity - originalQty;
+                netStockChanges.set(item.productId, (netStockChanges.get(item.productId) || 0) + change);
+            });
+
+            originalItemQuantities.forEach((originalQty, productId) => {
+                if (!physicalItems.some(item => item.productId === productId)) {
+                    // Item was removed
+                    netStockChanges.set(productId, (netStockChanges.get(productId) || 0) - originalQty);
+                }
+            });
+
 
             // --- Recalculate COGS and Update Stock for the new item set ---
             let totalCogs = 0;
@@ -817,17 +852,43 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 );
                 
                 const lotsSnap = await getDocs(lotsQuery); // Use getDocs, not transaction.get
-                const availableLots = lotsSnap.docs
-                    .map(d => ({ id: d.id, ...d.data(), purchaseDate: (d.data().purchaseDate as Timestamp).toDate() } as StockLot))
-                    .filter(lot => lot.remainingQuantity > 0)
-                    .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
+                
+                // For validation, we consider the stock that would be "returned" from the original sale.
+                let totalStockForProduct = 0;
+                const availableLotsForValidation = lotsSnap.docs
+                    .map(d => ({ id: d.id, ...d.data()} as StockLot))
+                
+                availableLotsForValidation.forEach(lot => {
+                    totalStockForProduct += lot.remainingQuantity;
+                });
+                
+                // Add back the stock from the original transaction to get the "true" available stock before this update.
+                totalStockForProduct += originalItemQuantities.get(item.productId) || 0;
 
-                const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
-                if (totalStockForProduct < item.quantity) throw new Error(`Stok tidak mencukupi untuk ${item.productName}.`);
+                if (totalStockForProduct < item.quantity) {
+                    throw new Error(`Stok tidak mencukupi untuk ${item.productName}. Stok tersedia saat ini: ${totalStockForProduct - (originalItemQuantities.get(item.productId) || 0)}, dibutuhkan: ${item.quantity}.`);
+                }
+
+
+                // For COGS and deduction, sort the lots for FIFO
+                 const availableLots = lotsSnap.docs
+                    .map(d => ({ id: d.id, ...d.data(), purchaseDate: (d.data().purchaseDate as Timestamp).toDate() } as StockLot))
+                    .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
 
                 let quantityToDeduct = item.quantity;
                 let itemCogs = 0;
-                for (const lot of availableLots) {
+                
+                // First, conceptually "return" the stock for FIFO calculation
+                let tempLots = JSON.parse(JSON.stringify(availableLots)); // Deep copy to avoid side effects
+                const originalQty = originalItemQuantities.get(item.productId) || 0;
+                
+                // Find lots to return stock to, in reverse order of purchase (LIFO for returns)
+                for (let i = tempLots.length - 1; i >= 0; i--) {
+                    let returnedQty = Math.min(originalQty, tempLots[i].initialQuantity - tempLots[i].remainingQuantity);
+                    tempLots[i].remainingQuantity += returnedQty;
+                }
+
+                for (const lot of tempLots) {
                     if (quantityToDeduct <= 0) break;
                     
                     const lotRef = doc(db, 'stockLots', lot.id);
@@ -837,7 +898,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
                     itemCogs += quantityFromThisLot * lot.purchasePrice;
                     
-                    transaction.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
+                    const actualLotDoc = availableLots.find(l => l.id === lot.id)!;
+                    transaction.update(lotRef, { remainingQuantity: actualLotDoc.remainingQuantity - quantityFromThisLot });
                     quantityToDeduct -= quantityFromThisLot;
                 }
                 itemsForTransaction.push({ ...item, cogs: itemCogs });
@@ -1121,6 +1183,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         branches,
         warehouses,
         productUnits,
+        productCategories,
         filteredWarehouses,
         selectedBranchId,
         setSelectedBranchId,
