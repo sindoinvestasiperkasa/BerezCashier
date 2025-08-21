@@ -799,87 +799,97 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, db, accounts, toast]);
 
-  const handleStockUpdateInTransaction = async (
-    firestoreTransaction: FirebaseFirestore.Transaction,
-    txId: string,
-    idUMKM: string
-  ): Promise<{ updatedItems: SaleItem[], totalCogs: number, batch: FirebaseFirestore.WriteBatch }> => {
-    
-    const txDocRef = doc(db, 'transactions', txId);
-    const txSnap = await firestoreTransaction.get(txDocRef);
-    if (!txSnap.exists()) throw new Error("Transaksi tidak ditemukan.");
-    const txData = txSnap.data() as Transaction;
-    
-    const originalItems = txData.items.filter(item => item.productType === 'Barang');
-    const warehouseId = txData.warehouseId;
-    if (!warehouseId) throw new Error("Gudang asal transaksi tidak ditemukan.");
-  
-    const batch = writeBatch(db);
-    const stockLotCache = new Map<string, StockLot[]>();
-    
-    // --- Step 1: Return original stock to lots ---
-    for (const item of originalItems) {
-      const lotsQuery = query(
-        collection(db, 'stockLots'), where('idUMKM', '==', idUMKM),
-        where('warehouseId', '==', warehouseId), where('productId', '==', item.productId)
-      );
-      const lotsSnapshot = await getDocs(lotsQuery);
-      const lots = lotsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as StockLot)).sort((a,b) => (a.purchaseDate as any).seconds - (b.purchaseDate as any).seconds);
-      stockLotCache.set(item.productId, lots);
-      
-      let returnedQty = item.quantity;
-      for (const lot of lots) {
-          if (returnedQty <= 0) break;
-          const lotRef = doc(db, 'stockLots', lot.id);
-          const maxReturn = lot.initialQuantity - lot.remainingQuantity;
-          const qtyToReturn = Math.min(returnedQty, maxReturn);
-          batch.update(lotRef, { remainingQuantity: lot.remainingQuantity + qtyToReturn });
-          returnedQty -= qtyToReturn;
-      }
-    }
-  
-    // --- Step 2: Deduct new stock amounts and calculate COGS ---
-    let totalCogs = 0;
-    const updatedItems: SaleItem[] = [];
-  
-    for (const item of txData.items) {
-      if (item.productType === 'Jasa') {
-        updatedItems.push({ ...item, cogs: 0 });
-        continue;
-      }
-  
-      const availableLots = stockLotCache.get(item.productId) || [];
-      let quantityToDeduct = item.quantity;
-      let itemCogs = 0;
-      
-      const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
-      if (totalStockForProduct < quantityToDeduct) throw new Error(`Stok tidak mencukupi untuk ${item.productName}.`);
-  
-      for (const lot of availableLots) {
-        if (quantityToDeduct <= 0) break;
-        const lotRef = doc(db, 'stockLots', lot.id);
-        const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
-        itemCogs += quantityFromThisLot * (lot.purchasePrice || 0);
-        batch.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
-        quantityToDeduct -= quantityFromThisLot;
-      }
-      updatedItems.push({ ...item, cogs: itemCogs });
-      totalCogs += itemCogs;
-    }
-    
-    return { updatedItems, totalCogs, batch };
-  };
-
   const updateTransactionOnly = async (editedTransaction: Transaction, discountAmount: number, settings: { isPkp?: boolean }): Promise<boolean> => {
     if (!user) {
         toast({ title: "Anda harus login", variant: "destructive" });
         return false;
     }
+    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+    if (!idUMKM) return false;
+
     const txDocRef = doc(db, 'transactions', editedTransaction.id);
 
     try {
-        const { updatedItems, totalCogs, batch } = await handleStockUpdateInTransaction(runTransaction, editedTransaction.id, user.idUMKM || user.uid);
+        const txSnap = await getDoc(txDocRef);
+        if (!txSnap.exists()) throw new Error("Transaksi tidak ditemukan.");
         
+        const originalTxData = txSnap.data() as Transaction;
+        const warehouseId = originalTxData.warehouseId;
+        if (!warehouseId) throw new Error("Gudang asal transaksi tidak ditemukan.");
+        
+        const batch = writeBatch(db);
+        
+        // Fetch all relevant stock lots for all items at once.
+        const productIds = [...new Set([
+            ...originalTxData.items.filter(i => i.productType === 'Barang').map(i => i.productId),
+            ...editedTransaction.items.filter(i => i.productType === 'Barang').map(i => i.productId)
+        ])];
+
+        const lotsSnap = productIds.length > 0 ? await getDocs(
+            query(collection(db, 'stockLots'), where('productId', 'in', productIds), where('warehouseId', '==', warehouseId))
+        ) : { docs: [] };
+        
+        const currentLots = new Map<string, StockLot[]>();
+        lotsSnap.docs.forEach(d => {
+            const lot = { id: d.id, ...d.data() } as StockLot;
+            const lotsForProduct = currentLots.get(lot.productId) || [];
+            lotsForProduct.push(lot);
+            currentLots.set(lot.productId, lotsForProduct);
+        });
+
+        // 1. Revert stock from original transaction
+        for (const item of originalTxData.items.filter(i => i.productType === 'Barang')) {
+            const lotRef = doc(db, 'stockLots', 'dummy'); // We don't update here, just find
+             for (const lot of currentLots.get(item.productId) || []) {
+                if(lot.productId === item.productId){
+                    const lotRefUpdate = doc(db, 'stockLots', lot.id);
+                    batch.update(lotRefUpdate, {
+                        remainingQuantity: lot.remainingQuantity + item.quantity
+                    });
+                    break;
+                }
+            }
+        }
+        
+        // 2. Recalculate COGS and deduct new stock for the edited transaction
+        let totalCogs = 0;
+        const updatedItems: SaleItem[] = [];
+
+        for (const item of editedTransaction.items) {
+            if (item.productType === 'Jasa') {
+                updatedItems.push({ ...item, cogs: 0 });
+                continue;
+            }
+
+            const availableLots = (currentLots.get(item.productId) || [])
+                .map(lot => {
+                    const originalItem = originalTxData.items.find(i => i.productId === lot.productId);
+                    return { ...lot, remainingQuantity: lot.remainingQuantity + (originalItem?.quantity || 0) };
+                })
+                .filter(lot => lot.remainingQuantity > 0)
+                .sort((a,b) => (a.purchaseDate as any).seconds - (b.purchaseDate as any).seconds);
+            
+            let quantityToDeduct = item.quantity;
+            let itemCogs = 0;
+            
+            const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+            if (totalStockForProduct < quantityToDeduct) {
+                throw new Error(`Stok tidak mencukupi untuk ${item.productName}. Stok tersedia: ${totalStockForProduct}`);
+            }
+
+            for (const lot of availableLots) {
+                if (quantityToDeduct <= 0) break;
+                const lotRef = doc(db, 'stockLots', lot.id);
+                const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+                itemCogs += quantityFromThisLot * (lot.purchasePrice || 0);
+                
+                batch.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
+                quantityToDeduct -= quantityFromThisLot;
+            }
+            updatedItems.push({ ...item, cogs: itemCogs });
+            totalCogs += itemCogs;
+        }
+
         const subtotal = editedTransaction.items?.reduce((sum, item) => sum + asNumber(item.unitPrice) * asNumber(item.quantity), 0);
         const serviceFee = asNumber(editedTransaction.serviceFee);
         const subtotalAfterDiscount = subtotal - asNumber(discountAmount);
@@ -891,7 +901,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             subtotal, discountAmount, taxAmount, total,
             isPkp: settings.isPkp,
             amount: total,
-            // Don't update lines, status, or paymentStatus
+            // Do not update lines, status, or paymentStatus here
         };
 
         batch.update(txDocRef, removeUndefinedDeep(dataToUpdate));
@@ -945,7 +955,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 const availableLots = lotsSnap.docs
                     .map(d => ({ id: d.id, ...d.data(), purchaseDate: (d.data().purchaseDate as Timestamp).toDate() } as StockLot))
                     .sort((a, b) => a.purchaseDate.getTime() - b.purchaseDate.getTime());
-
+                
                 let totalStockForProduct = 0;
                 availableLots.forEach(lot => {
                     totalStockForProduct += lot.remainingQuantity;
@@ -955,12 +965,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 if (totalStockForProduct < item.quantity) {
                     throw new Error(`Stok tidak mencukupi untuk ${item.productName}. Sisa stok: ${totalStockForProduct - (originalItemQuantities.get(item.productId) || 0)}.`);
                 }
-
+                
                 // --- Deduct Stock ---
                 let quantityToDeduct = item.quantity;
                 let itemCogs = 0;
                 
-                // Conceptually "return" stock first for accurate FIFO/COGS
                 const tempLots = JSON.parse(JSON.stringify(availableLots));
                 const originalQty = originalItemQuantities.get(item.productId) || 0;
                 let tempReturned = originalQty;
