@@ -349,6 +349,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return locales[locale][key] || key;
   }, [locale]);
 
+  // Load cart from localStorage on initial render
+  useEffect(() => {
+    try {
+        const savedCart = localStorage.getItem('activeCart');
+        if (savedCart) {
+            setCart(JSON.parse(savedCart));
+        }
+    } catch (error) {
+        console.error("Failed to parse cart from localStorage", error);
+        localStorage.removeItem('activeCart');
+    }
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+      try {
+          if (cart.length > 0) {
+              localStorage.setItem('activeCart', JSON.stringify(cart));
+          } else {
+              // If cart is empty, remove it from storage to keep it clean
+              localStorage.removeItem('activeCart');
+          }
+      } catch (error) {
+          console.error("Failed to save cart to localStorage", error);
+      }
+  }, [cart]);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1451,3 +1478,4 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     
 
     
+
