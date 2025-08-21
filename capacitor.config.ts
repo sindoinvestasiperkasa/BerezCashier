@@ -1,3 +1,4 @@
+
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -5,7 +6,7 @@ const config: CapacitorConfig = {
   appName: 'Berez Cashier',
   webDir: 'out',
   server: {
-    allowNavigation: ["placehold.co"]
+    allowNavigation: ["placehold.co", "nominatim.openstreetmap.org"]
   },
   plugins: {
     StatusBar: {
