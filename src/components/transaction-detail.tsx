@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -11,7 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, HandCoins, FileCog, Banknote, PlusCircle, Trash2, Minus, Plus } from "lucide-react";
+import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, HandCoins, FileCog, Banknote, PlusCircle, Trash2, Minus, Plus, Search } from "lucide-react";
 import type { Transaction, SaleItem } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,7 @@ const formatDate = (date: Date) => {
 
 
 export default function TransactionDetail({ transaction: initialTransaction, products, isOpen, onClose }: TransactionDetailProps) {
-  const { updateTransactionAndPay, accounts, products: allProducts } = useApp();
+  const { updateTransactionAndPay, accounts, products: allProducts, productCategories } = useApp();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
@@ -72,6 +73,9 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
   const [cogsAccountId, setCogsAccountId] = useState<string | undefined>();
   const [inventoryAccountId, setInventoryAccountId] = useState<string | undefined>();
   const [taxAccountId, setTaxAccountId] = useState<string | undefined>();
+
+  // State for Add Item Dialog
+  const [addItemSearch, setAddItemSearch] = useState("");
   
   // Populate state when transaction changes
   useEffect(() => {
@@ -162,6 +166,25 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     });
     toast({ title: "Item Ditambahkan", description: `${product.name} telah ditambahkan ke pesanan.` });
   };
+  
+  const filteredProductsForDialog = useMemo(() => {
+      const productsWithCategory = allProducts
+        .filter(p => p.productSubType !== 'Bahan Baku' && p.name.toLowerCase().includes(addItemSearch.toLowerCase()))
+        .map(p => {
+            const category = productCategories.find(c => c.id === p.categoryId);
+            const categoryName = (typeof category?.name === 'object' ? category.name.id : category?.name) || 'Lain-lain';
+            return { ...p, categoryName };
+        });
+
+      return productsWithCategory.reduce((acc, product) => {
+          const { categoryName } = product;
+          if (!acc[categoryName]) {
+              acc[categoryName] = [];
+          }
+          acc[categoryName].push(product);
+          return acc;
+      }, {} as Record<string, Product[]>);
+  }, [allProducts, productCategories, addItemSearch]);
 
 
   if (!transaction) {
@@ -438,37 +461,55 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
 
     {/* Add Item Dialog */}
     <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md flex flex-col h-[80vh]">
             <DialogHeader>
                 <DialogTitle>Tambah Item ke Pesanan</DialogTitle>
                 <DialogDescription>Pilih produk untuk ditambahkan ke transaksi ini.</DialogDescription>
             </DialogHeader>
-            <ScrollArea className="max-h-[60vh] -mx-6">
-                <div className="px-6 py-4 space-y-2">
-                    {allProducts
-                        .filter(p => p.productSubType !== 'Bahan Baku')
-                        .map(product => (
-                        <div 
-                            key={product.id} 
-                            className="flex items-center gap-4 p-2 rounded-lg hover:bg-secondary cursor-pointer"
-                            onClick={() => handleAddNewItem(product)}
-                        >
-                            <Image
-                                src={product.imageUrls?.[0] || 'https://placehold.co/64x64.png'}
-                                alt={product.name}
-                                width={48}
-                                height={48}
-                                className="rounded-md object-cover bg-muted"
-                            />
-                            <div className="flex-grow">
-                                <p className="font-semibold">{product.name}</p>
-                                <p className="text-sm text-primary">{formatCurrency(product.price)}</p>
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Cari produk..."
+                    className="pl-10"
+                    value={addItemSearch}
+                    onChange={(e) => setAddItemSearch(e.target.value)}
+                />
+            </div>
+            <ScrollArea className="flex-grow -mx-6">
+                <div className="px-6 py-4 space-y-4">
+                    {Object.keys(filteredProductsForDialog).length > 0 ? (
+                        Object.entries(filteredProductsForDialog).map(([categoryName, productsInCategory]) => (
+                            <div key={categoryName}>
+                                <h3 className="font-semibold text-md mb-2 sticky top-0 bg-content p-1 -mx-1">{categoryName}</h3>
+                                <div className="space-y-2">
+                                    {productsInCategory.map(product => (
+                                        <div 
+                                            key={product.id} 
+                                            className="flex items-center gap-4 p-2 rounded-lg hover:bg-secondary cursor-pointer"
+                                            onClick={() => handleAddNewItem(product)}
+                                        >
+                                            <Image
+                                                src={product.imageUrls?.[0] || 'https://placehold.co/64x64.png'}
+                                                alt={product.name}
+                                                width={48}
+                                                height={48}
+                                                className="rounded-md object-cover bg-muted"
+                                            />
+                                            <div className="flex-grow">
+                                                <p className="font-semibold">{product.name}</p>
+                                                <p className="text-sm text-primary">{formatCurrency(product.price)}</p>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <PlusCircle className="h-5 w-5 text-muted-foreground" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <Button variant="ghost" size="icon">
-                                <PlusCircle className="h-5 w-5 text-muted-foreground" />
-                            </Button>
-                        </div>
-                    ))}
+                        ))
+                    ) : (
+                        <p className="text-center text-muted-foreground pt-10">Produk tidak ditemukan.</p>
+                    )}
                 </div>
             </ScrollArea>
         </DialogContent>
@@ -476,3 +517,4 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
+
