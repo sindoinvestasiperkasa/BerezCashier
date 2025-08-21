@@ -752,15 +752,11 @@ export default function CartPage({ setView }: CartPageProps) {
                 </div>
 
                 <div className="flex gap-2">
-                    <Button variant="outline" className="h-12 text-md font-bold" onClick={handleHoldCart} disabled={cart.length === 0 || isProcessing || isSaving}>
-                        <PauseCircle className="mr-2 h-5 w-5" />
-                        Tahan
-                    </Button>
-                    <Button variant="outline" className="h-12 text-md font-bold" onClick={handleSaveAsPending} disabled={cart.length === 0 || isProcessing || isSaving}>
+                    <Button variant="outline" className="w-full h-12 text-md font-bold" onClick={handleSaveAsPending} disabled={cart.length === 0 || isProcessing || isSaving}>
                         {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
                         {isSaving ? 'Menyimpan...' : 'Simpan'}
                     </Button>
-                    <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handleOpenPaymentDialog} disabled={cart.length === 0 || isProcessing || isSaving}>
+                    <Button className="w-full h-12 text-lg font-bold" onClick={handleOpenPaymentDialog} disabled={cart.length === 0 || isProcessing || isSaving}>
                         {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wallet className="mr-2 h-5 w-5" />}
                         {isProcessing ? 'Memproses...' : 'Bayar'}
                     </Button>
