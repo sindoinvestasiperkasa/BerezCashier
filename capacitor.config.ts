@@ -9,6 +9,16 @@ const config: CapacitorConfig = {
     allowNavigation: ["placehold.co", "nominatim.openstreetmap.org"]
   },
   plugins: {
+    SplashScreen: {
+      launchShowDuration: 3000,
+      launchAutoHide: true,
+      backgroundColor: "#ffffffff",
+      androidSplashResourceName: "splash",
+      androidScaleType: "CENTER_CROP",
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
     StatusBar: {
       overlaysWebView: true,
       style: "DARK",
