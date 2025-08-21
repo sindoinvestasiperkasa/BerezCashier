@@ -4,7 +4,7 @@
 import React, { createContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch, runTransaction, serverTimestamp, documentId, orderBy } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch, runTransaction, serverTimestamp, documentId, orderBy, deleteDoc } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 
@@ -264,6 +264,7 @@ interface AppContextType {
   updateTransactionAndPay: (transaction: Transaction, discountAmount: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
   updateTransactionOnly: (transaction: Transaction, discountAmount: number, settings: { isPkp?: boolean }) => Promise<boolean>;
   updateTransactionDiscount: (transactionId: string, discountAmount: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
+  deleteTransaction: (transactionId: string) => Promise<boolean>;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
@@ -844,6 +845,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 itemsForTransaction.push({
                     productId: item.id, productName: item.name, productType: item.productType,
                     quantity: item.quantity, unitPrice: item.price, cogs: 0,
+                    imageUrl: item.imageUrls?.[0] || item.imageUrl,
                 });
             }
 
@@ -892,76 +894,51 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const warehouseId = originalTx.warehouseId;
         if (!warehouseId) throw new Error("Gudang asal transaksi tidak ditemukan.");
         
-        // 1. Calculate deltas for each product (ONLY for goods)
-        const itemDeltas = new Map<string, number>();
-        originalTx.items
-            .filter(item => item.productType === 'Barang')
-            .forEach(item => {
-                itemDeltas.set(item.productId, (itemDeltas.get(item.productId) || 0) - item.quantity);
-            });
-        editedTransaction.items
-            .filter(item => item.productType === 'Barang')
-            .forEach(item => {
-                itemDeltas.set(item.productId, (itemDeltas.get(item.productId) || 0) + item.quantity);
-            });
-
         const batch = writeBatch(db);
-
-        // 2. Return stock first for all items with decreased quantity or removed items
-        for (const [productId, delta] of itemDeltas.entries()) {
-          if (delta >= 0) continue;
-          
-          let quantityToReturn = Math.abs(delta);
-          const lotsQuery = query(collection(db, "stockLots"), where("productId", "==", productId), where("warehouseId", "==", warehouseId), orderBy("purchaseDate", "desc"));
-          const lotsSnap = await getDocs(lotsQuery);
-          
-          let returned = 0;
-          for (const lotDoc of lotsSnap.docs) {
-              if (returned >= quantityToReturn) break;
-              const lotData = lotDoc.data() as StockLot;
-              const canReturnToLot = lotData.initialQuantity - lotData.remainingQuantity;
-              const amountToReturn = Math.min(quantityToReturn - returned, canReturnToLot);
-              
-              if(amountToReturn > 0) {
-                 const lotRef = doc(db, 'stockLots', lotDoc.id);
-                 batch.update(lotRef, { remainingQuantity: lotData.remainingQuantity + amountToReturn });
-                 returned += amountToReturn;
-              }
-          }
-          if (returned < quantityToReturn) {
-              console.warn(`Tidak dapat mengembalikan seluruh stok untuk produk ${productId}. Stok mungkin tidak akurat.`);
-          }
-        }
         
-        // 3. Validate stock for items with increased quantity and deduct from lots
-        for (const [productId, delta] of itemDeltas.entries()) {
-            if (delta <= 0) continue; 
+        const stockDeltas = new Map<string, number>();
+        editedTransaction.items.filter(i => i.productType === 'Barang').forEach(i => stockDeltas.set(i.productId, (stockDeltas.get(i.productId) || 0) + i.quantity));
+        originalTx.items.filter(i => i.productType === 'Barang').forEach(i => stockDeltas.set(i.productId, (stockDeltas.get(i.productId) || 0) - i.quantity));
+
+        for (const [productId, delta] of stockDeltas.entries()) {
+            if (delta === 0) continue;
             
             const lotsQuery = query(collection(db, "stockLots"), where("productId", "==", productId), where("warehouseId", "==", warehouseId));
             const lotsSnap = await getDocs(lotsQuery);
             const availableLots = lotsSnap.docs
                 .map(d => ({ id: d.id, ...d.data() } as StockLot))
-                .filter(lot => lot.remainingQuantity > 0)
                 .sort((a, b) => (a.purchaseDate as any).seconds - (b.purchaseDate as any).seconds);
-            
-            const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
-            const item = editedTransaction.items.find(i => i.productId === productId);
-            if (totalStockForProduct < delta) {
-                throw new Error(`Stok tidak cukup untuk ${item?.productName || productId}. Dibutuhkan tambahan: ${delta}, Tersedia: ${totalStockForProduct}`);
-            }
 
-            // Deduct stock for positive deltas
-            let quantityToDeduct = delta;
-            for (const lot of availableLots) {
-                if (quantityToDeduct <= 0) break;
-                const lotRef = doc(db, 'stockLots', lot.id);
-                const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
-                batch.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
-                quantityToDeduct -= quantityFromThisLot;
+            let amountToChange = Math.abs(delta);
+            
+            if (delta > 0) { // Deduct stock
+                const totalStockForProduct = availableLots.filter(l => l.remainingQuantity > 0).reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+                if (totalStockForProduct < delta) {
+                    throw new Error(`Stok tidak cukup untuk ${editedTransaction.items.find(i=>i.productId === productId)?.productName}. Dibutuhkan tambahan: ${delta}, Tersedia: ${totalStockForProduct}`);
+                }
+                const lotsToDeductFrom = availableLots.filter(l => l.remainingQuantity > 0);
+                for (const lot of lotsToDeductFrom) {
+                    if (amountToChange <= 0) break;
+                    const lotRef = doc(db, 'stockLots', lot.id);
+                    const quantityFromThisLot = Math.min(amountToChange, lot.remainingQuantity);
+                    batch.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
+                    amountToChange -= quantityFromThisLot;
+                }
+            } else { // Return stock
+                const lotsToReturnTo = availableLots.sort((a, b) => (b.purchaseDate as any).seconds - (a.purchaseDate as any).seconds); // LIFO for returns
+                for (const lot of lotsToReturnTo) {
+                    if (amountToChange <= 0) break;
+                    const lotRef = doc(db, 'stockLots', lot.id);
+                    const canReturnToLot = lot.initialQuantity - lot.remainingQuantity;
+                    const amountToReturn = Math.min(amountToChange, canReturnToLot);
+                    if (amountToReturn > 0) {
+                        batch.update(lotRef, { remainingQuantity: lot.remainingQuantity + amountToReturn });
+                        amountToChange -= amountToReturn;
+                    }
+                }
             }
         }
 
-        // 4. Recalculate totals
         const subtotal = editedTransaction.items?.reduce((sum, item) => sum + asNumber(item.unitPrice) * asNumber(item.quantity), 0);
         const serviceFee = asNumber(editedTransaction.serviceFee);
         const subtotalAfterDiscount = subtotal - asNumber(discountAmount);
@@ -969,11 +946,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const total = subtotalAfterDiscount + taxAmount + serviceFee;
         
         const dataToUpdate = {
-            items: editedTransaction.items,
+            items: editedTransaction.items.map(item => ({...item, imageUrl: item.imageUrls?.[0] || item.imageUrl})),
             subtotal, discountAmount, taxAmount, total,
             isPkp: settings.isPkp,
             amount: total,
-            date: new Date(), // Update the date to reflect the edit time
+            date: new Date(),
         };
 
         batch.update(txDocRef, removeUndefinedDeep(dataToUpdate));
@@ -1022,6 +999,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const allProductIds = new Set([...originalItemQuantities.keys(), ...editedTransaction.items.map(i => i.productId)]);
 
             for (const productId of allProductIds) {
+                if (!productId) continue;
                 const lotsQuery = query(collection(db, 'stockLots'), where('idUMKM', '==', idUMKM), where('warehouseId', '==', warehouseId), where('productId', '==', productId));
                 const lotsSnap = await getDocs(lotsQuery);
                 let currentStock = 0;
@@ -1269,6 +1247,60 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deleteTransaction = async (transactionId: string): Promise<boolean> => {
+    if (!user) {
+        toast({ title: "Anda harus login", variant: "destructive" });
+        return false;
+    }
+
+    const txDocRef = doc(db, 'transactions', transactionId);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const txSnap = await transaction.get(txDocRef);
+            if (!txSnap.exists()) throw new Error("Transaksi tidak ditemukan untuk dihapus.");
+            
+            const txData = txSnap.data() as Transaction;
+            const warehouseId = txData.warehouseId;
+            if (!warehouseId) throw new Error("Gudang asal transaksi tidak ditemukan.");
+            
+            // Return stock for all 'Barang' items
+            for (const item of txData.items.filter(i => i.productType === 'Barang')) {
+                let quantityToReturn = item.quantity;
+                const lotsQuery = query(collection(db, "stockLots"), where("productId", "==", item.productId), where("warehouseId", "==", warehouseId), orderBy("purchaseDate", "desc"));
+                const lotsSnap = await getDocs(lotsQuery);
+
+                for (const lotDoc of lotsSnap.docs) {
+                    if (quantityToReturn <= 0) break;
+                    const lotData = lotDoc.data() as StockLot;
+                    const lotRef = doc(db, 'stockLots', lotDoc.id);
+                    const canReturnToLot = lotData.initialQuantity - lotData.remainingQuantity;
+                    const amountToReturn = Math.min(quantityToReturn, canReturnToLot);
+                    
+                    if (amountToReturn > 0) {
+                        transaction.update(lotRef, { remainingQuantity: lotData.remainingQuantity + amountToReturn });
+                        quantityToReturn -= amountToReturn;
+                    }
+                }
+                 if (quantityToReturn > 0) {
+                    console.warn(`Tidak dapat mengembalikan seluruh stok (${quantityToReturn}) untuk produk ${item.productName}. Stok mungkin tidak akurat.`);
+                }
+            }
+
+            // Delete the transaction document
+            transaction.delete(txDocRef);
+        });
+
+        toast({ title: 'Sukses', description: 'Pesanan telah berhasil dihapus.' });
+        return true;
+
+    } catch (error: any) {
+        console.error("Error deleting transaction:", error);
+        toast({ title: 'Gagal', description: error.message || 'Gagal menghapus pesanan.', variant: 'destructive' });
+        return false;
+    }
+};
+
   const clearCart = () => {
       setCart([]);
   };
@@ -1393,6 +1425,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         updateTransactionAndPay,
         updateTransactionOnly,
         updateTransactionDiscount,
+        deleteTransaction,
         clearCart,
         addCustomer,
         holdCart,

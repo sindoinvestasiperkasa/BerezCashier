@@ -27,9 +27,10 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Switch } from "./ui/switch";
 import type { UpdatedAccountInfo } from "@/providers/app-provider";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogTrigger, DialogFooter } from "./ui/dialog";
 import { ScrollArea } from "./ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 
 
 interface TransactionDetailProps {
@@ -56,10 +57,11 @@ const formatDate = (date: Date) => {
 
 
 export default function TransactionDetail({ transaction: initialTransaction, products, isOpen, onClose }: TransactionDetailProps) {
-  const { updateTransactionAndPay, accounts, products: allProducts, productCategories, updateTransactionOnly } = useApp();
+  const { updateTransactionAndPay, accounts, products: allProducts, productCategories, updateTransactionOnly, deleteTransaction } = useApp();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   
   // Local state for the transaction being edited
@@ -218,6 +220,16 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     onClose();
   };
 
+  const handleDelete = async () => {
+    if (!transaction) return;
+    setIsDeleting(true);
+    const success = await deleteTransaction(transaction.id);
+    if(success) {
+        onClose();
+    }
+    setIsDeleting(false);
+  }
+
   const isPaymentPending = transaction.paymentStatus === 'Pending' || transaction.paymentStatus === 'Gagal';
   const paymentConfig = paymentStatusConfig[transaction.paymentStatus];
   const PaymentIcon = paymentConfig?.icon || CreditCard;
@@ -226,26 +238,49 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     <>
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="flex flex-col p-0 max-h-[90vh] w-full" side="bottom">
-        <SheetHeader className="p-6 pb-2 border-b">
-            <SheetTitle className="text-xl font-bold text-left flex items-center justify-between mr-8">
-                <span>Detail Transaksi</span>
-                <Badge variant={statusVariant[transaction.status] || 'outline'} className={cn("text-sm", transaction.status === 'Diproses' ? 'border-primary text-primary' : '')}>
-                    {transaction.status}
-                </Badge>
-            </SheetTitle>
-            <div className="text-left flex items-center gap-4 text-sm pt-1 text-muted-foreground flex-wrap">
-                <span className="font-mono">{transaction.transactionNumber || transaction.id}</span>
-                <span className="text-xs">•</span>
-                <div className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4" />
-                    <span>{formatDate(transaction.date)}</span>
-                </div>
-                <span className="text-xs">•</span>
-                <div className="flex items-center gap-1.5">
-                    <User className="w-4 h-4" />
-                    <span>{transaction.customerName || 'Pelanggan Umum'}</span>
-                </div>
+        <SheetHeader className="p-6 pb-2 border-b flex-row items-center justify-between">
+            <div>
+              <SheetTitle className="text-xl font-bold text-left flex items-center gap-3">
+                  <span>Detail Transaksi</span>
+                  <Badge variant={statusVariant[transaction.status] || 'outline'} className={cn("text-sm", transaction.status === 'Diproses' ? 'border-primary text-primary' : '')}>
+                      {transaction.status}
+                  </Badge>
+              </SheetTitle>
+              <div className="text-left flex items-center gap-4 text-sm pt-1 text-muted-foreground flex-wrap">
+                  <span className="font-mono">{transaction.transactionNumber || transaction.id}</span>
+                  <span className="text-xs">•</span>
+                  <div className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4" />
+                      <span>{formatDate(transaction.date)}</span>
+                  </div>
+                  <span className="text-xs">•</span>
+                  <div className="flex items-center gap-1.5">
+                      <User className="w-4 h-4" />
+                      <span>{transaction.customerName || 'Pelanggan Umum'}</span>
+                  </div>
+              </div>
             </div>
+            {isPaymentPending && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="icon" disabled={isDeleting}>
+                      {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Anda yakin ingin menghapus pesanan ini?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tindakan ini tidak dapat dibatalkan. Pesanan akan dihapus secara permanen dan stok akan dikembalikan.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} variant="destructive">Hapus</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
         </SheetHeader>
 
         <div className="p-4 space-y-4 flex-grow overflow-y-auto bg-secondary/30">
@@ -534,6 +569,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
+
 
 
 
