@@ -12,7 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, HandCoins, FileCog, Banknote, PlusCircle, Trash2, Minus, Plus, Search, Save } from "lucide-react";
+import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, HandCoins, FileCog, Banknote, PlusCircle, Trash2, Minus, Plus, Search, Save, Hash, ShieldCheck } from "lucide-react";
 import type { Transaction, SaleItem } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -240,30 +240,12 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     <>
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="flex flex-col p-0 max-h-[90vh] w-full" side="bottom">
-        <SheetHeader className="p-4 md:p-6 pb-2 border-b flex-row items-start justify-between">
-            <div className="flex-grow space-y-1">
-              <div className="flex items-center gap-2">
-                <SheetTitle className="text-xl font-bold text-left">
-                    Detail Transaksi
-                </SheetTitle>
-                <Badge variant={statusVariant[transaction.status] || 'outline'} className={cn("text-xs", transaction.status === 'Diproses' ? 'border-primary text-primary' : '')}>
-                    {transaction.status}
-                </Badge>
-              </div>
-              <p className="font-mono text-xs text-muted-foreground">{transaction.transactionNumber || transaction.id}</p>
-              <div className="text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                  <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>{formatDate(transaction.date)}</span>
-                  </div>
-                  <span className="hidden sm:inline">•</span>
-                  <div className="flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5" />
-                      <span>{transaction.customerName || 'Pelanggan Umum'}</span>
-                  </div>
-              </div>
-            </div>
-            {isPaymentPending && (
+        <SheetHeader className="p-4 pb-4 border-b">
+          <div className="flex justify-between items-center">
+            <SheetTitle className="text-xl font-bold text-left">
+                Detail Transaksi
+            </SheetTitle>
+             {isPaymentPending && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="icon" className="h-9 w-9 flex-shrink-0" disabled={isDeleting}>
@@ -284,6 +266,27 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
                 </AlertDialogContent>
               </AlertDialog>
             )}
+          </div>
+            <div className="space-y-1.5 text-sm text-muted-foreground mt-2">
+                <div className="flex items-center gap-2">
+                    <Hash className="w-4 h-4" />
+                    <span>{transaction.transactionNumber || transaction.id}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    <Badge variant={statusVariant[transaction.status] || 'outline'} className={cn("text-xs", transaction.status === 'Diproses' ? 'border-primary text-primary' : '')}>
+                        {transaction.status}
+                    </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>{formatDate(transaction.date)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    <span>{transaction.customerName || 'Pelanggan Umum'}</span>
+                </div>
+            </div>
         </SheetHeader>
 
         <div className="p-4 space-y-4 flex-grow overflow-y-auto bg-secondary/30">
@@ -577,6 +580,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
+
 
 
 
