@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent, Building, Warehouse, HandCoins, Calendar } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent, Building, Warehouse, HandCoins, Calendar, Save } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -59,11 +59,13 @@ export default function CartPage({ setView }: CartPageProps) {
     transactions, customers, addCustomer, accounts, user, addShiftReportNotification,
     stockLots,
     selectedBranchId, 
-    selectedWarehouseId, 
+    selectedWarehouseId,
+    saveCartAsPendingTransaction 
   } = useApp();
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [amountReceived, setAmountReceived] = useState(0);
@@ -288,6 +290,46 @@ export default function CartPage({ setView }: CartPageProps) {
     setAmountReceived(0);
     setSelectedCustomerId("_general_");
   };
+
+  const handleSaveAsPending = async () => {
+    if (cart.length === 0) {
+      toast({ title: "Keranjang Kosong", variant: "destructive" });
+      return;
+    }
+     if(!selectedBranchId || !selectedWarehouseId) {
+      toast({ title: "Cabang/Gudang Belum Dipilih", description: "Silakan pilih di halaman Akun.", variant: "destructive" });
+      return;
+    }
+
+    setIsSaving(true);
+    const customer = customers.find(c => c.id === selectedCustomerId);
+    
+    const result = await saveCartAsPendingTransaction({
+        items: cart,
+        subtotal,
+        discountAmount,
+        taxAmount,
+        total,
+        customerId: selectedCustomerId,
+        customerName: customer?.name || "Pelanggan Umum",
+        branchId: selectedBranchId,
+        warehouseId: selectedWarehouseId,
+        isPkp,
+        serviceFee
+    });
+
+    if (result.success) {
+      toast({ title: 'Transaksi Disimpan', description: `Pesanan untuk ${customer?.name || "Pelanggan Umum"} telah disimpan sebagai tertunda.` });
+      clearCart();
+      setDiscountPercent(0);
+      setAmountReceived(0);
+      setSelectedCustomerId("_general_");
+    } else {
+      toast({ title: 'Gagal Menyimpan', description: 'Gagal menyimpan transaksi sebagai tertunda.', variant: "destructive" });
+    }
+    setIsSaving(false);
+  }
+
 
   const handleResumeCart = (cartId: number) => {
     const held = heldCarts.find(h => h.id === cartId);
@@ -709,12 +751,16 @@ export default function CartPage({ setView }: CartPageProps) {
                   <span className="text-2xl font-bold text-primary">{formatCurrency(total)}</span>
                 </div>
 
-                <div className="flex gap-4">
-                    <Button variant="outline" className="h-12 text-md font-bold flex-1" onClick={handleHoldCart} disabled={cart.length === 0 || isProcessing}>
+                <div className="flex gap-2">
+                    <Button variant="outline" className="h-12 text-md font-bold" onClick={handleHoldCart} disabled={cart.length === 0 || isProcessing || isSaving}>
                         <PauseCircle className="mr-2 h-5 w-5" />
                         Tahan
                     </Button>
-                    <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handleOpenPaymentDialog} disabled={cart.length === 0 || isProcessing}>
+                    <Button variant="outline" className="h-12 text-md font-bold" onClick={handleSaveAsPending} disabled={cart.length === 0 || isProcessing || isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
+                        {isSaving ? 'Menyimpan...' : 'Simpan'}
+                    </Button>
+                    <Button className="w-full h-12 text-lg font-bold flex-[2]" onClick={handleOpenPaymentDialog} disabled={cart.length === 0 || isProcessing || isSaving}>
                         {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wallet className="mr-2 h-5 w-5" />}
                         {isProcessing ? 'Memproses...' : 'Bayar'}
                     </Button>
@@ -978,5 +1024,7 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
+
+    
 
     
