@@ -171,7 +171,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
       const productsWithCategory = allProducts
         .filter(p => p.productSubType !== 'Bahan Baku' && p.name.toLowerCase().includes(addItemSearch.toLowerCase()))
         .map(p => {
-            const category = productCategories.find(c => c.id === p.categoryId);
+            const category = productCategories?.find(c => c.id === p.categoryId);
             const categoryName = (typeof category?.name === 'object' ? category.name.id : category?.name) || 'Lain-lain';
             return { ...p, categoryName };
         });
@@ -517,4 +517,5 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
+
 
