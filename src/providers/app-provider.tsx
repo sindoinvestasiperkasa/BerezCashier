@@ -832,35 +832,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         const batch = writeBatch(db);
 
-        // 2. Validate stock for items with increased quantity and prepare stock updates
-        for (const [productId, delta] of itemDeltas.entries()) {
-            if (delta <= 0) continue; // Only check for stock decrease
-            
-            const lotsQuery = query(collection(db, "stockLots"), where("productId", "==", productId), where("warehouseId", "==", warehouseId));
-            const lotsSnap = await getDocs(lotsQuery);
-            const availableLots = lotsSnap.docs
-                .map(d => d.data() as StockLot)
-                .filter(lot => lot.remainingQuantity > 0)
-                .sort((a, b) => (a.purchaseDate as any).seconds - (b.purchaseDate as any).seconds);
-            
-            const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
-            if (totalStockForProduct < delta) {
-                const product = products.find(p => p.id === productId);
-                throw new Error(`Stok tidak cukup untuk ${product?.name || productId}. Dibutuhkan tambahan: ${delta}, Tersedia: ${totalStockForProduct}`);
-            }
-
-            // Deduct stock for positive deltas
-            let quantityToDeduct = delta;
-            for (const lot of availableLots) {
-                if (quantityToDeduct <= 0) break;
-                const lotRef = doc(db, 'stockLots', lot.id);
-                const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
-                batch.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
-                quantityToDeduct -= quantityFromThisLot;
-            }
-        }
-        
-        // 3. Return stock for items with decreased quantity or removed items
+        // 2. Return stock first for all items with decreased quantity or removed items
         for (const [productId, delta] of itemDeltas.entries()) {
           if (delta >= 0) continue;
           
@@ -874,6 +846,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           } else {
             console.warn(`Tidak dapat mengembalikan stok untuk produk ${productId} karena tidak ditemukan lot. Stok mungkin tidak akurat.`);
           }
+        }
+        
+        // 3. Validate stock for items with increased quantity and deduct from lots
+        for (const [productId, delta] of itemDeltas.entries()) {
+            if (delta <= 0) continue; 
+            
+            const lotsQuery = query(collection(db, "stockLots"), where("productId", "==", productId), where("warehouseId", "==", warehouseId));
+            const lotsSnap = await getDocs(lotsQuery);
+            const availableLots = lotsSnap.docs
+                .map(d => ({ id: d.id, ...d.data() } as StockLot))
+                .filter(lot => lot.remainingQuantity > 0)
+                .sort((a, b) => (a.purchaseDate as any).seconds - (b.purchaseDate as any).seconds);
+            
+            const totalStockForProduct = availableLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+            const item = editedTransaction.items.find(i => i.productId === productId);
+            if (totalStockForProduct < delta) {
+                throw new Error(`Stok tidak cukup untuk ${item?.productName || productId}. Dibutuhkan tambahan: ${delta}, Tersedia: ${totalStockForProduct}`);
+            }
+
+            // Deduct stock for positive deltas
+            let quantityToDeduct = delta;
+            for (const lot of availableLots) {
+                if (quantityToDeduct <= 0) break;
+                const lotRef = doc(db, 'stockLots', lot.id);
+                const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+                batch.update(lotRef, { remainingQuantity: lot.remainingQuantity - quantityFromThisLot });
+                quantityToDeduct -= quantityFromThisLot;
+            }
         }
 
         // 4. Recalculate totals
@@ -948,17 +948,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 availableLots.forEach(lot => {
                     totalStockForProduct += lot.remainingQuantity;
                 });
-                totalStockForProduct += originalItemQuantities.get(item.productId) || 0;
+                
+                const originalQty = originalItemQuantities.get(item.productId) || 0;
+                totalStockForProduct += originalQty;
+
 
                 if (totalStockForProduct < item.quantity) {
-                    throw new Error(`Stok tidak mencukupi untuk ${item.productName}. Sisa stok: ${totalStockForProduct - (originalItemQuantities.get(item.productId) || 0)}.`);
+                    throw new Error(`Stok tidak mencukupi untuk ${item.productName}. Sisa stok: ${totalStockForProduct - originalQty}.`);
                 }
                 
                 let quantityToDeduct = item.quantity;
                 let itemCogs = 0;
                 
                 const tempLots = JSON.parse(JSON.stringify(availableLots));
-                const originalQty = originalItemQuantities.get(item.productId) || 0;
+                
                 let tempReturned = originalQty;
                 
                 for(let i = tempLots.length - 1; i >= 0; i--) {
@@ -1293,3 +1296,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    
