@@ -230,6 +230,9 @@ export type UserData = {
     serviceFeeTier3?: number;
     // Employee fields
     name?: string;
+    employeeDocId?: string; // Storing employee's own document ID
+    branchId?: string; // Assigned branch for employee
+    warehouseId?: string; // Assigned warehouse for employee
     [key: string]: any;
 };
 
@@ -403,6 +406,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setSelectedBranchId = (id: string) => {
+    if (user?.role === 'Employee') return; // Employees cannot change their assigned branch
     setSelectedBranchIdState(id);
     localStorage.setItem('selectedBranchId', id);
     // Reset warehouse selection if it's not valid for the new branch
@@ -413,6 +417,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const setSelectedWarehouseId = (id: string) => {
+    if (user?.role === 'Employee') return; // Employees cannot change their assigned warehouse
     setSelectedWarehouseIdState(id);
     if(id) {
         localStorage.setItem('selectedWarehouseId', id);
@@ -436,7 +441,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (user.role === 'UMKM') {
       userDocRef = doc(db, 'dataUMKM', user.uid);
     } else if (user.role === 'Employee') {
-      userDocRef = doc(db, 'employees', user.uid);
+      userDocRef = doc(db, 'employees', user.employeeDocId!);
     } else {
       return; // No listener for SuperAdmin or other roles for now
     }
@@ -450,16 +455,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsub();
-  }, [user?.uid, user?.role, db]);
+  }, [user?.uid, user?.role, user?.employeeDocId, db]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseAuthUser | null) => {
         if (firebaseUser) {
             const storedUser = localStorage.getItem('sagara-user-data');
             if(storedUser) {
-                const parsedUser = JSON.parse(storedUser);
+                const parsedUser: UserData = JSON.parse(storedUser);
                 setUser(parsedUser);
                 setIsAuthenticated(true);
+                // For employees, automatically set their assigned branch/warehouse
+                if (parsedUser.role === 'Employee') {
+                  if(parsedUser.branchId) setSelectedBranchIdState(parsedUser.branchId);
+                  if(parsedUser.warehouseId) setSelectedWarehouseIdState(parsedUser.warehouseId);
+                }
             }
         } else {
             setUser(null);
@@ -484,7 +494,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return;
     };
     
-    const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
+    const idUMKM = user.idUMKM || (user.role === 'UMKM' ? user.uid : undefined);
     if (!idUMKM) return;
 
     const customersQuery = query(collection(db, "customers"), where("idUMKM", "==", idUMKM));
@@ -550,7 +560,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const unsubBranches = onSnapshot(branchesQuery, (snapshot) => {
         const branchesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Branch));
         setBranches(branchesData);
-        if (!selectedBranchId && branchesData.length > 0) {
+        if (user.role === 'UMKM' && !selectedBranchId && branchesData.length > 0) {
             setSelectedBranchId(branchesData[0].id);
         }
     });
@@ -619,35 +629,70 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
 
-      let userDataDoc;
+      let finalUserData: UserData | null = null;
+      
+      // 1. Check if user is a UMKM owner
       const umkmDocRef = doc(db, 'dataUMKM', firebaseUser.uid);
       const umkmDocSnap = await getDoc(umkmDocRef);
-
       if (umkmDocSnap.exists()) {
-        const data = umkmDocSnap.data();
-        userDataDoc = { uid: firebaseUser.uid, ...data, role: data.role || 'UMKM', photoUrl: data.photoUrl };
+          const data = umkmDocSnap.data();
+          finalUserData = { 
+              uid: firebaseUser.uid, 
+              ...data, 
+              role: data.role || 'UMKM',
+              email: firebaseUser.email || data.email,
+          } as UserData;
       } else {
-        const employeeDocRef = doc(db, 'employees', firebaseUser.uid);
-        const employeeDocSnap = await getDoc(employeeDocRef);
+        // 2. If not owner, check if user is an Employee
+        const employeesQuery = query(collection(db, "employees"), where("uid", "==", firebaseUser.uid));
+        const employeeSnapshot = await getDocs(employeesQuery);
 
-        if (employeeDocSnap.exists()) {
-           const employeeData = employeeDocSnap.data();
-           if (employeeData.canLogin !== true) {
-              await signOut(auth);
-              throw new Error("Akun karyawan Anda tidak aktif. Silakan hubungi administrator.");
-          }
-           userDataDoc = { uid: firebaseUser.uid, ...employeeData, role: 'Employee', photoUrl: employeeData.photoUrl };
+        if (!employeeSnapshot.empty) {
+            const employeeDoc = employeeSnapshot.docs[0];
+            const employeeData = employeeDoc.data();
+
+            if (employeeData.canLogin !== true) {
+                await signOut(auth);
+                throw new Error("Akun karyawan Anda tidak aktif. Silakan hubungi administrator.");
+            }
+
+            const divisionIds = employeeData.divisionIds || [];
+            if (divisionIds.length > 0) {
+                const divisionsQuery = query(collection(db, 'divisions'), where(documentId(), 'in', divisionIds));
+                const divisionsSnapshot = await getDocs(divisionsQuery);
+                const divisionNames = divisionsSnapshot.docs.map(d => d.data().name.toLowerCase());
+                
+                if (divisionNames.includes('waitress') || divisionNames.includes('pelayan')) {
+                    finalUserData = {
+                        uid: firebaseUser.uid,
+                        ...employeeData,
+                        employeeDocId: employeeDoc.id, // Store employee document ID
+                        role: 'Employee',
+                        email: firebaseUser.email || employeeData.email,
+                    } as UserData;
+                    // Automatically set branch and warehouse for the employee
+                    if(employeeData.branchId) setSelectedBranchIdState(employeeData.branchId);
+                    if(employeeData.warehouseId) setSelectedWarehouseIdState(employeeData.warehouseId);
+
+                } else {
+                    await signOut(auth);
+                    throw new Error("Anda tidak memiliki divisi 'Waitress' atau 'Pelayan' untuk mengakses aplikasi ini.");
+                }
+            } else {
+                await signOut(auth);
+                throw new Error("Akun Anda tidak terdaftar dalam divisi manapun.");
+            }
         }
       }
 
-      if (userDataDoc) {
-        setUser(userDataDoc as UserData);
-        localStorage.setItem('sagara-user-data', JSON.stringify(userDataDoc));
+      if (finalUserData) {
+        setUser(finalUserData);
+        localStorage.setItem('sagara-user-data', JSON.stringify(finalUserData));
         setIsAuthenticated(true);
         return true;
       } else {
         await signOut(auth);
-        throw new Error("Data pengguna tidak ditemukan di database. Silakan hubungi administrator.");
+        throw new Error("Data pengguna tidak ditemukan. Pastikan Anda terdaftar sebagai pemilik UMKM atau karyawan yang sesuai.");
       }
     } catch (error: any) {
         if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
@@ -1406,7 +1451,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: "Anda harus login", variant: "destructive" });
         return false;
     }
-    const docRef = doc(db, user.role === 'UMKM' ? 'dataUMKM' : 'employees', user.uid);
+    const docRef = doc(db, user.role === 'UMKM' ? 'dataUMKM' : 'employees', user.employeeDocId!);
     try {
         await updateDoc(docRef, data);
         // Data will be updated automatically by the onSnapshot listener

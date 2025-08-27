@@ -110,6 +110,9 @@ export default function HomePage({ setView }: HomePageProps) {
   }, [user?.address, t]);
 
   const availableProducts = useMemo(() => {
+    if (!selectedBranchId || !selectedWarehouseId) {
+      return [];
+    }
     const allProducts = products.filter(p => p.productSubType !== 'Bahan Baku');
 
     // Handle 'Barang' (Goods) based on warehouse stock
@@ -130,7 +133,7 @@ export default function HomePage({ setView }: HomePageProps) {
 
     // Handle 'Jasa' (Services) based on branch availability
     const serviceProducts = allProducts
-      .filter(p => p.productSubType === 'Jasa' && Array.isArray(p.availableBranchIds) && p.availableBranchIds.includes(selectedBranchId || ''))
+      .filter(p => p.productSubType === 'Jasa' && Array.isArray(p.availableBranchIds) && p.availableBranchIds.includes(selectedBranchId))
       .map(product => ({
         ...product,
         stock: Infinity, // Services don't have stock

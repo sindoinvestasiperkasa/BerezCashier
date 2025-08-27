@@ -86,6 +86,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
           </CardContent>
         </Card>
         
+        {user?.role === 'UMKM' && (
         <Card>
           <CardContent className="p-4 space-y-4">
               <h3 className="font-semibold text-lg">{t('account.operationalSettings')}</h3>
@@ -123,6 +124,7 @@ export default function AccountPage({ setView }: AccountPageProps) {
               </div>
           </CardContent>
         </Card>
+        )}
         
         <Card>
           <CardContent className="p-4">
