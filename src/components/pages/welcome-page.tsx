@@ -17,26 +17,26 @@ interface WelcomePageProps {
 
 const slides = [
   {
-    title: "Kelola Transaksi dengan Mudah",
-    description: "Catat setiap penjualan dengan cepat dan akurat menggunakan antarmuka yang intuitif.",
+    title: "Kelola Pesanan Meja",
+    description: "Catat setiap pesanan dari pelanggan dengan cepat, akurat, dan langsung dari meja.",
     image: "/images/welcome/transactions.jpeg",
-    hint: "cashier point of sale"
+    hint: "waiter taking order tablet"
   },
   {
-    title: "Manajemen Stok Real-time",
-    description: "Pantau persediaan produk Anda secara langsung untuk menghindari kehabisan stok.",
+    title: "Status Pesanan Real-time",
+    description: "Pantau status setiap pesanan, dari dapur hingga meja pelanggan, secara langsung.",
     image: "/images/welcome/inventory.jpeg",
-    hint: "inventory management warehouse"
+    hint: "kitchen order screen"
   },
   {
-    title: "Integrasi Stok & Keuangan",
-    description: "Aplikasi kasir ini terintegrasi langsung dengan manajemen stok dan laporan keuangan Anda.",
+    title: "Integrasi Dapur & Kasir",
+    description: "Aplikasi pelayan ini terintegrasi langsung dengan dapur dan kasir untuk alur kerja yang efisien.",
     image: "/images/welcome/finance.jpeg",
-    hint: "finance integration stock"
+    hint: "restaurant kitchen staff"
   },
   {
-    title: "Laporan Penjualan Lengkap",
-    description: "Dapatkan laporan harian, mingguan, dan bulanan untuk analisis bisnis yang lebih baik.",
+    title: "Laporan Performa Lengkap",
+    description: "Dapatkan laporan penjualan dan performa menu untuk analisis bisnis yang lebih baik.",
     image: "/images/welcome/reports.jpeg",
     hint: "sales analytics chart"
   },
@@ -47,10 +47,10 @@ const slides = [
     hint: "customer loyalty program"
   },
   {
-    title: "Cocok untuk Berbagai Bisnis",
-    description: "Sangat fleksibel untuk digunakan di toko retail, kafe, restoran, dan berbagai jenis usaha lainnya.",
+    title: "Cocok untuk Restoran & Kafe",
+    description: "Sangat fleksibel untuk digunakan di restoran, kafe, warung kopi, dan berbagai jenis F&B lainnya.",
     image: "/images/welcome/retail.jpeg",
-    hint: "small business storefront"
+    hint: "cozy cafe interior"
   }
 ];
 
@@ -63,8 +63,8 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
     <div className="flex h-full flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm text-center flex-grow flex flex-col justify-center">
         <div>
-            <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Cashier</h1>
-            <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk kasir Anda.</p>
+            <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Waitress</h1>
+            <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk pelayan Anda.</p>
             <Carousel
               className="w-full"
               opts={{ loop: true }}

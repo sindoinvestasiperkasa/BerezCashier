@@ -20,7 +20,7 @@ export default function PrivacyPage({ setView }: PrivacyPageProps) {
       </header>
       <div className="p-6 flex-grow overflow-y-auto prose prose-sm max-w-none">
         <p>Terakhir diperbarui: 24 Juli 2024</p>
-        <p>Kebijakan Privasi ini menjelaskan bagaimana informasi Anda dikumpulkan, digunakan, dan dibagikan saat Anda menggunakan aplikasi Berez Cashier ("Aplikasi").</p>
+        <p>Kebijakan Privasi ini menjelaskan bagaimana informasi Anda dikumpulkan, digunakan, dan dibagikan saat Anda menggunakan aplikasi Berez Waitress ("Aplikasi").</p>
         
         <h2>1. Informasi yang Kami Kumpulkan</h2>
         <p>Kami mengumpulkan beberapa jenis informasi untuk berbagai tujuan guna menyediakan dan meningkatkan Layanan kami kepada Anda.</p>

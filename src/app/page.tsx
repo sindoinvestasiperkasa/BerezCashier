@@ -6,7 +6,7 @@ import StatusBarManager from "@/components/status-bar-manager";
 
 export const metadata: Metadata = {
   title: 'Beranda',
-  description: 'Selamat datang di Berez Cashier. Aplikasi Point of Sale (POS) modern untuk mengelola transaksi, stok, dan keuangan bisnis Anda dengan mudah.',
+  description: 'Selamat datang di Berez Waitress. Aplikasi modern untuk mengelola pesanan dan meja untuk restoran dan kafe Anda.',
 }
 
 export default function Home() {

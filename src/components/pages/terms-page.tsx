@@ -20,13 +20,13 @@ export default function TermsPage({ setView }: TermsPageProps) {
       </header>
       <div className="p-6 flex-grow overflow-y-auto prose prose-sm max-w-none">
         <p>Terakhir diperbarui: 24 Juli 2024</p>
-        <p>Harap baca Syarat dan Ketentuan ("Syarat", "Syarat dan Ketentuan") ini dengan saksama sebelum menggunakan aplikasi seluler Berez Cashier ("Layanan") yang dioperasikan oleh Berez.id ("kami", "kita", atau "milik kami").</p>
+        <p>Harap baca Syarat dan Ketentuan ("Syarat", "Syarat dan Ketentuan") ini dengan saksama sebelum menggunakan aplikasi seluler Berez Waitress ("Layanan") yang dioperasikan oleh Berez.id ("kami", "kita", atau "milik kami").</p>
 
         <h2>1. Penerimaan Persyaratan</h2>
         <p>Dengan mengakses atau menggunakan Layanan, Anda setuju untuk terikat oleh Syarat ini. Jika Anda tidak setuju dengan bagian mana pun dari syarat ini, maka Anda tidak diizinkan untuk mengakses Layanan.</p>
 
         <h2>2. Deskripsi Layanan</h2>
-        <p>Berez Cashier menyediakan aplikasi point-of-sale (POS) untuk membantu bisnis mengelola penjualan, inventaris, dan data pelanggan. Layanan dapat berubah dari waktu ke waktu atas kebijakan kami.</p>
+        <p>Berez Waitress menyediakan aplikasi pemesanan dan point-of-sale (POS) untuk membantu bisnis F&B mengelola pesanan, meja, penjualan, dan data pelanggan. Layanan dapat berubah dari waktu ke waktu atas kebijakan kami.</p>
 
         <h2>3. Pendaftaran Akun</h2>
         <ul>
