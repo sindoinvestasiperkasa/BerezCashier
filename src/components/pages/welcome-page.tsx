@@ -18,40 +18,40 @@ interface WelcomePageProps {
 
 const slides = [
   {
-    title: "Kelola Pesanan Meja",
-    description: "Catat setiap pesanan dari pelanggan dengan cepat, akurat, dan langsung dari meja.",
+    title: "Tampilan Pesanan Dapur",
+    description: "Lihat semua pesanan masuk secara real-time di satu layar yang terorganisir.",
     image: "/images/welcome/transactions.jpeg",
-    hint: "waiter taking order tablet"
+    hint: "kitchen display system"
   },
   {
-    title: "Status Pesanan Real-time",
-    description: "Pantau status setiap pesanan, dari dapur hingga meja pelanggan, secara langsung.",
+    title: "Manajemen Status Pesanan",
+    description: "Ubah status pesanan dari 'Baru', 'Sedang Dimasak', hingga 'Siap Disajikan' dengan mudah.",
     image: "/images/welcome/inventory.jpeg",
-    hint: "kitchen order screen"
+    hint: "chef cooking order"
   },
   {
-    title: "Integrasi Dapur & Kasir",
-    description: "Aplikasi pelayan ini terintegrasi langsung dengan dapur dan kasir untuk alur kerja yang efisien.",
+    title: "Prioritas dan Waktu Memasak",
+    description: "Sistem akan menampilkan timer untuk setiap pesanan agar Anda bisa menjaga kualitas dan kecepatan.",
     image: "/images/welcome/finance.jpeg",
-    hint: "restaurant kitchen staff"
+    hint: "restaurant kitchen timer"
   },
   {
-    title: "Laporan Performa Lengkap",
-    description: "Dapatkan laporan penjualan dan performa menu untuk analisis bisnis yang lebih baik.",
+    title: "Notifikasi Pesanan Selesai",
+    description: "Beri tahu pelayan secara otomatis saat hidangan sudah siap untuk diantar ke meja pelanggan.",
     image: "/images/welcome/reports.jpeg",
-    hint: "sales analytics chart"
+    hint: "waiter picking up food"
   },
   {
-    title: "Program Loyalitas Pelanggan",
-    description: "Buat dan kelola promo atau diskon untuk meningkatkan loyalitas pelanggan setia Anda.",
+    title: "Analisis Performa Menu",
+    description: "Ketahui menu mana yang paling cepat atau paling lama dimasak untuk optimasi alur kerja.",
     image: "/images/welcome/loyalty.jpeg",
-    hint: "customer loyalty program"
+    hint: "food analytics chart"
   },
   {
-    title: "Cocok untuk Restoran & Kafe",
-    description: "Sangat fleksibel untuk digunakan di restoran, kafe, warung kopi, dan berbagai jenis F&B lainnya.",
+    title: "Terhubung dengan Pelayan & Kasir",
+    description: "Sinkronisasi otomatis antara dapur, pelayan, dan kasir untuk operasional yang lancar.",
     image: "/images/welcome/retail.jpeg",
-    hint: "cozy cafe interior"
+    hint: "busy restaurant staff"
   }
 ];
 
