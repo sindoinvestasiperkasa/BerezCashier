@@ -319,13 +319,13 @@ export default function CartPage({ setView }: CartPageProps) {
     });
 
     if (result.success) {
-      toast({ title: 'Transaksi Disimpan', description: `Pesanan untuk ${customer?.name || "Pelanggan Umum"} telah disimpan sebagai tertunda.` });
+      toast({ title: 'Pesanan Dibuat', description: `Pesanan untuk ${customer?.name || "Pelanggan Umum"} telah dibuat.` });
       clearCart();
       setDiscountPercent(0);
       setAmountReceived(0);
       setSelectedCustomerId("_general_");
     } else {
-      toast({ title: 'Gagal Menyimpan', description: 'Gagal menyimpan transaksi sebagai tertunda.', variant: "destructive" });
+      toast({ title: 'Gagal Membuat Pesanan', description: 'Gagal menyimpan transaksi sebagai pesanan.', variant: "destructive" });
     }
     setIsSaving(false);
   }
@@ -754,7 +754,7 @@ export default function CartPage({ setView }: CartPageProps) {
                 <div className="flex gap-2">
                     <Button variant="outline" className="w-full h-12 text-md font-bold" onClick={handleSaveAsPending} disabled={cart.length === 0 || isProcessing || isSaving}>
                         {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-                        {isSaving ? 'Menyimpan...' : 'Simpan'}
+                        {isSaving ? 'Membuat...' : 'Buat Pesanan'}
                     </Button>
                     <Button className="w-full h-12 text-lg font-bold" onClick={handleOpenPaymentDialog} disabled={cart.length === 0 || isProcessing || isSaving}>
                         {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wallet className="mr-2 h-5 w-5" />}
@@ -1024,3 +1024,4 @@ export default function CartPage({ setView }: CartPageProps) {
     
 
     
+
