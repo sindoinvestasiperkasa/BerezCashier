@@ -66,7 +66,7 @@ export default function CartPage({ setView }: CartPageProps) {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [amountReceived, setAmountReceived] = useState(0);
   const [selectedCustomerId, setSelectedCustomerId] = useState("_general_");
@@ -123,7 +123,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const TAX_RATE = 0.11;
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
-  const discountAmount = useMemo(() => (subtotal * discountPercent) / 100, [subtotal, discountPercent]);
+  const discountAmount = useMemo(() => (subtotal * Number(discountPercent || 0)) / 100, [subtotal, discountPercent]);
   const subtotalAfterDiscount = useMemo(() => subtotal - discountAmount, [subtotal, discountAmount]);
 
   const serviceFee = useMemo(() => {
@@ -269,7 +269,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const handleFinishTransaction = () => {
     setIsSuccessOpen(false);
     clearCart();
-    setDiscountPercent(0);
+    setDiscountPercent('');
     setAmountReceived(0);
     setSelectedCustomerId("_general_");
     setTableNumber('');
@@ -316,7 +316,7 @@ export default function CartPage({ setView }: CartPageProps) {
     if (result.success) {
       toast({ title: 'Pesanan Dibuat', description: `Pesanan untuk ${customer?.name || "Pelanggan Umum"} di meja ${tableNumber} telah dibuat.` });
       clearCart();
-      setDiscountPercent(0);
+      setDiscountPercent('');
       setAmountReceived(0);
       setSelectedCustomerId("_general_");
       setTableNumber('');
@@ -605,7 +605,7 @@ export default function CartPage({ setView }: CartPageProps) {
                             id="discount" 
                             type="number" 
                             value={discountPercent} 
-                            onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                            onChange={(e) => setDiscountPercent(e.target.value === '' ? '' : Number(e.target.value))}
                             className="w-24 h-9" 
                             placeholder='0'
                         />
@@ -778,7 +778,7 @@ export default function CartPage({ setView }: CartPageProps) {
                         <span>{formatCurrency(subtotal)}</span>
                     </div>
                      <div className="flex justify-between">
-                        <span>Diskon ({discountPercent}%)</span>
+                        <span>Diskon ({Number(discountPercent || 0)}%)</span>
                         <span className="text-destructive">- {formatCurrency(discountAmount)}</span>
                     </div>
                      {isPkp && <div className="flex justify-between">
@@ -1005,3 +1005,5 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
+
+    

@@ -70,7 +70,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
   const [transaction, setTransaction] = useState<Transaction | null>(initialTransaction);
 
   // State for editable fields
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState<number | ''>('');
   const [isPkp, setIsPkp] = useState(false);
   const [paymentAccountId, setPaymentAccountId] = useState<string | undefined>();
   const [salesAccountId, setSalesAccountId] = useState<string | undefined>();
@@ -88,7 +88,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     if (initialTransaction) {
       const initialDiscountPercent = (initialTransaction.discountAmount || 0) > 0 
         ? ((initialTransaction.discountAmount || 0) / (initialTransaction.subtotal || 1)) * 100 
-        : 0;
+        : '';
 
       const findAccId = (keywords: string[], category?: string) => accounts.find(a => (!category || a.category === category) && keywords.some(kw => a.name.toLowerCase().includes(kw)))?.id;
       
@@ -109,7 +109,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
   const taxRate = isPkp ? 0.11 : 0;
   
   const calculatedDiscountAmount = useMemo(() => {
-    return (subtotal * discountPercent) / 100;
+    return (subtotal * Number(discountPercent || 0)) / 100;
   }, [subtotal, discountPercent]);
 
   const subtotalAfterDiscount = subtotal - calculatedDiscountAmount;
@@ -352,8 +352,8 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
                            <Input 
                               id="discount-detail" 
                               type="number" 
-                              value={discountPercent || ''} 
-                              onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                              value={discountPercent} 
+                              onChange={(e) => setDiscountPercent(e.target.value === '' ? '' : Number(e.target.value))}
                               className="w-full h-9 pr-7" 
                               placeholder='0'
                               disabled={isLoading}
@@ -574,3 +574,5 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
+
+    
