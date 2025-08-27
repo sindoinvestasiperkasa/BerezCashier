@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ClipboardList, CheckCircle, AlertCircle, Clock, Frown, User, Hash } from "lucide-react";
+import { ClipboardList, CheckCircle, AlertCircle, Clock, Frown, User, Hash, UserCircle } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/providers/app-provider";
@@ -122,6 +122,12 @@ export default function OrdersPage() {
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <Separator className="mb-3" />
+                   {trx.employeeName && (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1.5 mb-2">
+                            <UserCircle className="w-3.5 h-3.5" />
+                            <span>Dibuat oleh: <strong>{trx.employeeName}</strong></span>
+                        </div>
+                    )}
                   <p className="text-sm text-muted-foreground truncate">{itemsSummary}</p>
                   <div className="flex justify-between items-center mt-3">
                     <p className="text-sm text-muted-foreground">Total Belanja</p>

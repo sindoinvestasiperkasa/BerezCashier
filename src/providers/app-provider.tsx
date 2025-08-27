@@ -138,6 +138,8 @@ export interface Transaction {
   warehouseId?: string;
   tableNumber?: string;
   lines?: { accountId: string; debit: number; credit: number; description: string }[];
+  employeeId?: string;
+  employeeName?: string;
   [key: string]: any;
 }
 
@@ -938,6 +940,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 transactionNumber: `KSR-${Date.now()}`,
                 items: itemsForTransaction,
                 paymentMethod: 'Belum Dipilih',
+                employeeId: user.role === 'Employee' ? user.employeeDocId : undefined,
+                employeeName: user.role === 'Employee' ? user.name : undefined,
             };
             transaction.set(txDocRef, removeUndefinedDeep(transactionData));
             transactionId = txDocRef.id;
