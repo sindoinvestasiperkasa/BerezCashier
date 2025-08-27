@@ -56,8 +56,8 @@ export default function TransactionsPage() {
   
   const today = new Date();
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfMonth(today),
-    to: today,
+    from: startOfDay(today),
+    to: endOfDay(today),
   });
 
   const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
@@ -232,7 +232,7 @@ export default function TransactionsPage() {
               />
             </PopoverContent>
           </Popover>
-          <Select onValueChange={handlePresetChange} defaultValue="this_month">
+          <Select onValueChange={handlePresetChange} defaultValue="today">
               <SelectTrigger className="shadow-sm col-span-1">
                   <SelectValue placeholder="Pilih rentang..." />
               </SelectTrigger>
