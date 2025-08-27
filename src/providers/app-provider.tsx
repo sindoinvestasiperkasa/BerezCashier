@@ -664,7 +664,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 const divisionsSnapshot = await getDocs(divisionsQuery);
                 const divisionNames = divisionsSnapshot.docs.map(d => d.data().name.toLowerCase());
                 
-                if (divisionNames.includes('waitress') || divisionNames.includes('pelayan') || divisionNames.includes('dapur') || divisionNames.includes('kitchen')) {
+                if (divisionNames.includes('dapur') || divisionNames.includes('kitchen')) {
                     finalUserData = {
                         uid: firebaseUser.uid,
                         ...employeeData,
