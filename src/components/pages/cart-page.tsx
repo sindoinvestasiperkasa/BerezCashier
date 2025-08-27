@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent, Building, Warehouse, HandCoins, Calendar, Save } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Frown, UserPlus, PauseCircle, DollarSign, History, PlayCircle, Edit, Loader2, CheckCircle, Wallet, Printer, AlertTriangle, BadgeCent, Building, Warehouse, HandCoins, Calendar, Save, Hash } from "lucide-react";
 import type { View } from "../app-shell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -70,6 +70,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [amountReceived, setAmountReceived] = useState(0);
   const [selectedCustomerId, setSelectedCustomerId] = useState("_general_");
+  const [tableNumber, setTableNumber] = useState('');
   
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -235,6 +236,7 @@ export default function CartPage({ setView }: CartPageProps) {
             discountAccountId: discountAmount > 0 ? discountAccountId : undefined,
             taxAccountId: isPkp ? taxAccountId : undefined,
             serviceFee: serviceFee,
+            tableNumber: tableNumber
         });
 
         if (result.success) {
@@ -270,11 +272,13 @@ export default function CartPage({ setView }: CartPageProps) {
     setDiscountPercent(0);
     setAmountReceived(0);
     setSelectedCustomerId("_general_");
+    setTableNumber('');
     setLastTransactionForReceipt(null);
   }
   
   const handleClearCart = () => {
     clearCart();
+    setTableNumber('');
     toast({
       title: 'Keranjang Dikosongkan',
       description: 'Semua item telah dihapus dari keranjang.',
@@ -305,15 +309,17 @@ export default function CartPage({ setView }: CartPageProps) {
         branchId: selectedBranchId,
         warehouseId: selectedWarehouseId,
         isPkp,
-        serviceFee
+        serviceFee,
+        tableNumber: tableNumber,
     });
 
     if (result.success) {
-      toast({ title: 'Pesanan Dibuat', description: `Pesanan untuk ${customer?.name || "Pelanggan Umum"} telah dibuat.` });
+      toast({ title: 'Pesanan Dibuat', description: `Pesanan untuk ${customer?.name || "Pelanggan Umum"} di meja ${tableNumber} telah dibuat.` });
       clearCart();
       setDiscountPercent(0);
       setAmountReceived(0);
       setSelectedCustomerId("_general_");
+      setTableNumber('');
     } else {
       toast({ title: 'Gagal Membuat Pesanan', description: 'Gagal menyimpan transaksi sebagai pesanan.', variant: "destructive" });
     }
@@ -529,21 +535,33 @@ export default function CartPage({ setView }: CartPageProps) {
         <div className="flex-grow overflow-y-auto space-y-4 pb-[12rem]">
              <Card>
                 <CardContent className="p-4 space-y-4">
-                    <div>
-                      <Label>Pelanggan</Label>
-                      <div className="flex gap-2 mt-1">
-                          <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Pilih pelanggan" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="_general_">Pelanggan Umum</SelectItem>
-                                  {customers.map(customer => (
-                                      <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
-                                  ))}
-                              </SelectContent>
-                          </Select>
-                          <Button variant="outline" size="icon" onClick={() => setIsCustomerDialogOpen(true)}><UserPlus className="h-5 w-5"/></Button>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Pelanggan</Label>
+                        <div className="flex gap-2 mt-1">
+                            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Pilih pelanggan" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="_general_">Pelanggan Umum</SelectItem>
+                                    {customers.map(customer => (
+                                        <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Button variant="outline" size="icon" onClick={() => setIsCustomerDialogOpen(true)}><UserPlus className="h-5 w-5"/></Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="table-number">Nomor Meja</Label>
+                        <Input 
+                            id="table-number"
+                            value={tableNumber}
+                            onChange={(e) => setTableNumber(e.target.value)}
+                            placeholder="Contoh: 12"
+                            className="mt-1"
+                        />
                       </div>
                     </div>
                 </CardContent>

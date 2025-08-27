@@ -136,6 +136,7 @@ export interface Transaction {
   transactionNumber?: string;
   branchId?: string;
   warehouseId?: string;
+  tableNumber?: string;
   lines?: { accountId: string; debit: number; credit: number; description: string }[];
   [key: string]: any;
 }
@@ -159,6 +160,7 @@ export type NewTransactionClientData = {
     taxAccountId?: string;
     isPkp?: boolean;
     serviceFee?: number;
+    tableNumber?: string;
 };
 
 export type PendingTransactionClientData = Omit<NewTransactionClientData, 
@@ -821,6 +823,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 discountAccountId: discountAccountId || null,
                 inventoryAccountId, taxAccountId: taxAccountId || null,
                 isPkp, serviceFee: serviceFee || 0,
+                tableNumber: data.tableNumber,
             };
 
             transaction.set(txDocRef, removeUndefinedDeep(transactionData));
@@ -1468,12 +1471,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    
-
-    
-
-
-
-
-    

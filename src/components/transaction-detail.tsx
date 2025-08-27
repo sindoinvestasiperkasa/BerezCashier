@@ -284,7 +284,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
                 </div>
                 <div className="flex items-center gap-2">
                     <User className="w-4 h-4" />
-                    <span>{transaction.customerName || 'Pelanggan Umum'}</span>
+                    <span>{transaction.customerName || 'Pelanggan Umum'} {transaction.tableNumber && `(Meja ${transaction.tableNumber})`}</span>
                 </div>
             </div>
         </SheetHeader>
@@ -574,10 +574,3 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
-
-
-
-
-
-
-
