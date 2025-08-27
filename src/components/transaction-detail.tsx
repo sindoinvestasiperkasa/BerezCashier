@@ -394,88 +394,90 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
                     </CardTitle>
                 </CardHeader>
                   <CardContent className="p-4 pt-0 space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div className='space-y-1 col-span-1 md:col-span-2'>
-                              <Label>Akun Pembayaran ({transaction.paymentMethod})</Label>
-                              <Select value={paymentAccountId} onValueChange={setPaymentAccountId} disabled={isLoading}>
-                                  <SelectTrigger><SelectValue placeholder="Pilih akun pembayaran..." /></SelectTrigger>
-                                  <SelectContent>
-                                      {accounts.filter(a => a.category === 'Aset' && (a.name.toLowerCase().includes('kas') || a.name.toLowerCase().includes('bank'))).map(acc => (
-                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                              </Select>
-                          </div>
-                          <div className='space-y-1'>
-                              <Label>Akun Pendapatan</Label>
-                               <Select value={salesAccountId} onValueChange={setSalesAccountId} disabled={isLoading}>
-                                  <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
-                                  <SelectContent>
-                                      {accounts.filter(a => a.category === 'Pendapatan').map(acc => (
-                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                              </Select>
-                          </div>
-                          <div className='space-y-1'>
-                              <Label>Akun Potongan</Label>
-                               <Select value={discountAccountId} onValueChange={setDiscountAccountId} disabled={isLoading}>
-                                  <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
-                                  <SelectContent>
-                                      {accounts.filter(a => a.category === 'Pendapatan' || a.category === 'Beban').map(acc => (
-                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                               </Select>
-                          </div>
-                          <div className='space-y-1'>
-                              <Label>Akun HPP</Label>
-                               <Select value={cogsAccountId} onValueChange={setCogsAccountId} disabled={isLoading}>
-                                  <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
-                                  <SelectContent>
-                                      {accounts.filter(a => a.category === 'Beban').map(acc => (
-                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                              </Select>
-                          </div>
-                          <div className='space-y-1'>
-                              <Label>Akun Persediaan</Label>
-                               <Select value={inventoryAccountId} onValueChange={setInventoryAccountId} disabled={isLoading}>
-                                  <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
-                                  <SelectContent>
-                                       {accounts.filter(a => a.category === 'Aset').map(acc => (
-                                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                              </Select>
-                          </div>
-                           <div className='space-y-1'>
-                              <Label className="text-muted-foreground">Utang Biaya Layanan</Label>
-                              <Input
-                                  value={utangBiayaLayananAccount ? `${utangBiayaLayananAccount.name} (${utangBiayaLayananAccount.id})` : 'Otomatis'}
-                                  disabled
-                                  className="bg-muted/50"
-                              />
-                          </div>
-                          {isPkp && (
-                               <div className='space-y-1'>
-                                  <Label>Akun PPN Keluaran</Label>
-                                  <Select value={taxAccountId} onValueChange={setTaxAccountId} disabled={isLoading}>
-                                      <SelectTrigger><SelectValue placeholder="Pilih akun PPN..."/></SelectTrigger>
-                                      <SelectContent>
-                                          {accounts.filter(a => a.category === 'Liabilitas').map(acc => (
-                                              <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                          ))}
-                                      </SelectContent>
-                                  </Select>
-                              </div>
-                          )}
-                      </div>
-                      <div className="flex items-center space-x-2 mt-4">
-                          <Switch id="pkp-detail" checked={isPkp} onCheckedChange={setIsPkp} disabled={isLoading}/>
-                          <Label htmlFor="pkp-detail">Perusahaan Kena Pajak (PKP)</Label>
-                      </div>
+                      <fieldset disabled>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div className='space-y-1 col-span-1 md:col-span-2'>
+                                <Label>Akun Pembayaran ({transaction.paymentMethod})</Label>
+                                <Select value={paymentAccountId} onValueChange={setPaymentAccountId} disabled>
+                                    <SelectTrigger><SelectValue placeholder="Pilih akun pembayaran..." /></SelectTrigger>
+                                    <SelectContent>
+                                        {accounts.filter(a => a.category === 'Aset' && (a.name.toLowerCase().includes('kas') || a.name.toLowerCase().includes('bank'))).map(acc => (
+                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className='space-y-1'>
+                                <Label>Akun Pendapatan</Label>
+                                 <Select value={salesAccountId} onValueChange={setSalesAccountId} disabled>
+                                    <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {accounts.filter(a => a.category === 'Pendapatan').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className='space-y-1'>
+                                <Label>Akun Potongan</Label>
+                                 <Select value={discountAccountId} onValueChange={setDiscountAccountId} disabled>
+                                    <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {accounts.filter(a => a.category === 'Pendapatan' || a.category === 'Beban').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                 </Select>
+                            </div>
+                            <div className='space-y-1'>
+                                <Label>Akun HPP</Label>
+                                 <Select value={cogsAccountId} onValueChange={setCogsAccountId} disabled>
+                                    <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {accounts.filter(a => a.category === 'Beban').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className='space-y-1'>
+                                <Label>Akun Persediaan</Label>
+                                 <Select value={inventoryAccountId} onValueChange={setInventoryAccountId} disabled>
+                                    <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
+                                    <SelectContent>
+                                         {accounts.filter(a => a.category === 'Aset').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div className='space-y-1'>
+                                <Label className="text-muted-foreground">Utang Biaya Layanan</Label>
+                                <Input
+                                    value={utangBiayaLayananAccount ? `${utangBiayaLayananAccount.name} (${utangBiayaLayananAccount.id})` : 'Otomatis'}
+                                    disabled
+                                    className="bg-muted/50"
+                                />
+                            </div>
+                            {isPkp && (
+                                 <div className='space-y-1'>
+                                    <Label>Akun PPN Keluaran</Label>
+                                    <Select value={taxAccountId} onValueChange={setTaxAccountId} disabled>
+                                        <SelectTrigger><SelectValue placeholder="Pilih akun PPN..."/></SelectTrigger>
+                                        <SelectContent>
+                                            {accounts.filter(a => a.category === 'Liabilitas').map(acc => (
+                                                <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex items-center space-x-2 mt-4">
+                            <Switch id="pkp-detail" checked={isPkp} onCheckedChange={setIsPkp} disabled/>
+                            <Label htmlFor="pkp-detail">Perusahaan Kena Pajak (PKP)</Label>
+                        </div>
+                      </fieldset>
                   </CardContent>
               </Card>
             )}
@@ -502,19 +504,11 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
         {isPaymentPending && (
           <SheetFooter className="p-4 border-t bg-background">
             <div className="flex gap-2 w-full">
-              <Button variant="outline" className="w-full h-12" onClick={handleSaveChanges} disabled={isSaving || isLoading}>
+              <Button variant="default" className="w-full h-12" onClick={handleSaveChanges} disabled={isSaving || isLoading}>
                 {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                <span className={cn(isMobile && "hidden")}>
+                <span>
                   {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </span>
-                 <span className={cn(!isMobile && "hidden")}>Simpan</span>
-              </Button>
-              <Button className="w-full h-12" onClick={handlePayAndSave} disabled={isLoading || isSaving}>
-                {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                <span className={cn(isMobile && "hidden")}>
-                  {isLoading ? 'Melunasi...' : 'Simpan & Lunasi'}
-                </span>
-                <span className={cn(!isMobile && "hidden")}>Lunasi</span>
               </Button>
             </div>
           </SheetFooter>
@@ -580,6 +574,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
+
 
 
 
