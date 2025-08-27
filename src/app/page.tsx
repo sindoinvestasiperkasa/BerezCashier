@@ -6,7 +6,7 @@ import StatusBarManager from "@/components/status-bar-manager";
 
 export const metadata: Metadata = {
   title: 'Beranda',
-  description: 'Selamat datang di Berez Waitress. Aplikasi modern untuk mengelola pesanan dan meja untuk restoran dan kafe Anda.',
+  description: 'Selamat datang di Berez Kitchen. Aplikasi modern untuk mengelola alur kerja dapur untuk restoran dan kafe Anda.',
 }
 
 export default function Home() {

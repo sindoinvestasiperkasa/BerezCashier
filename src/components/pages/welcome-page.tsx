@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -63,8 +64,8 @@ export default function WelcomePage({ setView }: WelcomePageProps) {
     <div className="flex h-full flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm text-center flex-grow flex flex-col justify-center">
         <div>
-            <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Waitress</h1>
-            <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk pelayan Anda.</p>
+            <h1 className="text-4xl font-bold text-primary tracking-tight">Berez Kitchen</h1>
+            <p className="text-muted-foreground mt-2 mb-8">Aplikasi mobile untuk manajemen dapur Anda.</p>
             <Carousel
               className="w-full"
               opts={{ loop: true }}

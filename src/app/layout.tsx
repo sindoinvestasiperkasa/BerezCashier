@@ -5,26 +5,26 @@ import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Berez Waitress',
-    default: 'Berez Waitress - Aplikasi Kasir & Pelayan Modern',
+    template: '%s | Berez Kitchen',
+    default: 'Berez Kitchen - Aplikasi Dapur Modern',
   },
-  description: 'Berez Waitress adalah aplikasi Point of Sale (POS) dan pemesanan modern yang dirancang untuk UMKM. Kelola pesanan, meja, transaksi, dan lainnya dengan mudah.',
-  keywords: ['aplikasi waitress', 'aplikasi pelayan', 'pos', 'point of sale', 'manajemen pesanan', 'umkm', 'berez', 'kasir', 'restoran', 'kafe'],
+  description: 'Berez Kitchen adalah aplikasi manajemen dapur modern yang dirancang untuk UMKM. Kelola pesanan, inventaris, dan alur kerja dapur dengan mudah.',
+  keywords: ['aplikasi dapur', 'manajemen dapur', 'kitchen display system', 'kds', 'manajemen pesanan', 'umkm', 'berez', 'kasir', 'restoran', 'kafe'],
   authors: [{ name: 'Berez.id', url: 'https://berez.id' }],
   creator: 'Berez.id',
   publisher: 'Berez.id',
   metadataBase: new URL('https://berez-waitress.web.app'), // Ganti dengan URL produksi Anda
   openGraph: {
-    title: 'Berez Waitress - Aplikasi Pemesanan Modern untuk UMKM',
-    description: 'Kelola pesanan, meja, dan transaksi dengan mudah menggunakan Berez Waitress. Terintegrasi, cepat, dan handal.',
+    title: 'Berez Kitchen - Aplikasi Manajemen Dapur Modern untuk UMKM',
+    description: 'Kelola pesanan, inventaris, dan alur kerja dapur dengan mudah menggunakan Berez Kitchen.',
     url: 'https://berez-waitress.web.app', // Ganti dengan URL produksi Anda
-    siteName: 'Berez Waitress',
+    siteName: 'Berez Kitchen',
     images: [
       {
         url: '/og-image.png', // Pastikan Anda memiliki gambar ini di folder /public
         width: 1200,
         height: 630,
-        alt: 'Berez Waitress App Interface',
+        alt: 'Berez Kitchen App Interface',
       },
     ],
     locale: 'id_ID',
@@ -32,8 +32,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Berez Waitress - Aplikasi Pemesanan Modern untuk UMKM',
-    description: 'Tingkatkan efisiensi restoran atau kafe Anda dengan Berez Waitress. Aplikasi POS modern untuk manajemen pesanan, meja, dan transaksi.',
+    title: 'Berez Kitchen - Aplikasi Manajemen Dapur Modern untuk UMKM',
+    description: 'Tingkatkan efisiensi dapur restoran atau kafe Anda dengan Berez Kitchen. Aplikasi KDS modern untuk manajemen pesanan.',
     images: ['/twitter-image.png'], // Pastikan Anda memiliki gambar ini di folder /public
     creator: '@berez_id', // Ganti dengan handle Twitter Anda
   },

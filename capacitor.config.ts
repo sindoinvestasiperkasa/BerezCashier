@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.berez.waitress',
-  appName: 'Berez Waitress',
+  appName: 'Berez Kitchen',
   webDir: 'out',
   server: {
     allowNavigation: ["placehold.co", "nominatim.openstreetmap.org"]

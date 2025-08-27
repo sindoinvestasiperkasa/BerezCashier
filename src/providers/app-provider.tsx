@@ -442,7 +442,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     let userDocRef;
     if (user.role === 'UMKM') {
       userDocRef = doc(db, 'dataUMKM', user.uid);
-    } else if (user.role === 'Employee') {
+    } else if (user.role === 'Employee' && user.employeeDocId) {
       userDocRef = doc(db, 'employees', user.employeeDocId!);
     } else {
       return; // No listener for SuperAdmin or other roles for now
@@ -664,7 +664,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 const divisionsSnapshot = await getDocs(divisionsQuery);
                 const divisionNames = divisionsSnapshot.docs.map(d => d.data().name.toLowerCase());
                 
-                if (divisionNames.includes('waitress') || divisionNames.includes('pelayan')) {
+                if (divisionNames.includes('waitress') || divisionNames.includes('pelayan') || divisionNames.includes('dapur') || divisionNames.includes('kitchen')) {
                     finalUserData = {
                         uid: firebaseUser.uid,
                         ...employeeData,
@@ -678,7 +678,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
                 } else {
                     await signOut(auth);
-                    throw new Error("Anda tidak memiliki divisi 'Waitress' atau 'Pelayan' untuk mengakses aplikasi ini.");
+                    throw new Error("Anda tidak memiliki divisi yang sesuai untuk mengakses aplikasi ini.");
                 }
             } else {
                 await signOut(auth);
@@ -1451,11 +1451,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const updateUserData = async (data: Partial<UserData>): Promise<boolean> => {
-    if (!user) {
+    if (!user || !user.employeeDocId) {
         toast({ title: "Anda harus login", variant: "destructive" });
         return false;
     }
-    const docRef = doc(db, user.role === 'UMKM' ? 'dataUMKM' : 'employees', user.employeeDocId!);
+    const docRef = doc(db, user.role === 'UMKM' ? 'dataUMKM' : 'employees', user.role === 'UMKM' ? user.uid : user.employeeDocId);
     try {
         await updateDoc(docRef, data);
         // Data will be updated automatically by the onSnapshot listener
