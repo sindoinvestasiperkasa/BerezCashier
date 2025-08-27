@@ -281,16 +281,6 @@ export default function CartPage({ setView }: CartPageProps) {
     });
   }
 
-  const handleHoldCart = () => {
-    if (cart.length === 0) return;
-    const customer = customers.find(c => c.id === selectedCustomerId);
-    const customerName = customer ? customer.name : "Pelanggan Umum";
-    holdCart(customerName, selectedCustomerId);
-    setDiscountPercent(0);
-    setAmountReceived(0);
-    setSelectedCustomerId("_general_");
-  };
-
   const handleSaveAsPending = async () => {
     if (cart.length === 0) {
       toast({ title: "Keranjang Kosong", variant: "destructive" });
@@ -616,7 +606,7 @@ export default function CartPage({ setView }: CartPageProps) {
                         <div className="grid grid-cols-2 gap-4">
                             <div className='space-y-1'>
                                 <Label>Akun Pendapatan</Label>
-                                 <Select value={salesAccountId} onValueChange={setSalesAccountId}>
+                                 <Select value={salesAccountId} onValueChange={setSalesAccountId} disabled>
                                     <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
                                     <SelectContent>
                                         {accounts.filter(a => a.category === 'Pendapatan').map(acc => (
@@ -627,7 +617,7 @@ export default function CartPage({ setView }: CartPageProps) {
                             </div>
                             <div className='space-y-1'>
                                 <Label>Akun Potongan Penjualan</Label>
-                                 <Select value={discountAccountId} onValueChange={setDiscountAccountId}>
+                                 <Select value={discountAccountId} onValueChange={setDiscountAccountId} disabled>
                                     <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
                                     <SelectContent>
                                         {accounts.filter(a => a.category === 'Pendapatan' || a.category === 'Beban').map(acc => (
@@ -638,7 +628,7 @@ export default function CartPage({ setView }: CartPageProps) {
                             </div>
                             <div className='space-y-1'>
                                 <Label>Akun HPP</Label>
-                                 <Select value={cogsAccountId} onValueChange={setCogsAccountId}>
+                                 <Select value={cogsAccountId} onValueChange={setCogsAccountId} disabled>
                                     <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
                                     <SelectContent>
                                         {accounts.filter(a => a.category === 'Beban').map(acc => (
@@ -649,7 +639,7 @@ export default function CartPage({ setView }: CartPageProps) {
                             </div>
                             <div className='space-y-1'>
                                 <Label>Akun Persediaan</Label>
-                                 <Select value={inventoryAccountId} onValueChange={setInventoryAccountId}>
+                                 <Select value={inventoryAccountId} onValueChange={setInventoryAccountId} disabled>
                                     <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
                                     <SelectContent>
                                          {accounts.filter(a => a.category === 'Aset').map(acc => (
@@ -669,7 +659,7 @@ export default function CartPage({ setView }: CartPageProps) {
                             {isPkp && (
                                  <div className='space-y-1 col-span-2'>
                                     <Label>Akun PPN Keluaran</Label>
-                                    <Select value={taxAccountId} onValueChange={setTaxAccountId}>
+                                    <Select value={taxAccountId} onValueChange={setTaxAccountId} disabled>
                                         <SelectTrigger><SelectValue placeholder="Pilih akun PPN..."/></SelectTrigger>
                                         <SelectContent>
                                             {accounts.filter(a => a.category === 'Liabilitas').map(acc => (
@@ -681,7 +671,7 @@ export default function CartPage({ setView }: CartPageProps) {
                             )}
                         </div>
                         <div className="flex items-center space-x-2 mt-4">
-                            <Switch id="pkp" checked={isPkp} onCheckedChange={setIsPkp}/>
+                            <Switch id="pkp" checked={isPkp} onCheckedChange={setIsPkp} disabled/>
                             <Label htmlFor="pkp">Perusahaan Kena Pajak (PKP)</Label>
                         </div>
                     </CardContent>
