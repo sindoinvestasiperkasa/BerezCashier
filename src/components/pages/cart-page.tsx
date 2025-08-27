@@ -410,7 +410,7 @@ export default function CartPage({ setView }: CartPageProps) {
       doc.text(item.productName, margin, y);
       y += 3;
       const itemLine = `${item.quantity} x ${item.unitPrice.toLocaleString('id-ID')}`;
-      const itemTotal = (item.quantity * item.unitPrice).toLocaleString('id-ID');
+      const itemTotal = (item.quantity * item.price).toLocaleString('id-ID');
       doc.text(itemLine, margin, y);
       doc.text(itemTotal, pageWidth - margin, y, { align: 'right' });
       y += 3;
@@ -461,7 +461,7 @@ export default function CartPage({ setView }: CartPageProps) {
     const itemsForReceipt = tx.items || [];
     
     const receiptData: ReceiptData = {
-      items: itemsForReceipt.map(i => ({ productName: i.productName, quantity: i.quantity, unitPrice: i.unitPrice })),
+      items: itemsForReceipt.map(i => ({ productName: i.productName, quantity: i.quantity, unitPrice: i.unitPrice, price: i.unitPrice })),
       subtotal: tx.subtotal || 0,
       discountAmount: tx.discountAmount || 0,
       taxAmount: tx.taxAmount || 0,
@@ -471,7 +471,7 @@ export default function CartPage({ setView }: CartPageProps) {
       cashReceived: tx.paidAmount || tx.total || 0,
       changeAmount: Math.max(0, (tx.paidAmount || 0) - (tx.total || 0)),
       transactionNumber: tx.transactionNumber || tx.id,
-      transactionDate: tx.date,
+      transactionDate: new Date(tx.date),
       customerName: tx.customerName || "Pelanggan Umum",
     };
   
@@ -483,7 +483,7 @@ export default function CartPage({ setView }: CartPageProps) {
   const transactionsToday = useMemo(() => {
     return transactions
       .filter(tx => {
-        const txDate = tx.date;
+        const txDate = tx.date instanceof Date ? tx.date : new Date(tx.date);
         const today = new Date();
         const isToday = isSameDay(txDate, today);
         const isCashierSale = tx.status === 'Lunas' && tx.transactionNumber?.startsWith('KSR');
@@ -497,7 +497,7 @@ export default function CartPage({ setView }: CartPageProps) {
           isBalanced: Math.abs(debits - credits) < 0.01
         };
       })
-      .sort((a,b) => b.date.getTime() - a.date.getTime());
+      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions]);
   
   const todayTotal = useMemo(() => {
@@ -902,7 +902,7 @@ export default function CartPage({ setView }: CartPageProps) {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <p className="text-muted-foreground">{format(tx.date, 'HH:mm')}</p>
+                                    <p className="text-muted-foreground">{format(new Date(tx.date), 'HH:mm')}</p>
                                      {!(tx as any).isBalanced && (
                                         <Button size="sm" variant="secondary" onClick={() => { /* Placeholder */ }}>
                                             <Edit className="mr-2 h-4 w-4" /> Edit Akun
@@ -1005,5 +1005,3 @@ export default function CartPage({ setView }: CartPageProps) {
     </>
   );
 }
-
-    

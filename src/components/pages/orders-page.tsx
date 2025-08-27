@@ -1,170 +1,174 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ClipboardList, CheckCircle, AlertCircle, Clock, Frown, User, Hash, UserCircle } from "lucide-react";
+import { ChefHat, Clock, Frown, User, Hash, CookingPot, CheckCircle } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
-import type { Transaction } from "@/providers/app-provider";
-import TransactionDetail from "../transaction-detail";
-import { format } from "date-fns";
-import { id } from "date-fns/locale";
+import type { Transaction, SaleItem } from "@/providers/app-provider";
+import { Button } from "../ui/button";
 
-export const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-    'Selesai': 'default',
-    'Lunas': 'default',
-    'Dikirim': 'secondary',
-    'Diproses': 'outline',
-    'Dibatalkan': 'destructive',
+const PREPARATION_TIME_LIMIT_SECONDS = 900; // 15 minutes
+
+const statusConfig: { [key: string]: { text: string; bg: string; icon: React.ElementType } } = {
+    'Diproses': { text: 'Baru', bg: 'bg-blue-500', icon: CookingPot },
+    'Sedang Disiapkan': { text: 'Sedang Disiapkan', bg: 'bg-yellow-500 animate-pulse', icon: ChefHat },
+    'Siap Diantar': { text: 'Siap Diantar', bg: 'bg-green-500', icon: CheckCircle },
 };
 
-export const paymentStatusConfig: {
-    [key: string]: {
-        className: string;
-        icon: React.ElementType;
+const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Siap Diantar") => void }) => {
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+    const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const now = new Date().getTime();
+            setElapsedSeconds(Math.floor((now - startTime) / 1000));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [startTime]);
+
+    const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
     };
-} = {
-    'Berhasil': {
-        className: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
-        icon: CheckCircle,
-    },
-    'Pending': {
-        className: 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100',
-        icon: Clock,
-    },
-    'Gagal': {
-        className: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100',
-        icon: AlertCircle,
-    },
+
+    const isOverTime = elapsedSeconds > PREPARATION_TIME_LIMIT_SECONDS;
+    const currentStatus = transaction.status as keyof typeof statusConfig;
+    const config = statusConfig[currentStatus] || { text: transaction.status, bg: 'bg-gray-500', icon: Clock };
+    const Icon = config.icon;
+
+    return (
+        <Card className={cn(
+            "shadow-lg w-full max-w-sm flex-shrink-0 transform transition-all duration-300",
+            isOverTime && transaction.status !== 'Siap Diantar' && "animate-flash"
+        )}>
+            <CardHeader className={cn("p-3 text-white rounded-t-lg", config.bg)}>
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                        <Icon className="w-6 h-6" /> {config.text}
+                    </CardTitle>
+                    <div className="flex items-center gap-2 text-xl font-bold">
+                        <Clock className="w-6 h-6" />
+                        <span>{formatDuration(elapsedSeconds)}</span>
+                    </div>
+                </div>
+                <div className="text-sm opacity-90 flex justify-between">
+                     <span>Meja: <span className="font-bold">{transaction.tableNumber || '-'}</span></span>
+                     <span>Oleh: <span className="font-bold">{transaction.employeeName || 'Waitress'}</span></span>
+                </div>
+            </CardHeader>
+            <CardContent className="p-3">
+                <ScrollArea className="h-48 pr-3">
+                  <div className="space-y-2">
+                      {transaction.items.map((item, index) => (
+                          <div key={index} className="flex justify-between items-start text-sm">
+                              <p className="font-bold">{item.quantity}x</p>
+                              <p className="flex-1 px-2">{item.productName}</p>
+                          </div>
+                      ))}
+                  </div>
+                </ScrollArea>
+                <Separator className="my-2" />
+                <div className="flex gap-2 mt-2">
+                    {transaction.status === 'Diproses' && (
+                        <Button className="w-full" variant="outline" onClick={() => onUpdateStatus(transaction.id, "Sedang Disiapkan")}>
+                            <ChefHat className="mr-2" /> Siapkan Pesanan
+                        </Button>
+                    )}
+                    {transaction.status === 'Sedang Disiapkan' && (
+                        <Button className="w-full" variant="default" onClick={() => onUpdateStatus(transaction.id, "Siap Diantar")}>
+                           <CheckCircle className="mr-2"/> Tandai Selesai
+                        </Button>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
 };
+
 
 export default function OrdersPage() {
-  const { transactions, products } = useApp();
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const { transactions, updateTransactionStatus } = useApp();
+  const audioRef = useRef<HTMLAudioElement>(null);
 
-  const pendingTransactions = useMemo(() => {
+  const kitchenOrders = useMemo(() => {
     return transactions
       .filter(trx => 
-        (trx.status !== 'Lunas' && trx.paymentStatus !== 'Berhasil') &&
-        trx.transactionNumber?.startsWith('KSR')
+        (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan')
       )
-      .sort((a, b) => b.date.getTime() - a.date.getTime());
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [transactions]);
+  
+  // Sound notification for new orders
+  useEffect(() => {
+    const newOrder = transactions.find(tx => tx.status === 'Diproses' && !tx.isNotified);
+    if(newOrder) {
+        audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
+        // We'd need a way to mark it as notified, maybe in the app state
+    }
   }, [transactions]);
 
-  const handleCloseDetail = () => {
-    setSelectedTransaction(null);
-  };
-  
-  const formatDate = (date: Date) => {
-    if (!date || !(date instanceof Date)) {
-      return "Tanggal tidak valid";
-    }
-    return format(date, "d MMMM yyyy, HH:mm", { locale: id });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const handleUpdateStatus = (id: string, status: "Sedang Disiapkan" | "Siap Diantar") => {
+    updateTransactionStatus(id, status);
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="p-4 border-b">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Pesanan Tertunda</h1>
+    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
+       <audio ref={audioRef} src="/sounds/notification.mp3" preload="auto" />
+      <header className="p-4 border-b bg-background shadow-sm">
+        <div className="flex items-center gap-3">
+          <ChefHat className="w-8 h-8 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Tampilan Dapur</h1>
+            <p className="text-muted-foreground text-sm">Pesanan aktif yang perlu disiapkan.</p>
+          </div>
         </div>
-        <p className="text-muted-foreground text-sm mt-1">Daftar transaksi yang pembayarannya belum lunas atau masih diproses.</p>
       </header>
       
-      <div className="flex-1 overflow-y-auto bg-secondary/30">
-        <div className="p-4 space-y-4 pb-24">
-          {pendingTransactions.length === 0 ? (
-            <div className="text-center py-20 flex flex-col items-center gap-4">
-              <Frown className="w-16 h-16 text-muted-foreground" />
-              <h2 className="text-xl font-semibold">Tidak Ada Pesanan Tertunda</h2>
-              <p className="text-muted-foreground">Semua transaksi sudah lunas.</p>
+      <main className="flex-1 overflow-x-auto p-4">
+        {kitchenOrders.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-gray-500">
+                <Frown className="w-24 h-24 mx-auto text-gray-400" />
+                <h2 className="mt-4 text-2xl font-semibold">Tidak Ada Pesanan Aktif</h2>
+                <p className="mt-2">Semua pesanan sudah selesai disiapkan. Kerja bagus!</p>
+              </div>
             </div>
-          ) : (
-            pendingTransactions.map((trx) => {
-              const paymentConfig = paymentStatusConfig[trx.paymentStatus];
-              const PaymentIcon = paymentConfig?.icon || Clock;
-              const itemsSummary = Array.isArray(trx.items) 
-                ? trx.items.map(item => `${item.productName} (x${item.quantity})`).join(', ')
-                : 'Ringkasan item tidak tersedia.';
-
-              return (
-              <Card key={trx.id} className="cursor-pointer shadow-md hover:shadow-lg transition-shadow" onClick={() => setSelectedTransaction(trx)}>
-                <CardHeader className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-base font-bold">{trx.transactionNumber}</CardTitle>
-                      <CardDescription>{formatDate(trx.date)}</CardDescription>
-                      <CardDescription className="flex items-center gap-1.5 mt-1">
-                        <User className="w-3.5 h-3.5" />
-                        <span>{trx.customerName || 'Pelanggan Umum'}</span>
-                      </CardDescription>
-                       {trx.tableNumber && (
-                        <CardDescription className="flex items-center gap-1.5 mt-1 font-medium text-primary">
-                          <Hash className="w-3.5 h-3.5" />
-                          <span>Meja {trx.tableNumber}</span>
-                        </CardDescription>
-                      )}
-                    </div>
-                    <Badge variant={statusVariant[trx.status] || 'outline'} className={trx.status === 'Diproses' ? 'border-primary text-primary' : ''}>{trx.status}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <Separator className="mb-3" />
-                   {trx.employeeName && (
-                        <div className="text-xs text-muted-foreground flex items-center gap-1.5 mb-2">
-                            <UserCircle className="w-3.5 h-3.5" />
-                            <span>Dibuat oleh: <strong>{trx.employeeName}</strong></span>
-                        </div>
-                    )}
-                  <p className="text-sm text-muted-foreground truncate">{itemsSummary}</p>
-                  <div className="flex justify-between items-center mt-3">
-                    <p className="text-sm text-muted-foreground">Total Belanja</p>
-                    <p className="font-bold text-base text-primary">
-                      {formatCurrency(trx.total || 0)}
-                    </p>
-                  </div>
-
-                  <Separator className="my-3" />
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center">
-                        <p className="text-muted-foreground">Metode Pembayaran</p>
-                        <p className="font-medium">{trx.paymentMethod}</p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <p className="text-muted-foreground">Status Pembayaran</p>
-                        {paymentConfig && (
-                            <Badge variant="outline" className={cn("font-medium text-xs", paymentConfig.className)}>
-                                <PaymentIcon className="w-3.5 h-3.5 mr-1.5" />
-                                {trx.paymentStatus}
-                            </Badge>
-                        )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )})
-          )}
-        </div>
-      </div>
-      <TransactionDetail 
-        transaction={selectedTransaction}
-        products={products}
-        isOpen={!!selectedTransaction}
-        onClose={handleCloseDetail}
-      />
+        ) : (
+          <div className="flex gap-4 h-full">
+            {kitchenOrders.map((trx) => (
+              <KitchenOrderCard 
+                key={trx.id}
+                transaction={trx}
+                onUpdateStatus={handleUpdateStatus}
+              />
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
+}
+
+// Add this to your globals.css or a style tag if needed
+const styles = `
+@keyframes flash {
+  50% { background-color: hsl(var(--destructive)); }
+}
+.animate-flash {
+  animation: flash 1.5s infinite;
+}
+`;
+// You can inject this style block in layout or here directly for simplicity
+if (typeof window !== "undefined") {
+    const styleSheet = document.createElement("style");
+    styleSheet.type = "text/css";
+    styleSheet.innerText = styles;
+    document.head.appendChild(styleSheet);
 }

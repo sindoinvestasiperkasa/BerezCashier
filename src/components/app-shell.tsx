@@ -5,11 +5,8 @@ import { useState } from "react";
 import BottomNav from "./bottom-nav";
 import HomePage from "./pages/home-page";
 import OrdersPage from "./pages/orders-page";
-import CartPage from "./pages/cart-page";
 import TransactionsPage from "./pages/transactions-page";
 import AccountPage from "./pages/account-page";
-import CheckoutPage from "./pages/checkout-page";
-import PaymentPage from "./pages/payment-page";
 import EditProfilePage from "./pages/edit-profile-page";
 import MyAddressPage from "./pages/my-address-page";
 import SettingsPage from "./pages/settings-page";
@@ -17,12 +14,13 @@ import NotificationsPage from "./pages/notifications-page";
 import AccountSecurityPage from "./pages/account-security-page";
 import LanguagePage from "./pages/language-page";
 import QrCodePage from "./pages/qr-code-page";
+import WishlistPage from "./pages/wishlist-page";
 
-export type Tab = "home" | "orders" | "cart" | "transactions" | "account";
-export type View = Tab | "checkout" | "payment" | "edit-profile" | "my-address" | "settings" | "notifications" | "account-security" | "language" | "qr-code";
+export type Tab = "home" | "orders" | "wishlist" | "transactions" | "account";
+export type View = Tab | "edit-profile" | "my-address" | "settings" | "notifications" | "account-security" | "language" | "qr-code";
 
 export default function AppShell() {
-  const [view, setView] = useState<View>("home");
+  const [view, setView] = useState<View>("orders");
 
   const renderContent = () => {
     switch (view) {
@@ -30,16 +28,12 @@ export default function AppShell() {
         return <HomePage setView={setView} />;
       case "orders":
         return <OrdersPage />;
-      case "cart":
-        return <CartPage setView={setView} />;
+      case "wishlist":
+        return <WishlistPage />;
       case "transactions":
         return <TransactionsPage />;
       case "account":
         return <AccountPage setView={setView} />;
-      case "checkout":
-        return <CheckoutPage setView={setView} />;
-      case "payment":
-        return <PaymentPage setView={setView} />;
       case "edit-profile":
         return <EditProfilePage setView={setView} />;
       case "my-address":
@@ -55,14 +49,14 @@ export default function AppShell() {
       case "qr-code":
         return <QrCodePage setView={setView} />;
       default:
-        return <HomePage setView={setView} />;
+        return <OrdersPage />;
     }
   };
   
-  const isTabView = (v: View): v is Tab => ["home", "orders", "cart", "transactions", "account"].includes(v);
+  const isTabView = (v: View): v is Tab => ["home", "orders", "wishlist", "transactions", "account"].includes(v);
 
   return (
-    <div className="mx-auto max-w-md md:max-w-2xl lg:max-w-4xl bg-background min-h-screen flex flex-col shadow-2xl">
+    <div className="mx-auto max-w-full bg-background min-h-screen flex flex-col">
       <main className="flex-grow overflow-y-auto">
         {renderContent()}
       </main>

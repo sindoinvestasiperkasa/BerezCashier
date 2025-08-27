@@ -124,7 +124,7 @@ export interface Transaction {
   id: string;
   date: Date;
   total: number;
-  status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan' | 'Lunas';
+  status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan' | 'Lunas' | 'Sedang Disiapkan' | 'Siap Diantar';
   items: SaleItem[];
   paymentMethod: string;
   paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
@@ -140,6 +140,8 @@ export interface Transaction {
   lines?: { accountId: string; debit: number; credit: number; description: string }[];
   employeeId?: string;
   employeeName?: string;
+  preparationStartTime?: Date;
+  isNotified?: boolean;
   [key: string]: any;
 }
 
@@ -272,6 +274,7 @@ interface AppContextType {
   updateTransactionOnly: (transaction: Transaction, discountAmount: number, settings: { isPkp?: boolean }) => Promise<boolean>;
   updateTransactionDiscount: (transactionId: string, discountAmount: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
   deleteTransaction: (transactionId: string) => Promise<boolean>;
+  updateTransactionStatus: (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai') => Promise<void>;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
@@ -545,12 +548,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const transactionsData = snapshot.docs.map(doc => {
         const data = doc.data();
         const { date, ...rest } = data;
-        const jsDate = (date instanceof Timestamp) ? date.toDate() : new Date();
+        const jsDate = (data.date instanceof Timestamp) ? data.date.toDate() : new Date();
+        const prepDate = (data.preparationStartTime instanceof Timestamp) ? data.preparationStartTime.toDate() : undefined;
         
         return {
             id: doc.id,
             ...rest,
             date: jsDate,
+            preparationStartTime: prepDate,
             total: data.total || data.amount || 0,
             transactionNumber: data.transactionNumber || doc.id,
         } as Transaction;
@@ -633,7 +638,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       let finalUserData: UserData | null = null;
       
-      // 1. Check if user is a UMKM owner
       const umkmDocRef = doc(db, 'dataUMKM', firebaseUser.uid);
       const umkmDocSnap = await getDoc(umkmDocRef);
       if (umkmDocSnap.exists()) {
@@ -645,7 +649,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               email: firebaseUser.email || data.email,
           } as UserData;
       } else {
-        // 2. If not owner, check if user is an Employee
         const employeesQuery = query(collection(db, "employees"), where("uid", "==", firebaseUser.uid));
         const employeeSnapshot = await getDocs(employeesQuery);
 
@@ -668,11 +671,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     finalUserData = {
                         uid: firebaseUser.uid,
                         ...employeeData,
-                        employeeDocId: employeeDoc.id, // Store employee document ID
+                        employeeDocId: employeeDoc.id,
                         role: 'Employee',
                         email: firebaseUser.email || employeeData.email,
                     } as UserData;
-                    // Automatically set branch and warehouse for the employee
                     if(employeeData.branchId) setSelectedBranchIdState(employeeData.branchId);
                     if(employeeData.warehouseId) setSelectedWarehouseIdState(employeeData.warehouseId);
 
@@ -933,9 +935,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 ...data,
                 idUMKM,
                 date: new Date(),
-                description: `Pesanan Kasir (Tertunda) - Atas Nama: ${data.customerName}`,
+                description: `Pesanan Dapur - Atas Nama: ${data.customerName}`,
                 type: 'Sale',
-                status: 'Diproses',
+                status: 'Diproses', // Initial status for Kitchen
                 paymentStatus: 'Pending',
                 transactionNumber: `KSR-${Date.now()}`,
                 items: itemsForTransaction,
@@ -1374,6 +1376,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 };
 
+  const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai') => {
+      const txDocRef = doc(db, 'transactions', transactionId);
+      try {
+          const updateData: { status: string, preparationStartTime?: Date, completedAt?: Date } = { status };
+          if (status === 'Sedang Disiapkan') {
+              updateData.preparationStartTime = new Date();
+          } else if (status === 'Siap Diantar' || status === 'Selesai') {
+              updateData.completedAt = new Date();
+              // In a real app, you might also trigger a notification to the waitress app here
+          }
+          await updateDoc(txDocRef, updateData);
+          toast({ title: 'Status Diperbarui', description: `Pesanan sekarang berstatus: ${status}` });
+      } catch (error) {
+          console.error("Error updating transaction status: ", error);
+          toast({ title: 'Gagal', description: 'Gagal memperbarui status pesanan.', variant: 'destructive' });
+      }
+  };
+
+
   const clearCart = () => {
       setCart([]);
   };
@@ -1499,6 +1520,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         updateTransactionOnly,
         updateTransactionDiscount,
         deleteTransaction,
+        updateTransactionStatus,
         clearCart,
         addCustomer,
         holdCart,
