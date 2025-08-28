@@ -65,6 +65,16 @@ export default function TransactionsPage() {
                 orderBy("date", "desc")
             );
 
+            // Filter by branch and warehouse for employees
+            if (user.role === 'Employee') {
+                if (user.branchId) {
+                    q = query(q, where("branchId", "==", user.branchId));
+                }
+                if (user.warehouseId) {
+                    q = query(q, where("warehouseId", "==", user.warehouseId));
+                }
+            }
+
             if (dateRange?.from) {
                 q = query(q, where("date", ">=", startOfDay(dateRange.from)));
             }
