@@ -275,6 +275,7 @@ interface AppContextType {
   updateTransactionDiscount: (transactionId: string, discountAmount: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
   deleteTransaction: (transactionId: string) => Promise<boolean>;
   updateTransactionStatus: (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai') => Promise<void>;
+  markTransactionAsNotified: (transactionId: string) => void;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
   holdCart: (customerName: string, customerId?: string) => void;
@@ -944,6 +945,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 paymentMethod: 'Belum Dipilih',
                 employeeId: user.role === 'Employee' ? user.employeeDocId : undefined,
                 employeeName: user.role === 'Employee' ? user.name : undefined,
+                isNotified: false,
             };
             transaction.set(txDocRef, removeUndefinedDeep(transactionData));
             transactionId = txDocRef.id;
@@ -1394,6 +1396,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
   };
 
+  const markTransactionAsNotified = useCallback((transactionId: string) => {
+    setTransactions(currentTransactions =>
+      currentTransactions.map(tx =>
+        tx.id === transactionId ? { ...tx, isNotified: true } : tx
+      )
+    );
+    // This is a local state update, if persistence is needed, an updateDoc call would be here.
+    // For now, this prevents re-triggering the sound for the same session.
+  }, []);
 
   const clearCart = () => {
       setCart([]);
@@ -1521,6 +1532,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         updateTransactionDiscount,
         deleteTransaction,
         updateTransactionStatus,
+        markTransactionAsNotified,
         clearCart,
         addCustomer,
         holdCart,

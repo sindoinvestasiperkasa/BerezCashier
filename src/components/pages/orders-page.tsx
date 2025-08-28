@@ -95,7 +95,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
 
 
 export default function OrdersPage() {
-  const { transactions, updateTransactionStatus } = useApp();
+  const { transactions, updateTransactionStatus, markTransactionAsNotified } = useApp();
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const kitchenOrders = useMemo(() => {
@@ -109,11 +109,11 @@ export default function OrdersPage() {
   // Sound notification for new orders
   useEffect(() => {
     const newOrder = transactions.find(tx => tx.status === 'Diproses' && !tx.isNotified);
-    if(newOrder) {
-        // audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
-        // We'd need a way to mark it as notified, maybe in the app state
+    if (newOrder) {
+      audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
+      markTransactionAsNotified(newOrder.id);
     }
-  }, [transactions]);
+  }, [transactions, markTransactionAsNotified]);
 
   const handleUpdateStatus = (id: string, status: "Sedang Disiapkan" | "Siap Diantar") => {
     updateTransactionStatus(id, status);
@@ -121,7 +121,7 @@ export default function OrdersPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-       {/* <audio ref={audioRef} src="/sounds/notification.mp3" preload="auto" /> */}
+       <audio ref={audioRef} src="/sounds/notification.mp3" preload="auto" />
       <header className="p-4 border-b bg-background shadow-sm">
         <div className="flex items-center gap-3">
           <ChefHat className="w-8 h-8 text-primary" />
