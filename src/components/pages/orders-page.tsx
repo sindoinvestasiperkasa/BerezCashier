@@ -46,7 +46,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
 
     return (
         <Card className={cn(
-            "shadow-lg w-full max-w-sm flex-shrink-0 transform transition-all duration-300",
+            "shadow-lg w-full transform transition-all duration-300",
             isOverTime && transaction.status !== 'Siap Diantar' && "animate-flash"
         )}>
             <CardHeader className={cn("p-3 text-white rounded-t-lg", config.bg)}>
@@ -132,7 +132,7 @@ export default function OrdersPage() {
         </div>
       </header>
       
-      <main className="flex-1 overflow-x-auto p-4">
+      <main className="flex-1 overflow-y-auto p-2 md:p-4">
         {kitchenOrders.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-gray-500">
@@ -142,7 +142,7 @@ export default function OrdersPage() {
               </div>
             </div>
         ) : (
-          <div className="flex gap-4 h-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
             {kitchenOrders.map((trx) => (
               <KitchenOrderCard 
                 key={trx.id}
