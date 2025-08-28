@@ -98,7 +98,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                         </Button>
                     )}
                      {transaction.status === 'Siap Diantar' && (
-                        <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => onUpdateStatus(transaction.id, "Selesai Diantar")}>
+                         <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => onUpdateStatus(transaction.id, "Selesai Diantar")}>
                            <CheckCheck className="mr-2"/> Tandai Selesai Diantar
                         </Button>
                     )}
@@ -136,7 +136,8 @@ export default function OrdersPage() {
         if (priorityA !== priorityB) {
             return priorityA - priorityB;
         }
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
+        // Sort descending by date (newest first)
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
       });
     return filtered;
   }, [transactions]);
