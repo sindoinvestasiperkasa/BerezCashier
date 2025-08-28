@@ -44,6 +44,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     const currentStatus = transaction.status as keyof typeof statusConfig;
     const config = statusConfig[currentStatus] || { text: transaction.status, bg: 'bg-gray-500', icon: Clock };
     const Icon = config.icon;
+    const employeeName = transaction.employeeName || 'Waitress';
 
     return (
         <Card className={cn(
@@ -65,7 +66,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                 <div className="text-sm opacity-90 mt-1 space-y-1">
                      <div className="flex justify-between">
                         <span>Meja: <span className="font-bold">{transaction.tableNumber || '-'}</span></span>
-                        <span>Oleh: <span className="font-bold">{transaction.employeeName || 'Waitress'}</span></span>
+                        <span>Oleh: <span className="font-bold">{employeeName}</span></span>
                      </div>
                      <div>
                         <span>Pelanggan: <span className="font-bold">{transaction.customerName || 'Umum'}</span></span>
@@ -151,7 +152,7 @@ export default function OrdersPage() {
         </div>
       </header>
       
-      <main className="flex-1 overflow-y-auto p-2 md:p-4">
+      <main className="flex-1 overflow-y-auto p-2 md:p-4 pb-20">
         {kitchenOrders.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-gray-500">
@@ -192,5 +193,3 @@ if (typeof window !== "undefined") {
     styleSheet.innerText = styles;
     document.head.appendChild(styleSheet);
 }
-
-    
