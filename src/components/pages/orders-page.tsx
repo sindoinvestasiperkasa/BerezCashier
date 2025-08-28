@@ -117,13 +117,7 @@ export default function OrdersPage() {
       .filter(trx => 
         (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Siap Diantar')
       )
-      .sort((a, b) => {
-        // 'Siap Diantar' orders go to the end
-        if (a.status === 'Siap Diantar' && b.status !== 'Siap Diantar') return 1;
-        if (a.status !== 'Siap Diantar' && b.status === 'Siap Diantar') return -1;
-        // Otherwise sort by date
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      });
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [transactions]);
   
   // Sound notification for new orders

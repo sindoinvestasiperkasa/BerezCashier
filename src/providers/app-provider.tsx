@@ -131,7 +131,6 @@ export interface Transaction {
   paidAmount?: number;
   taxAmount?: number;
   discountAmount?: number;
-  serviceFee?: number;
   transactionNumber?: string;
   branchId?: string;
   warehouseId?: string;
@@ -482,8 +481,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
     if (!idUMKM) throw new Error("UMKM ID is missing.");
     
-    // KDS app does not handle stock, just records the order.
-    // Stock and accounting logic is handled by the Cashier app upon payment.
+    // Logic for kitchen is only to record order, no stock or accounting.
     try {
         const itemsForTransaction: SaleItem[] = data.items.map(item => ({
             productId: item.id,
@@ -543,7 +541,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             subtotal: newSubtotal,
             discountAmount: newDiscount,
             status: newStatus,
-            date: new Date(), // Update timestamp on modification
+            date: new Date(), // Update timestamp on modification to bring it to front
         };
 
         await updateDoc(txDocRef, removeUndefinedDeep(dataToUpdate));
