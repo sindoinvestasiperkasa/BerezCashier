@@ -20,7 +20,7 @@ const statusConfig: { [key: string]: { text: string; bg: string; icon: React.Ele
     'Siap Diantar': { text: 'Siap Diantar', bg: 'bg-green-500', icon: CheckCircle },
 };
 
-const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Selesai Diantar") => void }) => {
+const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Siap Diantar") => void }) => {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
@@ -92,7 +92,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                         </Button>
                     )}
                     {transaction.status === 'Sedang Disiapkan' && (
-                        <Button className="w-full" variant="default" onClick={() => onUpdateStatus(transaction.id, "Selesai Diantar")}>
+                        <Button className="w-full" variant="default" onClick={() => onUpdateStatus(transaction.id, "Siap Diantar")}>
                            <CheckCircle className="mr-2"/> Tandai Selesai
                         </Button>
                     )}
@@ -142,7 +142,7 @@ export default function OrdersPage() {
     }
   }, [transactions, markTransactionAsNotified]);
 
-  const handleUpdateStatus = (id: string, status: "Sedang Disiapkan" | "Selesai Diantar") => {
+  const handleUpdateStatus = (id: string, status: "Sedang Disiapkan" | "Siap Diantar") => {
     updateTransactionStatus(id, status);
   };
 
