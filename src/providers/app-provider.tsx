@@ -534,18 +534,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             total: newTotal,
             subtotal: newSubtotal,
             discountAmount: newDiscount,
-            date: new Date(),
+            date: new Date(), // Always update timestamp to reflect the change time
         };
         
         if (currentStatus === 'Siap Diantar' || currentStatus === 'Selesai Diantar') {
             dataToUpdate.status = 'Diproses';
             dataToUpdate.isUpdated = true;
-            dataToUpdate.isNotified = false; // Key fix: trigger a notification event
+            dataToUpdate.isNotified = false; // This is the key to trigger the update notification
             dataToUpdate.preparationStartTime = null; 
             dataToUpdate.completedAt = null;
         }
 
-        console.log("[AppProvider] Data to update in Firestore:", dataToUpdate); // DEBUG LOG
         await updateDoc(txDocRef, removeUndefinedDeep(dataToUpdate));
 
         toast({ title: 'Sukses', description: 'Perubahan pesanan berhasil disimpan.' });
@@ -589,7 +588,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               if (currentData && !currentData.preparationStartTime) {
                 updateData.preparationStartTime = new Date();
               }
-              updateData.isUpdated = false;
+              // When kitchen starts working on it, acknowledge the update
+              if (currentData?.isUpdated) {
+                  updateData.isUpdated = false;
+              }
           } else if (status === 'Siap Diantar' || status === 'Selesai Diantar') {
               updateData.completedAt = new Date();
           }
