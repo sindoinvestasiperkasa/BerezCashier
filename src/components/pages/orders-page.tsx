@@ -98,7 +98,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                         </Button>
                     )}
                      {transaction.status === 'Siap Diantar' && (
-                        <Button className="w-full" variant="default" style={{backgroundColor: 'hsl(var(--emerald-600))'}} onClick={() => onUpdateStatus(transaction.id, "Selesai Diantar")}>
+                        <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => onUpdateStatus(transaction.id, "Selesai Diantar")}>
                            <CheckCheck className="mr-2"/> Tandai Selesai Diantar
                         </Button>
                     )}
