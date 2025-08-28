@@ -4,7 +4,7 @@
 import React, { createContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseAuthUser } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch, documentId, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, onSnapshot, addDoc, Timestamp, updateDoc, writeBatch, documentId, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from '@/hooks/use-toast';
 
 import en from '@/lib/locales/en.json';
@@ -139,6 +139,7 @@ export interface Transaction {
   employeeId?: string;
   employeeName?: string;
   preparationStartTime?: Date;
+  completedAt?: Date;
   isNotified?: boolean;
   isUpdated?: boolean; // To check if order was updated
   [key: string]: any;
@@ -238,7 +239,7 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 const locales = { en, id };
 
 const removeUndefinedDeep = (val: any): any => {
-    if (val instanceof Date) {
+    if (val instanceof Date || val instanceof Timestamp || val === serverTimestamp()) {
         return val;
     }
     if (Array.isArray(val)) {
@@ -420,15 +421,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
       const transactionsData = snapshot.docs.map(doc => {
         const data = doc.data();
-        const { date, ...rest } = data;
-        const jsDate = (data.date instanceof Timestamp) ? data.date.toDate() : new Date();
-        const prepDate = (data.preparationStartTime instanceof Timestamp) ? data.preparationStartTime.toDate() : undefined;
+        const { date, preparationStartTime, completedAt, ...rest } = data;
         
         return {
             id: doc.id,
             ...rest,
-            date: jsDate,
-            preparationStartTime: prepDate,
+            date: (date instanceof Timestamp) ? date.toDate() : new Date(),
+            preparationStartTime: (preparationStartTime instanceof Timestamp) ? preparationStartTime.toDate() : undefined,
+            completedAt: (completedAt instanceof Timestamp) ? completedAt.toDate() : undefined,
             total: data.total || data.amount || 0,
             transactionNumber: data.transactionNumber || doc.id,
         } as Transaction;
@@ -529,23 +529,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (!txSnap.exists()) throw new Error("Transaksi tidak ditemukan.");
         
         const currentStatus = txSnap.data().status;
-        let newStatus = currentStatus;
-        let isUpdated = false;
-        
-        if (currentStatus === 'Siap Diantar' || currentStatus === 'Selesai Diantar') {
-            newStatus = 'Diproses';
-            isUpdated = true;
-        }
-
-        const dataToUpdate = {
+        const dataToUpdate: any = {
             items: updatedItems,
             total: newTotal,
             subtotal: newSubtotal,
             discountAmount: newDiscount,
-            status: newStatus,
-            isUpdated: isUpdated,
-            date: new Date(), // Update timestamp on modification to bring it to front
+            date: new Date(), // Update timestamp to bring it to front
         };
+        
+        // If order was already delivered, "revive" it.
+        if (currentStatus === 'Siap Diantar' || currentStatus === 'Selesai Diantar') {
+            dataToUpdate.status = 'Diproses';
+            dataToUpdate.isUpdated = true;
+            dataToUpdate.isNotified = false;
+            // Reset timestamps
+            dataToUpdate.preparationStartTime = null; 
+            dataToUpdate.completedAt = null;
+        }
 
         await updateDoc(txDocRef, removeUndefinedDeep(dataToUpdate));
 
@@ -606,7 +606,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const markTransactionAsNotified = useCallback(async (transactionId: string) => {
     const txDocRef = doc(db, 'transactions', transactionId);
     try {
-        await updateDoc(txDocRef, { isNotified: true });
+        await updateDoc(txDocRef, { isNotified: true, isUpdated: false });
     } catch(e) {
         console.error("Failed to mark transaction as notified in Firestore:", e);
     }
