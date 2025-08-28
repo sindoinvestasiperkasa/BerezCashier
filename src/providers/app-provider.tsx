@@ -432,7 +432,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             transactionNumber: data.transactionNumber || doc.id,
         } as Transaction;
       });
-      console.log("[AppProvider] Fetched Transactions from Firestore:", transactionsData);
       setTransactions(transactionsData);
     });
 

@@ -118,7 +118,6 @@ export default function OrdersPage() {
         (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Siap Diantar')
       )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    console.log("[OrdersPage] Filtered Kitchen Orders:", filtered);
     return filtered;
   }, [transactions]);
   
