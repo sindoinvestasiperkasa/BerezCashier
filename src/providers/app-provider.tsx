@@ -534,15 +534,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             total: newTotal,
             subtotal: newSubtotal,
             discountAmount: newDiscount,
-            date: new Date(), // Update timestamp to bring it to front
+            date: new Date(),
         };
         
-        // If order was already delivered, "revive" it.
         if (currentStatus === 'Siap Diantar' || currentStatus === 'Selesai Diantar') {
             dataToUpdate.status = 'Diproses';
             dataToUpdate.isUpdated = true;
-            dataToUpdate.isNotified = false;
-            // Reset timestamps
+            dataToUpdate.isNotified = false; // Key fix: trigger a notification event
             dataToUpdate.preparationStartTime = null; 
             dataToUpdate.completedAt = null;
         }
@@ -590,7 +588,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               if (currentData && !currentData.preparationStartTime) {
                 updateData.preparationStartTime = new Date();
               }
-              // Reset the isUpdated flag when kitchen starts preparing
               updateData.isUpdated = false;
           } else if (status === 'Siap Diantar' || status === 'Selesai Diantar') {
               updateData.completedAt = new Date();
@@ -606,7 +603,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const markTransactionAsNotified = useCallback(async (transactionId: string) => {
     const txDocRef = doc(db, 'transactions', transactionId);
     try {
-        await updateDoc(txDocRef, { isNotified: true, isUpdated: false });
+        await updateDoc(txDocRef, { isNotified: true });
     } catch(e) {
         console.error("Failed to mark transaction as notified in Firestore:", e);
     }

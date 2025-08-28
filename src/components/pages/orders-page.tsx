@@ -27,7 +27,10 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
 
     useEffect(() => {
-        if (transaction.status === 'Selesai Diantar' || transaction.status === 'Siap Diantar') return;
+        if (transaction.status === 'Selesai Diantar' || transaction.status === 'Siap Diantar') {
+            setElapsedSeconds(0);
+            return;
+        };
         const timer = setInterval(() => {
             const now = new Date().getTime();
             setElapsedSeconds(Math.floor((now - startTime) / 1000));
@@ -84,7 +87,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                 <ScrollArea className="h-48 pr-3">
                   <div className="space-y-2">
                       {transaction.items.map((item, index) => (
-                          <div key={index} className="flex justify-between items-start text-sm">
+                          <div key={`${transaction.id}-${item.productId}-${index}`} className="flex justify-between items-start text-sm">
                               <p className="font-bold">{item.quantity}x</p>
                               <p className="flex-1 px-2">{item.productName}</p>
                           </div>
@@ -142,18 +145,16 @@ export default function OrdersPage() {
         if (priorityA !== priorityB) {
             return priorityA - priorityB;
         }
-        // Sort descending by date (newest first)
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       });
     return filtered;
   }, [transactions]);
   
-  // Sound notification for new orders
   useEffect(() => {
-    const newOrder = transactions.find(tx => (tx.status === 'Diproses' && !tx.isNotified) || tx.isUpdated);
-    if (newOrder) {
+    const newOrUpdatedOrder = transactions.find(tx => !tx.isNotified);
+    if (newOrUpdatedOrder) {
       audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
-      markTransactionAsNotified(newOrder.id);
+      markTransactionAsNotified(newOrUpdatedOrder.id);
     }
   }, [transactions, markTransactionAsNotified]);
 
