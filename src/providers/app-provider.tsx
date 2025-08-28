@@ -140,6 +140,7 @@ export interface Transaction {
   employeeName?: string;
   preparationStartTime?: Date;
   isNotified?: boolean;
+  isUpdated?: boolean; // To check if order was updated
   [key: string]: any;
 }
 
@@ -529,9 +530,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         const currentStatus = txSnap.data().status;
         let newStatus = currentStatus;
+        let isUpdated = false;
         
         if (currentStatus === 'Siap Diantar' || currentStatus === 'Selesai Diantar') {
             newStatus = 'Diproses';
+            isUpdated = true;
         }
 
         const dataToUpdate = {
@@ -540,6 +543,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             subtotal: newSubtotal,
             discountAmount: newDiscount,
             status: newStatus,
+            isUpdated: isUpdated,
             date: new Date(), // Update timestamp on modification to bring it to front
         };
 
@@ -577,18 +581,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai Diantar') => {
       const txDocRef = doc(db, 'transactions', transactionId);
       try {
-          const updateData: { status: string, preparationStartTime?: Date, completedAt?: Date } = { status };
+          const updateData: { status: string, preparationStartTime?: Date, completedAt?: Date, isUpdated?: boolean } = { status };
           
           const docSnap = await getDoc(txDocRef);
+          const currentData = docSnap.data();
 
           if (status === 'Sedang Disiapkan') {
-              if (docSnap.exists() && !docSnap.data().preparationStartTime) {
+              if (currentData && !currentData.preparationStartTime) {
                 updateData.preparationStartTime = new Date();
               }
+              // Reset the isUpdated flag when kitchen starts preparing
+              updateData.isUpdated = false;
           } else if (status === 'Siap Diantar' || status === 'Selesai Diantar') {
               updateData.completedAt = new Date();
           }
-          await updateDoc(txDocRef, updateData);
+          await updateDoc(txDocRef, updateData as { [x: string]: any; });
           toast({ title: 'Status Diperbarui', description: `Pesanan sekarang berstatus: ${status}` });
       } catch (error) {
           console.error("Error updating transaction status: ", error);

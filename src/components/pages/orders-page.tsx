@@ -2,13 +2,13 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChefHat, Clock, CheckCircle, User, Hash, CookingPot, CheckCheck } from "lucide-react";
+import { ChefHat, Clock, CheckCircle, CookingPot, CheckCheck, Sparkles } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
-import type { Transaction, SaleItem } from "@/providers/app-provider";
+import type { Transaction } from "@/providers/app-provider";
 import { Button } from "../ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -49,9 +49,15 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
 
     return (
         <Card className={cn(
-            "shadow-lg w-full transform transition-all duration-300",
+            "shadow-lg w-full transform transition-all duration-300 relative",
             isOverTime && !['Siap Diantar', 'Selesai Diantar'].includes(transaction.status) && "animate-flash"
         )}>
+            {transaction.isUpdated && (
+                <Badge variant="destructive" className="absolute -top-2 -right-2 z-10 shadow-lg animate-bounce">
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    Ada Tambahan
+                </Badge>
+            )}
             <CardHeader className={cn("p-3 text-white rounded-t-lg", config.bg)}>
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
