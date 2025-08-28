@@ -124,7 +124,7 @@ export interface Transaction {
   id: string;
   date: Date;
   total: number;
-  status: 'Selesai' | 'Dikirim' | 'Diproses' | 'Dibatalkan' | 'Lunas' | 'Sedang Disiapkan' | 'Siap Diantar';
+  status: 'Selesai Diantar' | 'Dikirim' | 'Diproses' | 'Dibatalkan' | 'Lunas' | 'Sedang Disiapkan' | 'Siap Diantar';
   items: SaleItem[];
   paymentMethod: string;
   paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
@@ -274,7 +274,7 @@ interface AppContextType {
   updateTransactionOnly: (transaction: Transaction, discountAmount: number, settings: { isPkp?: boolean }) => Promise<boolean>;
   updateTransactionDiscount: (transactionId: string, discountAmount: number, accountInfo: UpdatedAccountInfo) => Promise<boolean>;
   deleteTransaction: (transactionId: string) => Promise<boolean>;
-  updateTransactionStatus: (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai') => Promise<void>;
+  updateTransactionStatus: (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai Diantar') => Promise<void>;
   markTransactionAsNotified: (transactionId: string) => void;
   clearCart: () => void;
   addCustomer: (customerData: { name: string; email?: string, phone?: string }) => Promise<Customer | null>;
@@ -1378,7 +1378,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 };
 
-  const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai') => {
+  const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai Diantar') => {
       const txDocRef = doc(db, 'transactions', transactionId);
       try {
           const updateData: { status: string, preparationStartTime?: Date, completedAt?: Date } = { status };
@@ -1387,9 +1387,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               if (docSnap.exists() && !docSnap.data().preparationStartTime) {
                 updateData.preparationStartTime = new Date();
               }
-          } else if (status === 'Siap Diantar' || status === 'Selesai') {
+          } else if (status === 'Siap Diantar' || status === 'Selesai Diantar') {
               updateData.completedAt = new Date();
-              // In a real app, you might also trigger a notification to the waitress app here
           }
           await updateDoc(txDocRef, updateData);
           toast({ title: 'Status Diperbarui', description: `Pesanan sekarang berstatus: ${status}` });

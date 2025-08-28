@@ -21,7 +21,7 @@ import { Skeleton } from "../ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-    'Selesai': 'default',
+    'Selesai Diantar': 'default',
     'Lunas': 'default',
     'Dikirim': 'secondary',
     'Diproses': 'outline',
