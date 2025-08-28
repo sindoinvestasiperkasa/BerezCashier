@@ -61,18 +61,15 @@ export default function TransactionsPage() {
             let q = query(
                 collection(db, "transactions"),
                 where("idUMKM", "==", idUMKM),
-                where("status", "in", ["Selesai Diantar", "Lunas"]),
+                where("status", "in", ["Lunas", "Dibatalkan"]), // CORRECTED: Only show finalized transactions
                 orderBy("date", "desc")
             );
 
-            // Filter by branch and warehouse for employees
-            if (user.role === 'Employee') {
-                if (user.branchId) {
-                    q = query(q, where("branchId", "==", user.branchId));
-                }
-                if (user.warehouseId) {
-                    q = query(q, where("warehouseId", "==", user.warehouseId));
-                }
+            if (user.role === 'Employee' && user.branchId && user.warehouseId) {
+                q = query(q, 
+                    where("branchId", "==", user.branchId), 
+                    where("warehouseId", "==", user.warehouseId)
+                );
             }
 
             if (dateRange?.from) {
@@ -186,7 +183,7 @@ export default function TransactionsPage() {
         <div className="mt-4 flex flex-row gap-4">
             <Card className="flex-1 shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Jumlah Pesanan</CardTitle>
+                <CardTitle className="text-sm font-medium">Jumlah Pesanan Selesai</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold">{historyTransactions.length}</div>
