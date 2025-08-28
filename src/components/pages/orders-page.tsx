@@ -44,7 +44,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     const isOverTime = elapsedSeconds > PREPARATION_TIME_LIMIT_SECONDS;
     const currentStatus = transaction.status as keyof typeof statusConfig;
     const config = statusConfig[currentStatus] || { text: transaction.status, bg: 'bg-gray-500', icon: Clock };
-    const Icon = config.icon;
+    const Icon = config.icon || Clock;
     const employeeName = transaction.employeeName || 'Waitress';
 
     return (
