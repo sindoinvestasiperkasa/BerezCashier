@@ -113,11 +113,13 @@ export default function OrdersPage() {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const kitchenOrders = useMemo(() => {
-    return transactions
+    const filtered = transactions
       .filter(trx => 
         (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Siap Diantar')
       )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    console.log("[OrdersPage] Filtered Kitchen Orders:", filtered);
+    return filtered;
   }, [transactions]);
   
   // Sound notification for new orders
