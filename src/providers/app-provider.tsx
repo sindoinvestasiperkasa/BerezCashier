@@ -221,7 +221,7 @@ interface AppContextType {
   saveCartAsPendingTransaction: (data: NewTransactionClientData) => Promise<{ success: boolean; transactionId: string }>;
   updateTransactionOnly: (transactionId: string, updatedItems: SaleItem[], newTotal: number, newSubtotal: number, newDiscount: number) => Promise<boolean>;
   deleteTransaction: (transactionId: string) => Promise<boolean>;
-  updateTransactionStatus: (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai Diantar') => Promise<void>;
+  updateTransactionStatus: (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar') => Promise<void>;
   markTransactionAsNotified: (transactionId: string) => void;
   updateUserData: (data: Partial<UserData>) => Promise<boolean>;
   isAuthenticated: boolean;
@@ -482,6 +482,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const idUMKM = user.role === 'UMKM' ? user.uid : user.idUMKM;
     if (!idUMKM) throw new Error("UMKM ID is missing.");
     
+    // KDS app does not handle stock, just records the order.
+    // Stock and accounting logic is handled by the Cashier app upon payment.
     try {
         const itemsForTransaction: SaleItem[] = data.items.map(item => ({
             productId: item.id,
@@ -498,7 +500,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             date: new Date(),
             description: `Pesanan Dapur - Atas Nama: ${data.customerName}`,
             type: 'Sale',
-            status: 'Diproses', // Initial status for Kitchen
+            status: 'Diproses',
             paymentStatus: 'Pending',
             transactionNumber: `KSR-${Date.now()}`,
             items: itemsForTransaction,
@@ -527,10 +529,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const txSnap = await getDoc(txDocRef);
         if (!txSnap.exists()) throw new Error("Transaksi tidak ditemukan.");
         
-        const originalStatus = txSnap.data().status;
+        let newStatus = txSnap.data().status;
         
-        // If an order was already delivered, and is being modified, put it back in the queue.
-        const newStatus = originalStatus === 'Selesai Diantar' ? 'Diproses' : originalStatus;
+        // If an order was already ready ('Siap Diantar') and is being modified,
+        // it must be put back in the 'Diproses' queue for the kitchen.
+        if (newStatus === 'Siap Diantar') {
+            newStatus = 'Diproses';
+        }
 
         const dataToUpdate = {
             items: updatedItems,
@@ -562,18 +567,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const txDocRef = doc(db, 'transactions', transactionId);
 
     try {
-        // In a pure KDS, we just delete the order. Stock will be handled by cashier app.
-        await deleteDoc(txDocRef);
-        toast({ title: 'Sukses', description: 'Pesanan telah berhasil dihapus.' });
+        await updateDoc(txDocRef, { status: 'Dibatalkan' });
+        toast({ title: 'Sukses', description: 'Pesanan telah berhasil dibatalkan.' });
         return true;
     } catch (error: any) {
-        console.error("Error deleting transaction:", error);
-        toast({ title: 'Gagal', description: error.message || 'Gagal menghapus pesanan.', variant: 'destructive' });
+        console.error("Error canceling transaction:", error);
+        toast({ title: 'Gagal', description: error.message || 'Gagal membatalkan pesanan.', variant: 'destructive' });
         return false;
     }
   };
 
-  const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai Diantar') => {
+  const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar') => {
       const txDocRef = doc(db, 'transactions', transactionId);
       try {
           const updateData: { status: string, preparationStartTime?: Date, completedAt?: Date } = { status };
@@ -584,7 +588,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               if (docSnap.exists() && !docSnap.data().preparationStartTime) {
                 updateData.preparationStartTime = new Date();
               }
-          } else if (status === 'Siap Diantar' || status === 'Selesai Diantar') {
+          } else if (status === 'Siap Diantar') {
               updateData.completedAt = new Date();
           }
           await updateDoc(txDocRef, updateData);
@@ -650,5 +654,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    

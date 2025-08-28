@@ -26,7 +26,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
 
     useEffect(() => {
-        if (transaction.status === 'Siap Diantar' || transaction.status === 'Selesai Diantar') return;
+        if (transaction.status === 'Siap Diantar') return;
         const timer = setInterval(() => {
             const now = new Date().getTime();
             setElapsedSeconds(Math.floor((now - startTime) / 1000));
@@ -49,14 +49,14 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     return (
         <Card className={cn(
             "shadow-lg w-full transform transition-all duration-300",
-            isOverTime && !['Siap Diantar', 'Selesai Diantar'].includes(transaction.status) && "animate-flash"
+            isOverTime && transaction.status !== 'Siap Diantar' && "animate-flash"
         )}>
             <CardHeader className={cn("p-3 text-white rounded-t-lg", config.bg)}>
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                         <Icon className="w-6 h-6" /> {config.text}
                     </CardTitle>
-                     {transaction.status !== 'Siap Diantar' && transaction.status !== 'Selesai Diantar' && (
+                     {transaction.status !== 'Siap Diantar' && (
                         <div className="flex items-center gap-2 text-xl font-bold">
                             <Clock className="w-6 h-6" />
                             <span>{formatDuration(elapsedSeconds)}</span>
@@ -96,7 +96,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                            <CheckCircle className="mr-2"/> Tandai Selesai
                         </Button>
                     )}
-                     {(transaction.status === 'Siap Diantar' || transaction.status === 'Selesai Diantar') && (
+                     {transaction.status === 'Siap Diantar' && (
                         <Button className="w-full" disabled variant="secondary">
                            Menunggu Diambil Pelayan
                         </Button>
