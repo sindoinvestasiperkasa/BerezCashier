@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChefHat, Clock, Frown, User, Hash, CookingPot, CheckCircle } from "lucide-react";
+import { ChefHat, Clock, CheckCircle, User, Hash, CookingPot } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
 import type { Transaction, SaleItem } from "@/providers/app-provider";
@@ -130,7 +130,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const newOrder = transactions.find(tx => tx.status === 'Diproses' && !tx.isNotified);
     if (newOrder) {
-      // audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
+      audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
       markTransactionAsNotified(newOrder.id);
     }
   }, [transactions, markTransactionAsNotified]);
@@ -141,7 +141,7 @@ export default function OrdersPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-       {/* <audio ref={audioRef} src="/sounds/notification.mp3" preload="auto" /> */}
+       <audio ref={audioRef} src="/sounds/notification.mp3" preload="auto" />
       <header className="p-4 border-b bg-background shadow-sm">
         <div className="flex items-center gap-3">
           <ChefHat className="w-8 h-8 text-primary" />
@@ -156,7 +156,7 @@ export default function OrdersPage() {
         {kitchenOrders.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-gray-500">
-                <Frown className="w-24 h-24 mx-auto text-gray-400" />
+                <CheckCircle className="w-24 h-24 mx-auto text-green-500" />
                 <h2 className="mt-4 text-2xl font-semibold">Tidak Ada Pesanan Aktif</h2>
                 <p className="mt-2">Semua pesanan sudah selesai disiapkan. Kerja bagus!</p>
               </div>
