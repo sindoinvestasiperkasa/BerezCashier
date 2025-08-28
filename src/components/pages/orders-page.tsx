@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChefHat, Clock, CheckCircle, User, Hash, CookingPot, Moped } from "lucide-react";
+import { ChefHat, Clock, CheckCircle, User, Hash, CookingPot, CheckCheck } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
 import type { Transaction, SaleItem } from "@/providers/app-provider";
@@ -18,7 +18,7 @@ const statusConfig: { [key: string]: { text: string; bg: string; icon: React.Ele
     'Diproses': { text: 'Baru', bg: 'bg-blue-500', icon: CookingPot },
     'Sedang Disiapkan': { text: 'Sedang Disiapkan', bg: 'bg-yellow-500 animate-pulse', icon: ChefHat },
     'Siap Diantar': { text: 'Siap Diantar', bg: 'bg-green-500', icon: CheckCircle },
-    'Selesai Diantar': { text: 'Selesai Diantar', bg: 'bg-emerald-600', icon: Moped },
+    'Selesai Diantar': { text: 'Selesai Diantar', bg: 'bg-emerald-600', icon: CheckCheck },
 };
 
 const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Siap Diantar" | "Selesai Diantar") => void }) => {
@@ -99,7 +99,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                     )}
                      {transaction.status === 'Siap Diantar' && (
                         <Button className="w-full" variant="default" style={{backgroundColor: 'hsl(var(--emerald-600))'}} onClick={() => onUpdateStatus(transaction.id, "Selesai Diantar")}>
-                           <Moped className="mr-2"/> Tandai Selesai Diantar
+                           <CheckCheck className="mr-2"/> Tandai Selesai Diantar
                         </Button>
                     )}
                     {transaction.status === 'Selesai Diantar' && (
