@@ -123,7 +123,7 @@ export interface Transaction {
   id: string;
   date: Date;
   total: number;
-  status: 'Lunas' | 'Siap Diantar' | 'Sedang Disiapkan' | 'Diproses' | 'Dibatalkan';
+  status: 'Lunas' | 'Siap Diantar' | 'Sedang Disiapkan' | 'Diproses' | 'Dibatalkan' | 'Selesai Diantar';
   items: SaleItem[];
   paymentMethod: string;
   paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
@@ -220,7 +220,7 @@ interface AppContextType {
   saveCartAsPendingTransaction: (data: NewTransactionClientData) => Promise<{ success: boolean; transactionId: string }>;
   updateTransactionOnly: (transactionId: string, updatedItems: SaleItem[], newTotal: number, newSubtotal: number, newDiscount: number) => Promise<boolean>;
   deleteTransaction: (transactionId: string) => Promise<boolean>;
-  updateTransactionStatus: (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar') => Promise<void>;
+  updateTransactionStatus: (transactionId: string, status: "Sedang Disiapkan" | "Siap Diantar" | "Selesai Diantar") => Promise<void>;
   markTransactionAsNotified: (transactionId: string) => void;
   updateUserData: (data: Partial<UserData>) => Promise<boolean>;
   isAuthenticated: boolean;
@@ -414,7 +414,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const transactionsQuery = query(
         collection(db, "transactions"), 
         where("idUMKM", "==", idUMKM),
-        where("status", "in", ["Diproses", "Sedang Disiapkan", "Siap Diantar"])
+        where("status", "in", ["Diproses", "Sedang Disiapkan", "Siap Diantar", "Selesai Diantar"])
     );
     const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
       const transactionsData = snapshot.docs.map(doc => {
@@ -527,9 +527,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const txSnap = await getDoc(txDocRef);
         if (!txSnap.exists()) throw new Error("Transaksi tidak ditemukan.");
         
-        let newStatus = txSnap.data().status;
+        const currentStatus = txSnap.data().status;
+        let newStatus = currentStatus;
         
-        if (newStatus === 'Siap Diantar') {
+        if (currentStatus === 'Siap Diantar' || currentStatus === 'Selesai Diantar') {
             newStatus = 'Diproses';
         }
 
@@ -573,7 +574,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar') => {
+  const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar' | 'Selesai Diantar') => {
       const txDocRef = doc(db, 'transactions', transactionId);
       try {
           const updateData: { status: string, preparationStartTime?: Date, completedAt?: Date } = { status };
@@ -584,7 +585,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               if (docSnap.exists() && !docSnap.data().preparationStartTime) {
                 updateData.preparationStartTime = new Date();
               }
-          } else if (status === 'Siap Diantar') {
+          } else if (status === 'Siap Diantar' || status === 'Selesai Diantar') {
               updateData.completedAt = new Date();
           }
           await updateDoc(txDocRef, updateData);
@@ -650,3 +651,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    

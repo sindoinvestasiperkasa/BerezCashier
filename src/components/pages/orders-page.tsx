@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChefHat, Clock, CheckCircle, User, Hash, CookingPot } from "lucide-react";
+import { ChefHat, Clock, CheckCircle, User, Hash, CookingPot, Moped } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
 import type { Transaction, SaleItem } from "@/providers/app-provider";
@@ -18,15 +18,16 @@ const statusConfig: { [key: string]: { text: string; bg: string; icon: React.Ele
     'Diproses': { text: 'Baru', bg: 'bg-blue-500', icon: CookingPot },
     'Sedang Disiapkan': { text: 'Sedang Disiapkan', bg: 'bg-yellow-500 animate-pulse', icon: ChefHat },
     'Siap Diantar': { text: 'Siap Diantar', bg: 'bg-green-500', icon: CheckCircle },
+    'Selesai Diantar': { text: 'Selesai Diantar', bg: 'bg-emerald-600', icon: Moped },
 };
 
-const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Siap Diantar") => void }) => {
+const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Siap Diantar" | "Selesai Diantar") => void }) => {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
 
     useEffect(() => {
-        if (transaction.status === 'Siap Diantar') return;
+        if (transaction.status === 'Selesai Diantar' || transaction.status === 'Siap Diantar') return;
         const timer = setInterval(() => {
             const now = new Date().getTime();
             setElapsedSeconds(Math.floor((now - startTime) / 1000));
@@ -49,14 +50,14 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     return (
         <Card className={cn(
             "shadow-lg w-full transform transition-all duration-300",
-            isOverTime && transaction.status !== 'Siap Diantar' && "animate-flash"
+            isOverTime && !['Siap Diantar', 'Selesai Diantar'].includes(transaction.status) && "animate-flash"
         )}>
             <CardHeader className={cn("p-3 text-white rounded-t-lg", config.bg)}>
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                         <Icon className="w-6 h-6" /> {config.text}
                     </CardTitle>
-                     {transaction.status !== 'Siap Diantar' && (
+                     {transaction.status !== 'Siap Diantar' && transaction.status !== 'Selesai Diantar' && (
                         <div className="flex items-center gap-2 text-xl font-bold">
                             <Clock className="w-6 h-6" />
                             <span>{formatDuration(elapsedSeconds)}</span>
@@ -93,12 +94,17 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                     )}
                     {transaction.status === 'Sedang Disiapkan' && (
                         <Button className="w-full" variant="default" onClick={() => onUpdateStatus(transaction.id, "Siap Diantar")}>
-                           <CheckCircle className="mr-2"/> Tandai Selesai
+                           <CheckCircle className="mr-2"/> Tandai Siap Diantar
                         </Button>
                     )}
                      {transaction.status === 'Siap Diantar' && (
+                        <Button className="w-full" variant="default" style={{backgroundColor: 'hsl(var(--emerald-600))'}} onClick={() => onUpdateStatus(transaction.id, "Selesai Diantar")}>
+                           <Moped className="mr-2"/> Tandai Selesai Diantar
+                        </Button>
+                    )}
+                    {transaction.status === 'Selesai Diantar' && (
                         <Button className="w-full" disabled variant="secondary">
-                           Menunggu Diambil Pelayan
+                           Menunggu Pembayaran Kasir
                         </Button>
                     )}
                 </div>
@@ -117,10 +123,12 @@ export default function OrdersPage() {
       'Diproses': 1,
       'Sedang Disiapkan': 2,
       'Siap Diantar': 3,
+      'Selesai Diantar': 4,
     };
+
     const filtered = transactions
       .filter(trx => 
-        (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Siap Diantar')
+        (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Siap Diantar' || trx.status === 'Selesai Diantar')
       )
       .sort((a, b) => {
         const priorityA = statusPriority[a.status] || 99;
@@ -142,7 +150,7 @@ export default function OrdersPage() {
     }
   }, [transactions, markTransactionAsNotified]);
 
-  const handleUpdateStatus = (id: string, status: "Sedang Disiapkan" | "Siap Diantar") => {
+  const handleUpdateStatus = (id: string, status: "Sedang Disiapkan" | "Siap Diantar" | "Selesai Diantar") => {
     updateTransactionStatus(id, status);
   };
 
@@ -200,3 +208,5 @@ if (typeof window !== "undefined") {
     styleSheet.innerText = styles;
     document.head.appendChild(styleSheet);
 }
+
+    
