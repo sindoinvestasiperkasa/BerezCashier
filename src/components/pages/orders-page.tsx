@@ -10,6 +10,7 @@ import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
 import type { Transaction, SaleItem } from "@/providers/app-provider";
 import { Button } from "../ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const PREPARATION_TIME_LIMIT_SECONDS = 900; // 15 minutes
 
