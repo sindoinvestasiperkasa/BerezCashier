@@ -314,7 +314,7 @@ export default function CartPage({ setView }: CartPageProps) {
     });
 
     if (result.success) {
-      toast({ title: 'Pesanan Dibuat', description: `Pesanan untuk ${customer?.name || "Pelanggan Umum"} di meja ${tableNumber} telah dibuat.` });
+      toast({ title: 'Pesanan Dibuat', description: `Pesanan untuk ${customer?.name || "Pelanggan Umum"} telah dibuat.` });
       clearCart();
       setDiscountPercent('');
       setAmountReceived(0);
@@ -535,34 +535,32 @@ export default function CartPage({ setView }: CartPageProps) {
         <div className="flex-grow overflow-y-auto space-y-4 pb-[12rem]">
              <Card>
                 <CardContent className="p-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Pelanggan</Label>
-                        <div className="flex gap-2 mt-1">
-                            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih pelanggan" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="_general_">Pelanggan Umum</SelectItem>
-                                    {customers.map(customer => (
-                                        <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Button variant="outline" size="icon" onClick={() => setIsCustomerDialogOpen(true)}><UserPlus className="h-5 w-5"/></Button>
-                        </div>
+                    <div>
+                      <Label>Pelanggan (Wajib)</Label>
+                      <div className="flex gap-2 mt-1">
+                          <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Pilih pelanggan" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="_general_">Pelanggan Umum</SelectItem>
+                                  {customers.map(customer => (
+                                      <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                          <Button variant="outline" size="icon" onClick={() => setIsCustomerDialogOpen(true)}><UserPlus className="h-5 w-5"/></Button>
                       </div>
-                      <div>
-                        <Label htmlFor="table-number">Nomor Meja</Label>
-                        <Input 
-                            id="table-number"
-                            value={tableNumber}
-                            onChange={(e) => setTableNumber(e.target.value)}
-                            placeholder="Contoh: 12"
-                            className="mt-1"
-                        />
-                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="table-number">Nomor Meja (Opsional)</Label>
+                      <Input 
+                          id="table-number"
+                          value={tableNumber}
+                          onChange={(e) => setTableNumber(e.target.value)}
+                          placeholder="Contoh: 12"
+                          className="mt-1"
+                      />
                     </div>
                 </CardContent>
             </Card>
