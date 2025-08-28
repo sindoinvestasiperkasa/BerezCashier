@@ -110,7 +110,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const newOrder = transactions.find(tx => tx.status === 'Diproses' && !tx.isNotified);
     if(newOrder) {
-        audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
+        // audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
         // We'd need a way to mark it as notified, maybe in the app state
     }
   }, [transactions]);
@@ -121,7 +121,7 @@ export default function OrdersPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-       <audio ref={audioRef} src="/sounds/notification.mp3" preload="auto" />
+       {/* <audio ref={audioRef} src="/sounds/notification.mp3" preload="auto" /> */}
       <header className="p-4 border-b bg-background shadow-sm">
         <div className="flex items-center gap-3">
           <ChefHat className="w-8 h-8 text-primary" />
