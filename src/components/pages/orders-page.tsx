@@ -26,12 +26,13 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
 
     useEffect(() => {
+        if (transaction.status === 'Siap Diantar') return;
         const timer = setInterval(() => {
             const now = new Date().getTime();
             setElapsedSeconds(Math.floor((now - startTime) / 1000));
         }, 1000);
         return () => clearInterval(timer);
-    }, [startTime]);
+    }, [startTime, transaction.status]);
 
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -54,14 +55,21 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                         <Icon className="w-6 h-6" /> {config.text}
                     </CardTitle>
-                    <div className="flex items-center gap-2 text-xl font-bold">
-                        <Clock className="w-6 h-6" />
-                        <span>{formatDuration(elapsedSeconds)}</span>
-                    </div>
+                     {transaction.status !== 'Siap Diantar' && (
+                        <div className="flex items-center gap-2 text-xl font-bold">
+                            <Clock className="w-6 h-6" />
+                            <span>{formatDuration(elapsedSeconds)}</span>
+                        </div>
+                     )}
                 </div>
-                <div className="text-sm opacity-90 flex justify-between">
-                     <span>Meja: <span className="font-bold">{transaction.tableNumber || '-'}</span></span>
-                     <span>Oleh: <span className="font-bold">{transaction.employeeName || 'Waitress'}</span></span>
+                <div className="text-sm opacity-90 mt-1 space-y-1">
+                     <div className="flex justify-between">
+                        <span>Meja: <span className="font-bold">{transaction.tableNumber || '-'}</span></span>
+                        <span>Oleh: <span className="font-bold">{transaction.employeeName || 'Waitress'}</span></span>
+                     </div>
+                     <div>
+                        <span>Pelanggan: <span className="font-bold">{transaction.customerName || 'Umum'}</span></span>
+                     </div>
                 </div>
             </CardHeader>
             <CardContent className="p-3">
@@ -87,6 +95,11 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                            <CheckCircle className="mr-2"/> Tandai Selesai
                         </Button>
                     )}
+                     {transaction.status === 'Siap Diantar' && (
+                        <Button className="w-full" disabled variant="secondary">
+                           Menunggu Diambil Pelayan
+                        </Button>
+                    )}
                 </div>
             </CardContent>
         </Card>
@@ -101,9 +114,15 @@ export default function OrdersPage() {
   const kitchenOrders = useMemo(() => {
     return transactions
       .filter(trx => 
-        (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan')
+        (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Siap Diantar')
       )
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => {
+        // 'Siap Diantar' orders go to the end
+        if (a.status === 'Siap Diantar' && b.status !== 'Siap Diantar') return 1;
+        if (a.status !== 'Siap Diantar' && b.status === 'Siap Diantar') return -1;
+        // Otherwise sort by date
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
   }, [transactions]);
   
   // Sound notification for new orders
@@ -173,3 +192,5 @@ if (typeof window !== "undefined") {
     styleSheet.innerText = styles;
     document.head.appendChild(styleSheet);
 }
+
+    
