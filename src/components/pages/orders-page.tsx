@@ -17,7 +17,7 @@ const PREPARATION_TIME_LIMIT_SECONDS = 900; // 15 minutes
 const statusConfig: { [key: string]: { text: string; bg: string; icon: React.ElementType } } = {
     'Diproses': { text: 'Baru', bg: 'bg-blue-500', icon: CookingPot },
     'Sedang Disiapkan': { text: 'Sedang Disiapkan', bg: 'bg-yellow-500 animate-pulse', icon: ChefHat },
-    'Selesai Diantar': { text: 'Siap Diantar', bg: 'bg-green-500', icon: CheckCircle },
+    'Siap Diantar': { text: 'Siap Diantar', bg: 'bg-green-500', icon: CheckCircle },
 };
 
 const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Selesai Diantar") => void }) => {
@@ -26,7 +26,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
 
     useEffect(() => {
-        if (transaction.status === 'Selesai Diantar') return;
+        if (transaction.status === 'Siap Diantar') return;
         const timer = setInterval(() => {
             const now = new Date().getTime();
             setElapsedSeconds(Math.floor((now - startTime) / 1000));
@@ -49,14 +49,14 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     return (
         <Card className={cn(
             "shadow-lg w-full transform transition-all duration-300",
-            isOverTime && transaction.status !== 'Selesai Diantar' && "animate-flash"
+            isOverTime && transaction.status !== 'Siap Diantar' && "animate-flash"
         )}>
             <CardHeader className={cn("p-3 text-white rounded-t-lg", config.bg)}>
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                         <Icon className="w-6 h-6" /> {config.text}
                     </CardTitle>
-                     {transaction.status !== 'Selesai Diantar' && (
+                     {transaction.status !== 'Siap Diantar' && (
                         <div className="flex items-center gap-2 text-xl font-bold">
                             <Clock className="w-6 h-6" />
                             <span>{formatDuration(elapsedSeconds)}</span>
@@ -96,7 +96,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                            <CheckCircle className="mr-2"/> Tandai Selesai
                         </Button>
                     )}
-                     {transaction.status === 'Selesai Diantar' && (
+                     {transaction.status === 'Siap Diantar' && (
                         <Button className="w-full" disabled variant="secondary">
                            Menunggu Diambil Pelayan
                         </Button>
@@ -113,11 +113,23 @@ export default function OrdersPage() {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const kitchenOrders = useMemo(() => {
+    const statusPriority: { [key: string]: number } = {
+      'Diproses': 1,
+      'Sedang Disiapkan': 2,
+      'Siap Diantar': 3,
+    };
     const filtered = transactions
       .filter(trx => 
-        (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Selesai Diantar')
+        (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Siap Diantar')
       )
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => {
+        const priorityA = statusPriority[a.status] || 99;
+        const priorityB = statusPriority[b.status] || 99;
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
     return filtered;
   }, [transactions]);
   
