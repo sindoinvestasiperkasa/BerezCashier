@@ -24,6 +24,8 @@ const statusConfig: { [key: string]: { text: string; bg: string; icon: React.Ele
 const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Siap Diantar" | "Selesai Diantar") => void }) => {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+    console.log("[KitchenOrderCard] Received transaction prop:", transaction); // DEBUG LOG
+
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
 
     useEffect(() => {

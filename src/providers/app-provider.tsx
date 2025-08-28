@@ -545,6 +545,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             dataToUpdate.completedAt = null;
         }
 
+        console.log("[AppProvider] Data to update in Firestore:", dataToUpdate); // DEBUG LOG
         await updateDoc(txDocRef, removeUndefinedDeep(dataToUpdate));
 
         toast({ title: 'Sukses', description: 'Perubahan pesanan berhasil disimpan.' });
