@@ -150,7 +150,7 @@ export default function OrdersPage() {
   
   // Sound notification for new orders
   useEffect(() => {
-    const newOrder = transactions.find(tx => tx.status === 'Diproses' && !tx.isNotified);
+    const newOrder = transactions.find(tx => (tx.status === 'Diproses' && !tx.isNotified) || tx.isUpdated);
     if (newOrder) {
       audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
       markTransactionAsNotified(newOrder.id);
@@ -215,3 +215,4 @@ if (typeof window !== "undefined") {
     styleSheet.innerText = styles;
     document.head.appendChild(styleSheet);
 }
+
