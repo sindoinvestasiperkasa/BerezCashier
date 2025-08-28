@@ -16,7 +16,7 @@ import { Package, Calendar, CreditCard, CheckCircle, Loader2, User, Percent, Han
 import type { Transaction, SaleItem } from "@/providers/app-provider";
 import type { Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
-import { statusVariant, paymentStatusConfig } from "./pages/orders-page";
+import { statusVariant, paymentStatusConfig } from "./pages/transactions-page";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -574,5 +574,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </>
   );
 }
+
+    
 
     
