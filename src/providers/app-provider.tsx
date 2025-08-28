@@ -545,6 +545,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             dataToUpdate.completedAt = null;
         }
 
+        // DEBUG
+        console.log('[App-Provider] Updating transaction with data:', dataToUpdate);
+
         await updateDoc(txDocRef, removeUndefinedDeep(dataToUpdate));
 
         toast({ title: 'Sukses', description: 'Perubahan pesanan berhasil disimpan.' });
@@ -658,3 +661,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    

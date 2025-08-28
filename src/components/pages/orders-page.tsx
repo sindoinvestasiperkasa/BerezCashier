@@ -24,6 +24,14 @@ const statusConfig: { [key: string]: { text: string; bg: string; icon: React.Ele
 const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Siap Diantar" | "Selesai Diantar") => void }) => {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+    // DEBUG
+    useEffect(() => {
+        if (transaction.transactionNumber === 'KSR-1722421398864') { // Ganti dengan nomor transaksi yang relevan
+            console.log('[KitchenOrderCard] Received transaction prop:', transaction);
+        }
+    }, [transaction]);
+
+
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
 
     useEffect(() => {
@@ -145,6 +153,7 @@ export default function OrdersPage() {
         if (priorityA !== priorityB) {
             return priorityA - priorityB;
         }
+        // If priorities are the same, sort by latest date first
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       });
     return filtered;
@@ -216,3 +225,5 @@ if (typeof window !== "undefined") {
     styleSheet.innerText = styles;
     document.head.appendChild(styleSheet);
 }
+
+    
