@@ -26,7 +26,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
 
     useEffect(() => {
-        if (transaction.status === 'Siap Diantar') return;
+        if (transaction.status === 'Siap Diantar' || transaction.status === 'Selesai Diantar') return;
         const timer = setInterval(() => {
             const now = new Date().getTime();
             setElapsedSeconds(Math.floor((now - startTime) / 1000));
@@ -49,14 +49,14 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     return (
         <Card className={cn(
             "shadow-lg w-full transform transition-all duration-300",
-            isOverTime && transaction.status !== 'Siap Diantar' && "animate-flash"
+            isOverTime && !['Siap Diantar', 'Selesai Diantar'].includes(transaction.status) && "animate-flash"
         )}>
             <CardHeader className={cn("p-3 text-white rounded-t-lg", config.bg)}>
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                         <Icon className="w-6 h-6" /> {config.text}
                     </CardTitle>
-                     {transaction.status !== 'Siap Diantar' && (
+                     {transaction.status !== 'Siap Diantar' && transaction.status !== 'Selesai Diantar' && (
                         <div className="flex items-center gap-2 text-xl font-bold">
                             <Clock className="w-6 h-6" />
                             <span>{formatDuration(elapsedSeconds)}</span>
@@ -96,7 +96,7 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                            <CheckCircle className="mr-2"/> Tandai Selesai
                         </Button>
                     )}
-                     {transaction.status === 'Siap Diantar' && (
+                     {(transaction.status === 'Siap Diantar' || transaction.status === 'Selesai Diantar') && (
                         <Button className="w-full" disabled variant="secondary">
                            Menunggu Diambil Pelayan
                         </Button>
@@ -130,7 +130,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const newOrder = transactions.find(tx => tx.status === 'Diproses' && !tx.isNotified);
     if (newOrder) {
-      audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
+      // audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
       markTransactionAsNotified(newOrder.id);
     }
   }, [transactions, markTransactionAsNotified]);
@@ -141,7 +141,7 @@ export default function OrdersPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-       <audio ref={audioRef} src="/sounds/notification.mp3" preload="auto" />
+       {/* <audio ref={audioRef} src="/sounds/notification.mp3" preload="auto" /> */}
       <header className="p-4 border-b bg-background shadow-sm">
         <div className="flex items-center gap-3">
           <ChefHat className="w-8 h-8 text-primary" />

@@ -1151,7 +1151,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     } else { // Return stock
                         const canReturn = Math.min(amountToChange, lotData.initialQuantity - lotData.remainingQuantity);
                         transaction.update(lotRef, { remainingQuantity: lotData.remainingQuantity + canReturn });
-                        amountToChange -= canReturn;
+                        amountToChange -= amountToChange;
                     }
                 }
             }

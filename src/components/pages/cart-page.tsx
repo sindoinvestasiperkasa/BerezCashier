@@ -617,122 +617,26 @@ export default function CartPage({ setView }: CartPageProps) {
                 </CardContent>
             </Card>
             
-            <fieldset disabled>
-                <Card>
-                    <CardContent className="p-4">
-                        <h3 className="font-semibold mb-3">Pengaturan Akun</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className='space-y-1'>
-                                <Label>Akun Pendapatan</Label>
-                                 <Select value={salesAccountId} onValueChange={setSalesAccountId} disabled>
-                                    <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
-                                    <SelectContent>
-                                        {accounts.filter(a => a.category === 'Pendapatan').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className='space-y-1'>
-                                <Label>Akun Potongan Penjualan</Label>
-                                 <Select value={discountAccountId} onValueChange={setDiscountAccountId} disabled>
-                                    <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
-                                    <SelectContent>
-                                        {accounts.filter(a => a.category === 'Pendapatan' || a.category === 'Beban').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                 </Select>
-                            </div>
-                            <div className='space-y-1'>
-                                <Label>Akun HPP</Label>
-                                 <Select value={cogsAccountId} onValueChange={setCogsAccountId} disabled>
-                                    <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
-                                    <SelectContent>
-                                        {accounts.filter(a => a.category === 'Beban').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className='space-y-1'>
-                                <Label>Akun Persediaan</Label>
-                                 <Select value={inventoryAccountId} onValueChange={setInventoryAccountId} disabled>
-                                    <SelectTrigger><SelectValue placeholder="Pilih akun..."/></SelectTrigger>
-                                    <SelectContent>
-                                         {accounts.filter(a => a.category === 'Aset').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                             <div className='space-y-1'>
-                                <Label className="text-muted-foreground">Akun Utang Biaya Layanan</Label>
-                                <Input
-                                    value={utangBiayaLayananAccount ? `${utangBiayaLayananAccount.name} (${utangBiayaLayananAccount.id})` : 'Otomatis'}
-                                    disabled
-                                    className="bg-muted/50"
-                                />
-                            </div>
-                            {isPkp && (
-                                 <div className='space-y-1 col-span-2'>
-                                    <Label>Akun PPN Keluaran</Label>
-                                    <Select value={taxAccountId} onValueChange={setTaxAccountId} disabled>
-                                        <SelectTrigger><SelectValue placeholder="Pilih akun PPN..."/></SelectTrigger>
-                                        <SelectContent>
-                                            {accounts.filter(a => a.category === 'Liabilitas').map(acc => (
-                                                <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.id})</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
+            <Card>
+                <CardContent className="p-4 space-y-4">
+                     {serviceFee > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground flex items-center gap-1.5"><HandCoins className="w-4 h-4"/> Biaya Layanan</span>
+                          <span className="font-medium">{formatCurrency(serviceFee)}</span>
                         </div>
-                        <div className="flex items-center space-x-2 mt-4">
-                            <Switch id="pkp" checked={isPkp} onCheckedChange={setIsPkp} disabled/>
-                            <Label htmlFor="pkp">Perusahaan Kena Pajak (PKP)</Label>
+                     )}
+                     <div className="flex items-center space-x-2">
+                        <Switch id="pkp" checked={isPkp} onCheckedChange={setIsPkp} />
+                        <Label htmlFor="pkp">Perusahaan Kena Pajak (PKP)</Label>
+                    </div>
+                     {isPkp && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Pajak (11%)</span>
+                          <span className="font-medium">{formatCurrency(taxAmount)}</span>
                         </div>
-                    </CardContent>
-                </Card>
-            </fieldset>
-
-            <fieldset disabled>
-                <Card>
-                    <CardContent className="p-4 space-y-4">
-                        <div>
-                            <Label>Metode Pembayaran</Label>
-                            <RadioGroup defaultValue="Cash" className="flex flex-wrap gap-x-4 gap-y-2 mt-2" onValueChange={setPaymentMethod}>
-                                <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="cash" /><Label htmlFor="cash">Cash</Label></div>
-                                <div className="flex items-center space-x-2"><RadioGroupItem value="Transfer" id="transfer" /><Label htmlFor="transfer">Transfer</Label></div>
-                                <div className="flex items-center space-x-2"><RadioGroupItem value="QRIS" id="qris" /><Label htmlFor="qris">QRIS</Label></div>
-                            </RadioGroup>
-                        </div>
-                        {paymentMethod === 'Cash' && 
-                            <div className='flex justify-between items-center'>
-                                <Label htmlFor="received">Uang Diterima</Label>
-                                <Input id="received" type="number" placeholder='0' className="w-40 text-right" value={amountReceived || ''} onChange={(e) => setAmountReceived(Number(e.target.value))} />
-                            </div>
-                        }
-                        <Separator/>
-                        {isPkp && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground">Pajak (11%)</span>
-                              <span className="font-medium">{formatCurrency(taxAmount)}</span>
-                            </div>
-                         )}
-                         {serviceFee > 0 && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground flex items-center gap-1.5"><HandCoins className="w-4 h-4"/> Biaya Layanan</span>
-                              <span className="font-medium">{formatCurrency(serviceFee)}</span>
-                            </div>
-                         )}
-                         {paymentMethod === 'Cash' && <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Kembalian</span>
-                          <span className="text-lg font-bold">{formatCurrency(change)}</span>
-                        </div>}
-                    </CardContent>
-                </Card>
-            </fieldset>
+                     )}
+                </CardContent>
+            </Card>
         </div>
         
         <div className="fixed bottom-[4.5rem] left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-4xl p-4 bg-background border-t">
