@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 import BottomNav from "./bottom-nav";
-import HomePage from "./pages/home-page";
 import OrdersPage from "./pages/orders-page";
 import TransactionsPage from "./pages/transactions-page";
 import AccountPage from "./pages/account-page";
@@ -14,9 +13,8 @@ import NotificationsPage from "./pages/notifications-page";
 import AccountSecurityPage from "./pages/account-security-page";
 import LanguagePage from "./pages/language-page";
 import QrCodePage from "./pages/qr-code-page";
-import WishlistPage from "./pages/wishlist-page";
 
-export type Tab = "home" | "orders" | "wishlist" | "transactions" | "account";
+export type Tab = "orders" | "transactions" | "account";
 export type View = Tab | "edit-profile" | "my-address" | "settings" | "notifications" | "account-security" | "language" | "qr-code";
 
 export default function AppShell() {
@@ -24,12 +22,8 @@ export default function AppShell() {
 
   const renderContent = () => {
     switch (view) {
-      case "home":
-        return <HomePage setView={setView} />;
       case "orders":
         return <OrdersPage />;
-      case "wishlist":
-        return <WishlistPage />;
       case "transactions":
         return <TransactionsPage />;
       case "account":
@@ -53,7 +47,7 @@ export default function AppShell() {
     }
   };
   
-  const isTabView = (v: View): v is Tab => ["home", "orders", "wishlist", "transactions", "account"].includes(v);
+  const isTabView = (v: View): v is Tab => ["orders", "transactions", "account"].includes(v);
 
   return (
     <div className="mx-auto max-w-full bg-background min-h-screen flex flex-col">

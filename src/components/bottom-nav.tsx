@@ -2,7 +2,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { Home, ClipboardList, Receipt, User, Heart } from "lucide-react";
+import { ClipboardList, Receipt, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tab } from "./app-shell";
 import { useApp } from "@/hooks/use-app";
@@ -20,7 +20,6 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
   ).length;
 
   const navItems = [
-    { id: "home", label: t('nav.home'), icon: Home },
     { id: "orders", label: t('nav.orders'), icon: ClipboardList, badge: pendingOrdersCount },
     { id: "transactions", label: t('nav.transactions'), icon: Receipt },
     { id: "account", label: t('nav.account'), icon: User },
@@ -30,7 +29,7 @@ export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
   return (
     <div className="fixed bottom-0 left-0 w-full z-20">
       <div className="relative h-16 bg-gradient-to-t from-primary/90 to-primary/70 backdrop-blur-sm shadow-[0_-1px_10px_rgba(0,0,0,0.1)]">
-        <div className="grid grid-cols-4 h-full max-w-full mx-auto">
+        <div className="grid grid-cols-3 h-full max-w-full mx-auto">
           {navItems.map((item) => (
             <button
               key={item.id}
