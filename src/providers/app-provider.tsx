@@ -123,7 +123,7 @@ export interface Transaction {
   id: string;
   date: Date;
   total: number;
-  status: 'Lunas' | 'Selesai Diantar' | 'Siap Diantar' | 'Sedang Disiapkan' | 'Diproses' | 'Dibatalkan';
+  status: 'Lunas' | 'Selesai Diantar' | 'Sedang Disiapkan' | 'Diproses' | 'Dibatalkan';
   items: SaleItem[];
   paymentMethod: string;
   paymentStatus: 'Berhasil' | 'Pending' | 'Gagal';
@@ -220,7 +220,7 @@ interface AppContextType {
   saveCartAsPendingTransaction: (data: NewTransactionClientData) => Promise<{ success: boolean; transactionId: string }>;
   updateTransactionOnly: (transactionId: string, updatedItems: SaleItem[], newTotal: number, newSubtotal: number, newDiscount: number) => Promise<boolean>;
   deleteTransaction: (transactionId: string) => Promise<boolean>;
-  updateTransactionStatus: (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar') => Promise<void>;
+  updateTransactionStatus: (transactionId: string, status: 'Sedang Disiapkan' | 'Selesai Diantar') => Promise<void>;
   markTransactionAsNotified: (transactionId: string) => void;
   updateUserData: (data: Partial<UserData>) => Promise<boolean>;
   isAuthenticated: boolean;
@@ -414,7 +414,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const transactionsQuery = query(
         collection(db, "transactions"), 
         where("idUMKM", "==", idUMKM),
-        where("status", "in", ["Diproses", "Sedang Disiapkan", "Siap Diantar"])
+        where("status", "in", ["Diproses", "Sedang Disiapkan", "Selesai Diantar"])
     );
     const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
       const transactionsData = snapshot.docs.map(doc => {
@@ -529,9 +529,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         let newStatus = txSnap.data().status;
         
-        // If an order was already ready ('Siap Diantar') and is being modified,
+        // If an order was already ready ('Selesai Diantar') and is being modified,
         // it must be put back in the 'Diproses' queue for the kitchen.
-        if (newStatus === 'Siap Diantar') {
+        if (newStatus === 'Selesai Diantar') {
             newStatus = 'Diproses';
         }
 
@@ -575,7 +575,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Siap Diantar') => {
+  const updateTransactionStatus = async (transactionId: string, status: 'Sedang Disiapkan' | 'Selesai Diantar') => {
       const txDocRef = doc(db, 'transactions', transactionId);
       try {
           const updateData: { status: string, preparationStartTime?: Date, completedAt?: Date } = { status };
@@ -586,7 +586,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               if (docSnap.exists() && !docSnap.data().preparationStartTime) {
                 updateData.preparationStartTime = new Date();
               }
-          } else if (status === 'Siap Diantar') {
+          } else if (status === 'Selesai Diantar') {
               updateData.completedAt = new Date();
           }
           await updateDoc(txDocRef, updateData);

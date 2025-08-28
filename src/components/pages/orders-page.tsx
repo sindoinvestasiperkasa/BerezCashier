@@ -17,16 +17,16 @@ const PREPARATION_TIME_LIMIT_SECONDS = 900; // 15 minutes
 const statusConfig: { [key: string]: { text: string; bg: string; icon: React.ElementType } } = {
     'Diproses': { text: 'Baru', bg: 'bg-blue-500', icon: CookingPot },
     'Sedang Disiapkan': { text: 'Sedang Disiapkan', bg: 'bg-yellow-500 animate-pulse', icon: ChefHat },
-    'Siap Diantar': { text: 'Siap Diantar', bg: 'bg-green-500', icon: CheckCircle },
+    'Selesai Diantar': { text: 'Siap Diantar', bg: 'bg-green-500', icon: CheckCircle },
 };
 
-const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Siap Diantar") => void }) => {
+const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transaction, onUpdateStatus: (id: string, status: "Sedang Disiapkan" | "Selesai Diantar") => void }) => {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
     const startTime = useMemo(() => new Date(transaction.preparationStartTime || transaction.date).getTime(), [transaction.date, transaction.preparationStartTime]);
 
     useEffect(() => {
-        if (transaction.status === 'Siap Diantar') return;
+        if (transaction.status === 'Selesai Diantar') return;
         const timer = setInterval(() => {
             const now = new Date().getTime();
             setElapsedSeconds(Math.floor((now - startTime) / 1000));
@@ -49,14 +49,14 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
     return (
         <Card className={cn(
             "shadow-lg w-full transform transition-all duration-300",
-            isOverTime && transaction.status !== 'Siap Diantar' && "animate-flash"
+            isOverTime && transaction.status !== 'Selesai Diantar' && "animate-flash"
         )}>
             <CardHeader className={cn("p-3 text-white rounded-t-lg", config.bg)}>
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                         <Icon className="w-6 h-6" /> {config.text}
                     </CardTitle>
-                     {transaction.status !== 'Siap Diantar' && (
+                     {transaction.status !== 'Selesai Diantar' && (
                         <div className="flex items-center gap-2 text-xl font-bold">
                             <Clock className="w-6 h-6" />
                             <span>{formatDuration(elapsedSeconds)}</span>
@@ -92,11 +92,11 @@ const KitchenOrderCard = ({ transaction, onUpdateStatus }: { transaction: Transa
                         </Button>
                     )}
                     {transaction.status === 'Sedang Disiapkan' && (
-                        <Button className="w-full" variant="default" onClick={() => onUpdateStatus(transaction.id, "Siap Diantar")}>
+                        <Button className="w-full" variant="default" onClick={() => onUpdateStatus(transaction.id, "Selesai Diantar")}>
                            <CheckCircle className="mr-2"/> Tandai Selesai
                         </Button>
                     )}
-                     {transaction.status === 'Siap Diantar' && (
+                     {transaction.status === 'Selesai Diantar' && (
                         <Button className="w-full" disabled variant="secondary">
                            Menunggu Diambil Pelayan
                         </Button>
@@ -115,7 +115,7 @@ export default function OrdersPage() {
   const kitchenOrders = useMemo(() => {
     const filtered = transactions
       .filter(trx => 
-        (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Siap Diantar')
+        (trx.status === 'Diproses' || trx.status === 'Sedang Disiapkan' || trx.status === 'Selesai Diantar')
       )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     return filtered;
@@ -130,7 +130,7 @@ export default function OrdersPage() {
     }
   }, [transactions, markTransactionAsNotified]);
 
-  const handleUpdateStatus = (id: string, status: "Sedang Disiapkan" | "Siap Diantar") => {
+  const handleUpdateStatus = (id: string, status: "Sedang Disiapkan" | "Selesai Diantar") => {
     updateTransactionStatus(id, status);
   };
 
