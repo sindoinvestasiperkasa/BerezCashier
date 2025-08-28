@@ -1383,7 +1383,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       try {
           const updateData: { status: string, preparationStartTime?: Date, completedAt?: Date } = { status };
           if (status === 'Sedang Disiapkan') {
-              updateData.preparationStartTime = new Date();
+              const docSnap = await getDoc(txDocRef);
+              if (docSnap.exists() && !docSnap.data().preparationStartTime) {
+                updateData.preparationStartTime = new Date();
+              }
           } else if (status === 'Siap Diantar' || status === 'Selesai') {
               updateData.completedAt = new Date();
               // In a real app, you might also trigger a notification to the waitress app here
@@ -1396,15 +1399,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
   };
 
-  const markTransactionAsNotified = useCallback((transactionId: string) => {
+  const markTransactionAsNotified = useCallback(async (transactionId: string) => {
+    // This is a local state update to prevent re-triggering sound in the same session.
+    // A more robust solution might involve updating the Firestore document.
     setTransactions(currentTransactions =>
-      currentTransactions.map(tx =>
-        tx.id === transactionId ? { ...tx, isNotified: true } : tx
-      )
+        currentTransactions.map(tx =>
+            tx.id === transactionId ? { ...tx, isNotified: true } : tx
+        )
     );
-    // This is a local state update, if persistence is needed, an updateDoc call would be here.
-    // For now, this prevents re-triggering the sound for the same session.
-  }, []);
+    const txDocRef = doc(db, 'transactions', transactionId);
+    try {
+        await updateDoc(txDocRef, { isNotified: true });
+    } catch(e) {
+        console.error("Failed to mark transaction as notified in Firestore:", e);
+    }
+  }, [db]);
 
   const clearCart = () => {
       setCart([]);
