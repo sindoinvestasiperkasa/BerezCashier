@@ -19,22 +19,27 @@ import { Calendar } from "../ui/calendar";
 import type { DateRange } from "react-day-picker";
 import { Skeleton } from "../ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getDocs, query, collection, where, orderBy } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
+
 
 export const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Selesai Diantar': 'default',
     'Lunas': 'default',
-    'Dikirim': 'secondary',
+    'Siap Diantar': 'default',
+    'Sedang Disiapkan': 'secondary',
     'Diproses': 'outline',
     'Dibatalkan': 'destructive',
-    'Siap Diantar': 'default',
 }
 
 const ITEMS_PER_PAGE = 10;
 
 export default function TransactionsPage() {
-  const { transactions, products } = useApp();
+  const { user } = useApp();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  
+  const [historyTransactions, setHistoryTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const today = new Date();
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(today),
@@ -43,9 +48,58 @@ export default function TransactionsPage() {
 
   const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const db = getFirestore();
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+        if (!user) return;
+        const idUMKM = user.idUMKM || (user.role === 'UMKM' ? user.uid : undefined);
+        if (!idUMKM) return;
+
+        setIsLoading(true);
+        try {
+            let q = query(
+                collection(db, "transactions"),
+                where("idUMKM", "==", idUMKM),
+                where("status", "in", ["Selesai Diantar", "Lunas"]),
+                orderBy("date", "desc")
+            );
+
+            if (dateRange?.from) {
+                q = query(q, where("date", ">=", startOfDay(dateRange.from)));
+            }
+            if (dateRange?.to) {
+                q = query(q, where("date", "<=", endOfDay(dateRange.to)));
+            }
+            
+            const querySnapshot = await getDocs(q);
+            const transactionsData = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                const jsDate = (data.date instanceof Timestamp) ? data.date.toDate() : new Date();
+                return {
+                    id: doc.id,
+                    ...data,
+                    date: jsDate,
+                    total: data.total || data.amount || 0,
+                    transactionNumber: data.transactionNumber || doc.id,
+                } as Transaction;
+            });
+            setHistoryTransactions(transactionsData);
+
+        } catch (error) {
+            console.error("Error fetching transaction history: ", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    fetchHistory();
+  }, [user, dateRange, db]);
+
 
   const handlePresetChange = (value: string) => {
     const now = new Date();
+    setDisplayedCount(ITEMS_PER_PAGE); // Reset pagination on filter change
     switch (value) {
       case "all":
         setDateRange(undefined);
@@ -77,49 +131,21 @@ export default function TransactionsPage() {
     }
   };
 
-
-  const filteredTransactions = useMemo(() => {
-    // Filter for kitchen-relevant transactions
-    const kitchenTransactions = transactions
-      .filter(trx => 
-        trx.status === 'Selesai Diantar' &&
-        Array.isArray(trx.items) &&
-        trx.items.length > 0
-      )
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    if (!dateRange?.from) {
-      return kitchenTransactions;
-    }
-    const fromDate = startOfDay(dateRange.from);
-    const toDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-
-    return kitchenTransactions.filter(trx => {
-      const trxDate = new Date(trx.date);
-      return trxDate >= fromDate && trxDate <= toDate;
-    });
-  }, [transactions, dateRange]);
-  
   const paginatedTransactions = useMemo(() => {
-    return filteredTransactions.slice(0, displayedCount);
-  }, [filteredTransactions, displayedCount]);
+    return historyTransactions.slice(0, displayedCount);
+  }, [historyTransactions, displayedCount]);
   
-  const summary = useMemo(() => {
-    const transactionCount = filteredTransactions.length;
-    return { transactionCount };
-  }, [filteredTransactions]);
-
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
     if (container) {
       const { scrollTop, scrollHeight, clientHeight } = container;
       if (scrollTop + clientHeight >= scrollHeight - 20) {
-        if (displayedCount < filteredTransactions.length) {
-          setDisplayedCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredTransactions.length));
+        if (displayedCount < historyTransactions.length) {
+          setDisplayedCount(prev => Math.min(prev + ITEMS_PER_PAGE, historyTransactions.length));
         }
       }
     }
-  }, [displayedCount, filteredTransactions.length]);
+  }, [displayedCount, historyTransactions.length]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -128,12 +154,6 @@ export default function TransactionsPage() {
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, [handleScroll]);
-
-  // Reset pagination when filter changes
-  useEffect(() => {
-    setDisplayedCount(ITEMS_PER_PAGE);
-  }, [dateRange]);
-
 
   const handleCloseDetail = () => {
     setSelectedTransaction(null);
@@ -159,7 +179,7 @@ export default function TransactionsPage() {
                 <CardTitle className="text-sm font-medium">Jumlah Pesanan</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{summary.transactionCount}</div>
+                <div className="text-xl font-bold">{historyTransactions.length}</div>
               </CardContent>
             </Card>
         </div>
@@ -215,7 +235,22 @@ export default function TransactionsPage() {
       
       <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
         <div className="p-4 space-y-4">
-          {paginatedTransactions.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-4 mt-4">
+              {[...Array(5)].map((_, i) => (
+                <Card key={i} className="shadow-md">
+                  <CardHeader className="p-4">
+                    <Skeleton className="h-5 w-1/3" />
+                    <Skeleton className="h-4 w-1/2 mt-1" />
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <Separator className="mb-3" />
+                    <Skeleton className="h-4 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : paginatedTransactions.length === 0 ? (
             <div className="text-center py-20 flex flex-col items-center gap-4">
               <Frown className="w-16 h-16 text-muted-foreground" />
               <h2 className="text-xl font-semibold">Belum Ada Riwayat</h2>
@@ -235,7 +270,7 @@ export default function TransactionsPage() {
                       <CardTitle className="text-base font-bold">{trx.transactionNumber}</CardTitle>
                       <CardDescription>{formatDate(new Date(trx.date))}</CardDescription>
                     </div>
-                    <Badge variant={statusVariant[trx.status] || 'outline'} className={trx.status === 'Diproses' ? 'border-primary text-primary' : ''}>{trx.status}</Badge>
+                    <Badge variant={statusVariant[trx.status] || 'outline'}>{trx.status}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
@@ -245,30 +280,20 @@ export default function TransactionsPage() {
               </Card>
             )})
           )}
-          {filteredTransactions.length > displayedCount && (
-            <div className="space-y-4 mt-4">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="shadow-md">
-                  <CardHeader className="p-4">
-                    <Skeleton className="h-5 w-1/3" />
-                    <Skeleton className="h-4 w-1/2 mt-1" />
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <Separator className="mb-3" />
-                    <Skeleton className="h-4 w-full" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          {historyTransactions.length > displayedCount && (
+             <div className="text-center p-4">
+                <p className="text-sm text-muted-foreground">Memuat lebih banyak...</p>
+             </div>
           )}
         </div>
       </div>
       <TransactionDetail 
         transaction={selectedTransaction}
-        products={products}
         isOpen={!!selectedTransaction}
         onClose={handleCloseDetail}
       />
     </div>
   );
 }
+
+    

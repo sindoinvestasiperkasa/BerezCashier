@@ -8,24 +8,19 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetFooter
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Calendar, User, Minus, Plus, Search, Hash, ShieldCheck } from "lucide-react";
-import type { Transaction, SaleItem } from "@/providers/app-provider";
-import type { Product } from "@/lib/data";
+import { Package, Calendar, User, Hash, ShieldCheck } from "lucide-react";
+import type { Transaction } from "@/providers/app-provider";
 import { cn } from "@/lib/utils";
 import { statusVariant } from "./pages/transactions-page";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { useIsMobile } from "@/hooks/use-mobile";
-
 
 interface TransactionDetailProps {
   transaction: Transaction | null;
-  products: Product[];
   isOpen: boolean;
   onClose: () => void;
 }
@@ -38,11 +33,8 @@ const formatDate = (date: Date) => {
 };
 
 
-export default function TransactionDetail({ transaction: initialTransaction, products, isOpen, onClose }: TransactionDetailProps) {
-  const isMobile = useIsMobile();
+export default function TransactionDetail({ transaction, isOpen, onClose }: TransactionDetailProps) {
   
-  const transaction = initialTransaction;
-
   if (!transaction) {
     return null;
   }
@@ -63,7 +55,7 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
                 </div>
                 <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4" />
-                    <Badge variant={statusVariant[transaction.status] || 'outline'} className={cn("text-xs", transaction.status === 'Diproses' ? 'border-primary text-primary' : '')}>
+                    <Badge variant={statusVariant[transaction.status] || 'outline'}>
                         {transaction.status}
                     </Badge>
                 </div>
@@ -88,9 +80,8 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
                 </CardHeader>
                 <CardContent className="space-y-3 p-4 pt-0">
                     {Array.isArray(transaction.items) && transaction.items.map((item, index) => {
-                      const productInfo = products.find(p => p.id === item.productId);
-                      const imageUrl = item.imageUrl || productInfo?.imageUrls?.[0] || 'https://placehold.co/64x64.png';
-                      const productName = item.productName || productInfo?.name || 'Produk tidak ditemukan';
+                      const imageUrl = item.imageUrl || 'https://placehold.co/64x64.png';
+                      const productName = item.productName || 'Produk tidak ditemukan';
                       
                       return (
                       <div key={`${transaction.id}-${item.productId}-${index}`} className="flex items-center gap-4">
@@ -116,3 +107,5 @@ export default function TransactionDetail({ transaction: initialTransaction, pro
     </Sheet>
   );
 }
+
+    
