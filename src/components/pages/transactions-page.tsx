@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Receipt, CheckCircle, AlertCircle, Clock, Frown, DollarSign, Hash, CalendarIcon } from "lucide-react";
+import { Receipt, Frown, CalendarIcon, History } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/providers/app-provider";
@@ -26,26 +26,7 @@ export const statusVariant: { [key: string]: "default" | "secondary" | "destruct
     'Dikirim': 'secondary',
     'Diproses': 'outline',
     'Dibatalkan': 'destructive',
-}
-
-export const paymentStatusConfig: {
-    [key: string]: {
-        className: string;
-        icon: React.ElementType;
-    };
-} = {
-    'Berhasil': {
-        className: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
-        icon: CheckCircle,
-    },
-    'Pending': {
-        className: 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100',
-        icon: Clock,
-    },
-    'Gagal': {
-        className: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100',
-        icon: AlertCircle,
-    },
+    'Siap Diantar': 'default',
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -98,23 +79,23 @@ export default function TransactionsPage() {
 
 
   const filteredTransactions = useMemo(() => {
-    const cashierTransactions = transactions
+    // Filter for kitchen-relevant transactions
+    const kitchenTransactions = transactions
       .filter(trx => 
-        trx.status === 'Lunas' &&
-        trx.transactionNumber?.startsWith('KSR') &&
+        trx.status === 'Selesai Diantar' &&
         Array.isArray(trx.items) &&
         trx.items.length > 0
       )
-      .sort((a, b) => b.date.getTime() - a.date.getTime());
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     if (!dateRange?.from) {
-      return cashierTransactions;
+      return kitchenTransactions;
     }
     const fromDate = startOfDay(dateRange.from);
     const toDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
 
-    return cashierTransactions.filter(trx => {
-      const trxDate = trx.date;
+    return kitchenTransactions.filter(trx => {
+      const trxDate = new Date(trx.date);
       return trxDate >= fromDate && trxDate <= toDate;
     });
   }, [transactions, dateRange]);
@@ -124,9 +105,8 @@ export default function TransactionsPage() {
   }, [filteredTransactions, displayedCount]);
   
   const summary = useMemo(() => {
-    const totalSales = filteredTransactions.reduce((acc, trx) => acc + (trx.total || 0), 0);
     const transactionCount = filteredTransactions.length;
-    return { totalSales, transactionCount };
+    return { transactionCount };
   }, [filteredTransactions]);
 
   const handleScroll = useCallback(() => {
@@ -166,33 +146,17 @@ export default function TransactionsPage() {
     return format(date, "d MMMM yyyy, HH:mm", { locale: id });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       <header className="p-4 border-b">
         <div className="flex items-center gap-2">
-          <Receipt className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Riwayat Transaksi Kasir</h1>
+          <History className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-bold">Riwayat Pesanan Kitchen</h1>
         </div>
         <div className="mt-4 flex flex-row gap-4">
             <Card className="flex-1 shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold">{formatCurrency(summary.totalSales)}</div>
-              </CardContent>
-            </Card>
-            <Card className="flex-1 shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Jumlah Transaksi</CardTitle>
+                <CardTitle className="text-sm font-medium">Jumlah Pesanan</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold">{summary.transactionCount}</div>
@@ -254,13 +218,11 @@ export default function TransactionsPage() {
           {paginatedTransactions.length === 0 ? (
             <div className="text-center py-20 flex flex-col items-center gap-4">
               <Frown className="w-16 h-16 text-muted-foreground" />
-              <h2 className="text-xl font-semibold">Belum Ada Transaksi</h2>
-              <p className="text-muted-foreground">Tidak ada riwayat transaksi kasir pada rentang tanggal ini.</p>
+              <h2 className="text-xl font-semibold">Belum Ada Riwayat</h2>
+              <p className="text-muted-foreground">Tidak ada riwayat pesanan pada rentang tanggal ini.</p>
             </div>
           ) : (
             paginatedTransactions.map((trx) => {
-              const paymentConfig = paymentStatusConfig[trx.paymentStatus];
-              const PaymentIcon = paymentConfig?.icon || Clock;
               const itemsSummary = Array.isArray(trx.items) 
                 ? trx.items.map(item => `${item.productName} (x${item.quantity})`).join(', ')
                 : 'Ringkasan item tidak tersedia.';
@@ -271,7 +233,7 @@ export default function TransactionsPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="text-base font-bold">{trx.transactionNumber}</CardTitle>
-                      <CardDescription>{formatDate(trx.date)}</CardDescription>
+                      <CardDescription>{formatDate(new Date(trx.date))}</CardDescription>
                     </div>
                     <Badge variant={statusVariant[trx.status] || 'outline'} className={trx.status === 'Diproses' ? 'border-primary text-primary' : ''}>{trx.status}</Badge>
                   </div>
@@ -279,30 +241,6 @@ export default function TransactionsPage() {
                 <CardContent className="p-4 pt-0">
                   <Separator className="mb-3" />
                   <p className="text-sm text-muted-foreground truncate">{itemsSummary}</p>
-                  <div className="flex justify-between items-center mt-3">
-                    <p className="text-sm text-muted-foreground">Total Belanja</p>
-                    <p className="font-bold text-base text-primary">
-                      {formatCurrency(trx.total || 0)}
-                    </p>
-                  </div>
-
-                  <Separator className="my-3" />
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center">
-                        <p className="text-muted-foreground">Metode Pembayaran</p>
-                        <p className="font-medium">{trx.paymentMethod}</p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <p className="text-muted-foreground">Status Pembayaran</p>
-                        {paymentConfig && (
-                            <Badge variant="outline" className={cn("font-medium text-xs", paymentConfig.className)}>
-                                <PaymentIcon className="w-3.5 h-3.5 mr-1.5" />
-                                {trx.paymentStatus}
-                            </Badge>
-                        )}
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             )})
@@ -318,10 +256,6 @@ export default function TransactionsPage() {
                   <CardContent className="p-4 pt-0">
                     <Separator className="mb-3" />
                     <Skeleton className="h-4 w-full" />
-                    <div className="flex justify-between items-center mt-3">
-                      <Skeleton className="h-4 w-1/4" />
-                      <Skeleton className="h-6 w-1/3" />
-                    </div>
                   </CardContent>
                 </Card>
               ))}
