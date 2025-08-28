@@ -540,13 +540,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (currentStatus === 'Siap Diantar' || currentStatus === 'Selesai Diantar') {
             dataToUpdate.status = 'Diproses';
             dataToUpdate.isUpdated = true;
-            dataToUpdate.isNotified = false; // This is the key to trigger the update notification
+            dataToUpdate.isNotified = false; // Key to trigger update
             dataToUpdate.preparationStartTime = null; 
             dataToUpdate.completedAt = null;
         }
-
-        // DEBUG
-        console.log('[App-Provider] Updating transaction with data:', dataToUpdate);
 
         await updateDoc(txDocRef, removeUndefinedDeep(dataToUpdate));
 
@@ -661,5 +658,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    
