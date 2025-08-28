@@ -413,11 +413,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const idUMKM = user.idUMKM || (user.role === 'UMKM' ? user.uid : undefined);
     if (!idUMKM) return;
 
-    const transactionsQuery = query(
+    let transactionsQuery = query(
         collection(db, "transactions"), 
         where("idUMKM", "==", idUMKM),
         where("status", "in", ["Diproses", "Sedang Disiapkan", "Siap Diantar", "Selesai Diantar"])
     );
+    
+    if (user.role === 'Employee') {
+        if (!user.branchId || !user.warehouseId) {
+            setTransactions([]); // Clear transactions if employee has no assigned branch/warehouse
+            return;
+        }
+        transactionsQuery = query(transactionsQuery, 
+            where("branchId", "==", user.branchId),
+            where("warehouseId", "==", user.warehouseId)
+        );
+    } else { // For UMKM role
+        if (selectedBranchId && selectedWarehouseId) {
+             transactionsQuery = query(transactionsQuery, 
+                where("branchId", "==", selectedBranchId),
+                where("warehouseId", "==", selectedWarehouseId)
+            );
+        } else {
+            // If UMKM hasn't selected both, don't show any transactions
+            setTransactions([]);
+            // Don't return, let branch/warehouse listeners run
+        }
+    }
+
     const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
       const transactionsData = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -456,7 +479,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         unsubBranches();
         unsubWarehouses();
     };
-  }, [user, db, selectedBranchId]);
+  }, [user, db, selectedBranchId, selectedWarehouseId]);
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     try {
